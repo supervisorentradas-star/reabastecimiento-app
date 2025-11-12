@@ -541,9 +541,9 @@
         const GOOGLE_SHEETS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
         const ADMIN_PASSWORD = "E123456";
 
-        // ================= URLs DE APPS SCRIPT =================
-        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbw-GdcXVcaxh4NofBUUkWk1fHVvR09LkESTvvtr6vmGLUs9Qgywel0TG2b6NoAdS_n6Sw/exec';
-        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbw2GF5ctUuOe3PJUj6tOvUum6ASHvViQWjN2WU_h0xuku8rWFQKu2z44FeeyctRrsfDAg/exec';
+        // ================= URLs DE APPS SCRIPT ACTUALIZADAS =================
+        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbxZ8O6Dl1kVhleH1ZlUhSm40IH_7hEHkaUvvdxwZb1SdaYjpXf_8pRZOIfmcSk2ae0brA/exec';
+        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbyqwXodwHwNFuhWBYm1R-iHyEGvCj_ZG0zLpWSYiCL3rh9gn5sjd2XMRooDo2Pir633aQ/exec';
 
         // ================= VARIABLES GLOBALES =================
         let rutasMaestras = {};
@@ -585,7 +585,6 @@
         // ================= GESTIÓN DE ESTADO GLOBAL CON GOOGLE SHEETS =================
         async function cargarEstadoGlobalDesdeSheets() {
             try {
-                // Usamos la misma URL de estado para leer (doGet)
                 const response = await fetch(APPS_SCRIPT_ESTADO_URL);
                 if (!response.ok) throw new Error('Error cargando estado desde Sheets');
                 
@@ -760,6 +759,8 @@
 
         async function guardarRegistroEnSheets(registro) {
             try {
+                console.log('Enviando registro a Sheets:', registro);
+                
                 const response = await fetch(APPS_SCRIPT_REGISTROS_URL, {
                     method: 'POST',
                     headers: {
@@ -774,11 +775,12 @@
                 }
                 
                 console.log('Registro guardado en Google Sheets:', registro);
+                mostrarMensaje('✅ Registro guardado en Sheets', true);
                 return true;
                 
             } catch (error) {
                 console.error('Error guardando registro en Sheets:', error);
-                mostrarMensaje('⚠️ Registro guardado localmente (error en conexión)', true);
+                mostrarMensaje(`⚠️ Registro guardado localmente (error: ${error.message})`, true);
                 return false;
             }
         }
@@ -1085,13 +1087,9 @@
 
         async function verificarProgresoDesdeRegistros() {
             try {
-                // Esta función verificaría los registros en Google Sheets para cargar el progreso
-                // Por ahora usamos localStorage como respaldo
                 console.log('Verificando progreso desde registros...');
-                
                 // En una implementación futura, aquí se cargarían los registros desde Sheets
                 // para actualizar itemsPorCola[colaActual] con los recolectados reales
-                
             } catch (error) {
                 console.error('Error verificando progreso:', error);
             }
@@ -1442,7 +1440,6 @@
                 
                 localStorage.removeItem('registrosRecoleccion');
                 
-                // También resetear en Google Sheets (esto requeriría un script adicional)
                 mostrarMensaje('✅ Progreso reseteado correctamente (local)', true);
                 actualizarTablero();
             }
