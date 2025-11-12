@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Picking ALM</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f0f2f5;
+            padding: 6px;
+        }
+        .container {
+            background: white;
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 1em;
+        }
+        h2 {
+            font-size: 0.9em;
+            margin-bottom: 6px;
+        }
+        h3 {
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+        .section {
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 3px 0;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        button.success {
+            background: #27ae60;
+        }
+        button.success:active {
+            background: #219653;
+        }
+        button.warning {
+            background: #f39c12;
+        }
+        button.danger {
+            background: #e74c3c;
+        }
+        button.small {
+            padding: 5px;
+            font-size: 9px;
+        }
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .hidden {
+            display: none;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .picking-info {
+            background: #e8f4fc;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 6px 0;
+            font-size: 11px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+        .info-item {
+            text-align: center;
+            padding: 5px;
+            background: white;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            font-size: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .info-value {
+            font-size: 10px;
+        }
+        .deposito-info {
+            background: white;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border: 1px solid #ddd;
+        }
+        .deposito-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 3px;
+            font-size: 13px; /* Tamaño aumentado como SCAN */
+            text-align: center;
+            font-weight: bold;
+        }
+        .scan-area {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 5px;
+            margin: 8px 0;
+            text-align: center;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 6px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+            gap: 5px;
+        }
+        .stat-box {
+            flex: 1;
+            text-align: center;
+            padding: 5px;
+            background: #e8f4fc;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+        .cola-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 6px 0;
+        }
+        .cola-button {
+            flex: 1;
+            min-width: 70px;
+            padding: 6px;
+            font-size: 10px;
+        }
+        .cola-completed {
+            background: #27ae60;
+        }
+        .cola-in-progress {
+            background: #f39c12;
+        }
+        .cola-pending {
+            background: #3498db;
+        }
+        .status-message {
+            padding: 6px;
+            border-radius: 3px;
+            margin: 5px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .dashboard {
+            background: white;
+            border-radius: 5px;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+        }
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .dashboard-table th, .dashboard-table td {
+            border: 1px solid #ddd;
+            padding: 4px;
+            text-align: center;
+        }
+        .dashboard-table th {
+            background: #f2f2f2;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-pending {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .item-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 8px 0;
+        }
+        .item {
+            padding: 6px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .item-completed {
+            background-color: #d4edda;
+            text-decoration: line-through;
+        }
+        .item-current {
+            background-color: #cce7ff;
+            font-weight: bold;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            max-width: 80%;
+        }
+        .report-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin: 8px 0;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .filter-item label {
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .filter-item input {
+            padding: 5px;
+            font-size: 10px;
+        }
+        @media (max-width: 600px) {
+            .info-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            .controls-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 400px) {
+            .info-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            .controls-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- CABECERA COMPACTA -->
+        <div class="header">
+            <h1>PICKING ALM</h1>
+            <div class="connection-status">
+                <div id="connectionIndicator" class="connection-indicator checking"></div>
+                <span id="estadoConexion" style="font-size: 11px;">Conectado</span>
+                <button onclick="verificarConexion()" class="small warning" style="width: auto; padding: 3px 6px;">Conexión</button>
+            </div>
+        </div>
+
+        <!-- SECCIÓN ADMINISTRADOR -->
+        <div class="section admin-panel hidden" id="adminSection">
+            <h2>Panel Administrador</h2>
+            
+            <div class="dashboard">
+                <h3>📊 Tablero de Control - Estado de Rutas</h3>
+                <div id="dashboardContent">
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th>Ruta</th>
+                                <th>Cola</th>
+                                <th>Estado</th>
+                                <th>Recolector</th>
+                                <th>Progreso</th>
+                                <th>Última Actualización</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardTableBody">
+                            <!-- Los datos se llenarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- FILTROS PARA REPORTES -->
+            <div class="dashboard">
+                <h3>📊 Generar Reporte</h3>
+                <div class="report-filters">
+                    <div class="filter-item">
+                        <label for="fechaInicio">Fecha Inicio:</label>
+                        <input type="date" id="fechaInicio">
+                    </div>
+                    <div class="filter-item">
+                        <label for="fechaFin">Fecha Fin:</label>
+                        <input type="date" id="fechaFin">
+                    </div>
+                </div>
+                <button onclick="descargarReporteCompleto()" class="success">📊 Descargar Reporte</button>
+            </div>
+            
+            <button onclick="actualizarDesdeSheets()" class="warning">🔄 Actualizar desde Sheets</button>
+            <button onclick="mostrarPanelUsuario()" class="warning">👥 Modo Usuario</button>
+            <button onclick="resetearProgreso()" class="danger">🔄 Resetear Progreso</button>
+        </div>
+
+        <!-- SECCIÓN USUARIO -->
+        <div class="section user-panel" id="userSection">
+            <h2>Modo Recolección</h2>
+            <button onclick="cargarRutasDesdeSheets()" class="success">🔄 Cargar Rutas</button>
+            <button onclick="solicitarAccesoAdmin()" class="warning">👨‍💼 Modo Admin</button>
+            <div class="picking-info" id="fileInfo">
+                Presiona "Cargar Rutas" para comenzar...
+            </div>
+            <div id="rutasContainer" class="hidden">
+                <h3>Selecciona tu Ruta:</h3>
+                <div class="route-selector" id="routeSelector"></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN SELECCIÓN DE COLA -->
+        <div class="section hidden" id="colaSection">
+            <h2>Selección de Cola</h2>
+            <div class="picking-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">RECOLECTOR</div>
+                        <div class="info-value" id="recolectorNombre">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RUTA</div>
+                        <div class="info-value" id="rutaActual">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">TOTAL UNIDADES</div>
+                        <div class="info-value" id="totalUnidadesCola">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>Selecciona una cola:</h3>
+            <div class="cola-selector" id="colaSelector"></div>
+            
+            <button onclick="volverSeleccionRuta()" class="warning">↩️ Volver</button>
+        </div>
+
+        <!-- SECCIÓN PICKING -->
+        <div class="section hidden" id="pickingSection">
+            <div class="picking-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">RECOLECTOR</div>
+                        <div class="info-value" id="pickingRecolector">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RUTA</div>
+                        <div class="info-value" id="pickingRuta">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">COLA</div>
+                        <div class="info-value" id="pickingCola">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="deposito-info">
+                <!-- Quitamos las etiquetas "DEPOSITO" y "DESCRIPCION" -->
+                <div class="deposito-row">
+                    <span id="pickingDeposito">-</span>
+                </div>
+                <div class="deposito-row">
+                    <span id="pickingDescripcion">-</span>
+                </div>
+                <div class="info-grid" style="margin-top: 6px;">
+                    <div class="info-item">
+                        <div class="info-label">CANTIDAD</div>
+                        <div class="info-value" id="pickingCantidad">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RECOLECTADO</div>
+                        <div class="info-value" id="pickingRecolectado">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">PENDIENTE</div>
+                        <div class="info-value" id="pickingPendiente">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="scan-area">
+                <h3>SCAN</h3>
+                <input type="text" id="upcInput" placeholder="Escanear código UPC" autocomplete="off">
+                <div class="controls-grid">
+                    <button onclick="marcarComoNoEncontrado()" class="danger">❌ No Encontrado</button>
+                    <button onclick="anteriorDeposito()" class="warning">⏮️ Atrás</button>
+                    <button onclick="finalizarRecoleccion()" class="success">🏁 Finalizar</button>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <h4>TOTAL</h4>
+                    <span id="totalUnidadesPicking">0</span>
+                </div>
+                <div class="stat-box">
+                    <h4>COMPLETADO</h4>
+                    <span id="completedUnidadesPicking">0</span>
+                </div>
+                <div class="stat-box">
+                    <h4>PENDIENTE</h4>
+                    <span id="pendingUnidadesPicking">0</span>
+                </div>
+            </div>
+            
+            <!-- LISTA DE DEPÓSITOS PARA NAVEGACIÓN MANUAL -->
+            <div class="item-list" id="itemList"></div>
+        </div>
+
+        <!-- MENSAJES DE ESTADO -->
+        <div id="statusMessage" class="status-message hidden"></div>
+    </div>
+
+    <!-- MODAL PARA MENSAJES EMERGENTES -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Mensaje</h3>
+            <p id="modalMessage"></p>
+            <button onclick="cerrarModal()" class="success" style="margin-top: 8px;">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CONTRASEÑA ADMIN -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <h3>Acceso Administrador</h3>
+            <p>Ingresa la contraseña:</p>
+            <input type="password" id="adminPassword" placeholder="Contraseña">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px;">
+                <button onclick="verificarContrasena()" class="success">Aceptar</button>
+                <button onclick="cerrarAdminModal()" class="warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURACIÓN GOOGLE SHEETS =================
+        const SHEET_ID = '1GoickGaR8jgPAorkpnKuno7bOrBxYQt6RMUJcfFqLhY';
+        const SHEET_ID_REGISTROS = '1p5Zji6o71L4Wkk4KthuHVpUKjbsfaq49FgEG99FjPbc';
+        const SHEET_ID_ESTADO = '1DONHbGL5HUaNbD9g77tV55Gd3fO0WuraKvYBdsV43DE';
+        
+        const GOOGLE_SHEETS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+        const GOOGLE_SHEETS_REGISTROS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID_REGISTROS}/gviz/tq?tqx=out:csv`;
+        const GOOGLE_SHEETS_ESTADO_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID_ESTADO}/gviz/tq?tqx=out:csv`;
+        
+        const ADMIN_PASSWORD = "E123456";
+
+        // ================= VARIABLES GLOBALES =================
+        let rutasMaestras = {};
+        let rutaActual = null;
+        let usuarioActual = null;
+        let colaActual = null;
+        let itemsCompletados = [];
+        let itemsNoEncontrados = [];
+        let itemsPorCola = {};
+        let depositoActualIndex = 0;
+        let colasDisponibles = [];
+        let estadoGlobal = {};
+        let totalUnidadesGlobal = 0;
+
+        // ================= INICIALIZACIÓN =================
+        window.addEventListener('load', function() {
+            // Verificar conexión automáticamente al cargar
+            verificarConexion();
+            
+            // Asegurar que los modales estén ocultos al inicio
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('adminModal').style.display = 'none';
+            
+            // Cargar estado global desde localStorage
+            cargarEstadoGlobal();
+            
+            // Mostrar panel de usuario por defecto
+            mostrarPanelUsuario();
+            
+            // Establecer fechas por defecto para reportes
+            const hoy = new Date();
+            const haceUnaSemana = new Date();
+            haceUnaSemana.setDate(hoy.getDate() - 7);
+            
+            document.getElementById('fechaInicio').value = haceUnaSemana.toISOString().split('T')[0];
+            document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
+        });
+
+        // ================= GESTIÓN DE ESTADO GLOBAL =================
+        function cargarEstadoGlobal() {
+            const estadoGuardado = localStorage.getItem('estadoGlobalPicking');
+            if (estadoGuardado) {
+                estadoGlobal = JSON.parse(estadoGuardado);
+            } else {
+                estadoGlobal = {
+                    rutas: {},
+                    ultimaActualizacion: new Date().toISOString()
+                };
+            }
+        }
+
+        function guardarEstadoGlobal() {
+            estadoGlobal.ultimaActualizacion = new Date().toISOString();
+            localStorage.setItem('estadoGlobalPicking', JSON.stringify(estadoGlobal));
+        }
+
+        async function actualizarEstadoRuta(ruta, cola, estado, recolector = null) {
+            if (!estadoGlobal.rutas[ruta]) {
+                estadoGlobal.rutas[ruta] = {};
+            }
+            
+            if (!estadoGlobal.rutas[ruta][cola]) {
+                estadoGlobal.rutas[ruta][cola] = {
+                    estado: 'pendiente',
+                    recolector: null,
+                    progreso: 0,
+                    total: 0,
+                    ultimaActualizacion: new Date().toISOString()
+                };
+            }
+            
+            estadoGlobal.rutas[ruta][cola].estado = estado;
+            estadoGlobal.rutas[ruta][cola].ultimaActualizacion = new Date().toISOString();
+            
+            if (recolector) {
+                estadoGlobal.rutas[ruta][cola].recolector = recolector;
+            }
+            
+            // Calcular progreso
+            if (itemsPorCola[cola]) {
+                const totalUnidades = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
+                const completadasUnidades = itemsPorCola[cola].reduce((sum, item) => sum + item.recolectado, 0);
+                estadoGlobal.rutas[ruta][cola].progreso = completadasUnidades;
+                estadoGlobal.rutas[ruta][cola].total = totalUnidades;
+            }
+            
+            guardarEstadoGlobal();
+            
+            // Actualizar también en Google Sheets
+            await actualizarEstadoEnSheets(ruta, cola, estado, recolector);
+        }
+
+        async function actualizarEstadoEnSheets(ruta, cola, estado, recolector) {
+            try {
+                // Aquí iría el código para actualizar la hoja de estado
+                // Por ahora solo guardamos en localStorage
+                console.log('Actualizando estado en Sheets:', {ruta, cola, estado, recolector});
+            } catch (error) {
+                console.error('Error actualizando estado en Sheets:', error);
+            }
+        }
+
+        function cargarProgresoCola(ruta, cola) {
+            const claveProgreso = `progreso_${ruta}_${cola}`;
+            const progresoGuardado = localStorage.getItem(claveProgreso);
+            
+            if (progresoGuardado) {
+                return JSON.parse(progresoGuardado);
+            }
+            return null;
+        }
+
+        function guardarProgresoCola(ruta, cola, items) {
+            const claveProgreso = `progreso_${ruta}_${cola}`;
+            localStorage.setItem(claveProgreso, JSON.stringify(items));
+        }
+
+        // ================= VERIFICAR CONEXIÓN =================
+        async function verificarConexion() {
+            try {
+                document.getElementById('estadoConexion').innerHTML = 'Verificando...';
+                document.getElementById('connectionIndicator').className = 'connection-indicator checking';
+                
+                const response = await fetch(GOOGLE_SHEETS_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                
+                if (csvText.includes('error')) {
+                    throw new Error('Google Sheets no accesible');
+                }
+                
+                document.getElementById('estadoConexion').innerHTML = 'Conectado';
+                document.getElementById('connectionIndicator').className = 'connection-indicator connected';
+                mostrarMensaje('✅ Conexión con Google Sheets verificada', true);
+                
+            } catch (error) {
+                document.getElementById('estadoConexion').innerHTML = 'Error conexión';
+                document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
+                mostrarMensaje(`❌ Error de conexión: ${error.message}`, false);
+            }
+        }
+
+        // ================= GOOGLE SHEETS INTEGRATION =================
+        async function cargarDesdeGoogleSheets() {
+            try {
+                const response = await fetch(GOOGLE_SHEETS_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: No se pudo cargar desde Google Sheets`);
+                }
+                
+                const csvText = await response.text();
+                
+                if (!csvText || csvText.includes('error') || csvText.length < 10) {
+                    throw new Error('No hay datos en Google Sheets o la hoja no es accesible');
+                }
+                
+                return csvText;
+                
+            } catch (error) {
+                console.error('Error Google Sheets:', error);
+                throw new Error('No se pudo conectar con Google Sheets: ' + error.message);
+            }
+        }
+
+        async function guardarRegistroEnSheets(registro) {
+            try {
+                // Aquí implementarías la lógica para guardar en Google Sheets
+                // Por ahora solo guardamos en localStorage
+                const registros = JSON.parse(localStorage.getItem('registrosRecoleccion') || '[]');
+                registros.push(registro);
+                localStorage.setItem('registrosRecoleccion', JSON.stringify(registros));
+                
+                console.log('Registro guardado:', registro);
+                return true;
+                
+            } catch (error) {
+                console.error('Error guardando registro en Sheets:', error);
+                return false;
+            }
+        }
+
+        async function cargarRegistrosDesdeSheets() {
+            try {
+                const response = await fetch(GOOGLE_SHEETS_REGISTROS_URL);
+                if (!response.ok) throw new Error('Error cargando registros');
+                
+                const csvText = await response.text();
+                return csvText;
+            } catch (error) {
+                console.error('Error cargando registros:', error);
+                return null;
+            }
+        }
+
+        // ================= FUNCIONES PRINCIPALES =================
+        async function cargarRutasDesdeSheets() {
+            try {
+                mostrarMensaje('📥 Cargando desde Google Sheets...', true);
+                
+                let csvText = '';
+                let fuente = '';
+                
+                // Intentar desde Google Sheets primero
+                try {
+                    csvText = await cargarDesdeGoogleSheets();
+                    fuente = 'Google Sheets';
+                } catch (error) {
+                    // Fallback a localStorage
+                    csvText = localStorage.getItem('rutasCSV');
+                    fuente = localStorage.getItem('fuente') || 'Respaldo Local';
+                    
+                    if (!csvText) {
+                        throw new Error('No hay datos disponibles. El administrador debe subir un archivo CSV primero.');
+                    }
+                }
+                
+                procesarCSV(csvText, fuente);
+                mostrarMensaje(`✅ Rutas cargadas desde ${fuente}`, true);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarMensaje(`❌ ${error.message}`, false);
+            }
+        }
+
+        async function actualizarDesdeSheets() {
+            try {
+                mostrarMensaje('🔄 Actualizando desde Google Sheets...', true);
+                
+                const csvText = await cargarDesdeGoogleSheets();
+                localStorage.setItem('rutasCSV', csvText);
+                localStorage.setItem('ultimaActualizacion', new Date().toISOString());
+                localStorage.setItem('fuente', 'Google Sheets');
+                
+                procesarCSV(csvText, 'Google Sheets');
+                mostrarMensaje('✅ Datos actualizados desde Google Sheets', true);
+                
+            } catch (error) {
+                mostrarMensaje(`❌ ${error.message}`, false);
+            }
+        }
+
+        // ================= PROCESAMIENTO CSV =================
+        function procesarCSV(csvText, fuente) {
+            try {
+                rutasMaestras = {};
+                totalUnidadesGlobal = 0;
+                const lineas = csvText.split('\n').filter(linea => linea.trim());
+                
+                console.log('Procesando', lineas.length, 'líneas desde:', fuente);
+                
+                if (lineas.length < 2) {
+                    throw new Error('El archivo CSV está vacío o no tiene datos');
+                }
+                
+                // Detectar separador
+                const primeraLinea = lineas[0];
+                const separador = primeraLinea.includes('\t') ? '\t' : ',';
+                
+                for (let i = 1; i < lineas.length; i++) {
+                    const linea = lineas[i].trim();
+                    if (!linea) continue;
+                    
+                    const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                    
+                    if (partes.length >= 4) {
+                        const deposito = partes[0];
+                        const upc = partes[1].replace(',', '.');
+                        const descripcion = partes[2];
+                        const cantidad = parseInt(partes[3]) || 0;
+                        
+                        if (deposito && upc) {
+                            // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
+                            const rutaMatch = deposito.match(/^[A-Z](\d+)/);
+                            let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
+                            ruta = 'Ruta ' + ruta;
+                            
+                            if (!rutasMaestras[ruta]) {
+                                rutasMaestras[ruta] = [];
+                            }
+                            
+                            rutasMaestras[ruta].push({
+                                deposito,
+                                upc,
+                                descripcion,
+                                cantidad,
+                                recolectado: 0,
+                                completado: false
+                            });
+                            
+                            totalUnidadesGlobal += cantidad;
+                        }
+                    }
+                }
+                
+                if (Object.keys(rutasMaestras).length === 0) {
+                    throw new Error('No se encontraron datos válidos en el archivo');
+                }
+                
+                mostrarInfoRutas(fuente);
+                mostrarOpcionesRutas();
+                
+            } catch (error) {
+                throw new Error('Error procesando CSV: ' + error.message);
+            }
+        }
+
+        function mostrarInfoRutas(fuente) {
+            const totalRutas = Object.keys(rutasMaestras).length;
+            
+            document.getElementById('fileInfo').innerHTML = 
+                `<strong>✅ Fuente: ${fuente}</strong><br>
+                 <strong>📊 Rutas disponibles: ${totalRutas}</strong><br>
+                 <strong>📦 Total Unidades: ${totalUnidadesGlobal}</strong>`;
+        }
+
+        function mostrarOpcionesRutas() {
+            const container = document.getElementById('rutasContainer');
+            const selector = document.getElementById('routeSelector');
+            
+            selector.innerHTML = '';
+            
+            Object.keys(rutasMaestras).forEach(ruta => {
+                const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
+                const button = document.createElement('button');
+                button.className = 'route-button success';
+                button.textContent = `📍 ${ruta} (${totalUnidadesRuta})`;
+                button.onclick = () => seleccionarRuta(ruta);
+                selector.appendChild(button);
+            });
+            
+            container.classList.remove('hidden');
+        }
+
+        function seleccionarRuta(ruta) {
+            const usuario = prompt("👤 Ingresa tu nombre:", "Operador");
+            if (!usuario) return;
+            
+            rutaActual = ruta;
+            usuarioActual = usuario;
+            
+            // Agrupar por colas (A, B, CDE, F)
+            agruparPorColas(ruta);
+            
+            document.getElementById('userSection').classList.add('hidden');
+            document.getElementById('colaSection').classList.remove('hidden');
+            
+            document.getElementById('recolectorNombre').textContent = usuario;
+            document.getElementById('rutaActual').textContent = ruta;
+            
+            const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
+            document.getElementById('totalUnidadesCola').textContent = totalUnidadesRuta;
+            
+            mostrarOpcionesColas();
+        }
+
+        function agruparPorColas(ruta) {
+            itemsPorCola = {};
+            colasDisponibles = [];
+            
+            // Inicializar las colas
+            itemsPorCola['A'] = [];
+            itemsPorCola['B'] = [];
+            itemsPorCola['CDE'] = [];
+            itemsPorCola['F'] = [];
+            
+            rutasMaestras[ruta].forEach(item => {
+                const partes = item.deposito.split('-');
+                if (partes.length >= 3) {
+                    const nivel = partes[2].charAt(0);
+                    
+                    if (nivel === 'A') {
+                        itemsPorCola['A'].push(item);
+                    } else if (nivel === 'B') {
+                        itemsPorCola['B'].push(item);
+                    } else if (['C', 'D', 'E'].includes(nivel)) {
+                        itemsPorCola['CDE'].push(item);
+                    } else if (nivel === 'F') {
+                        itemsPorCola['F'].push(item);
+                    }
+                }
+            });
+            
+            // Ordenar cada cola según la nomenclatura
+            Object.keys(itemsPorCola).forEach(cola => {
+                itemsPorCola[cola].sort((a, b) => {
+                    return a.deposito.localeCompare(b.deposito);
+                });
+            });
+            
+            // Definir colas disponibles (solo las que tienen elementos)
+            colasDisponibles = Object.keys(itemsPorCola).filter(cola => itemsPorCola[cola].length > 0);
+            
+            // Si solo hay una cola, mostrar directamente el picking
+            if (colasDisponibles.length === 1) {
+                comenzarPicking(colasDisponibles[0]);
+            }
+        }
+
+        function mostrarOpcionesColas() {
+            const selector = document.getElementById('colaSelector');
+            selector.innerHTML = '';
+            
+            if (colasDisponibles.length === 0) {
+                selector.innerHTML = '<p>No hay colas disponibles para esta ruta</p>';
+                return;
+            }
+            
+            colasDisponibles.forEach(cola => {
+                const button = document.createElement('button');
+                
+                // Verificar el estado de la cola
+                const estadoCola = estadoGlobal.rutas[rutaActual] && estadoGlobal.rutas[rutaActual][cola] 
+                    ? estadoGlobal.rutas[rutaActual][cola].estado 
+                    : 'pendiente';
+                
+                const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
+                
+                if (estadoCola === 'completada') {
+                    button.className = 'cola-button cola-completed';
+                    button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
+                    button.disabled = true;
+                } else if (estadoCola === 'en-progreso') {
+                    button.className = 'cola-button cola-in-progress';
+                    button.textContent = `🔄 COLA: ${cola} (EN PROGRESO)`;
+                } else {
+                    button.className = 'cola-button cola-pending';
+                    button.textContent = `COLA: ${cola} (${totalUnidadesCola})`;
+                }
+                
+                button.onclick = () => comenzarPicking(cola);
+                selector.appendChild(button);
+            });
+        }
+
+        async function comenzarPicking(cola) {
+            colaActual = cola;
+            itemsCompletados = [];
+            itemsNoEncontrados = [];
+            
+            // Cargar progreso guardado si existe
+            const progresoGuardado = cargarProgresoCola(rutaActual, colaActual);
+            if (progresoGuardado) {
+                itemsPorCola[colaActual] = progresoGuardado;
+            } else {
+                // Cargar registros desde Sheets para verificar progreso
+                await verificarProgresoDesdeRegistros();
+            }
+            
+            // Encontrar el primer depósito no completado
+            depositoActualIndex = itemsPorCola[colaActual].findIndex(item => !item.completado);
+            
+            if (depositoActualIndex === -1) {
+                await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
+                mostrarMensajeModal('Cola Completada', 'Esta cola ya ha sido completada anteriormente.');
+                if (colasDisponibles.length === 1) {
+                    volverSeleccionRuta();
+                } else {
+                    mostrarOpcionesColas();
+                }
+                return;
+            }
+            
+            await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
+            
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.remove('hidden');
+            
+            document.getElementById('pickingRecolector').textContent = usuarioActual;
+            document.getElementById('pickingRuta').textContent = rutaActual;
+            document.getElementById('pickingCola').textContent = colaActual;
+            
+            mostrarDepositoActual();
+            actualizarEstadisticasPicking();
+            actualizarListaItems();
+            
+            document.getElementById('upcInput').focus();
+        }
+
+        async function verificarProgresoDesdeRegistros() {
+            try {
+                const registrosText = await cargarRegistrosDesdeSheets();
+                if (!registrosText) return;
+                
+                const lineas = registrosText.split('\n').filter(linea => linea.trim());
+                if (lineas.length < 2) return;
+                
+                const separador = lineas[0].includes('\t') ? '\t' : ',';
+                
+                for (let i = 1; i < lineas.length; i++) {
+                    const partes = lineas[i].split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                    if (partes.length >= 8) {
+                        const registroRuta = partes[1];
+                        const registroCola = partes[2];
+                        const registroDeposito = partes[3];
+                        const registroUPC = partes[4];
+                        const registroAccion = partes[8];
+                        
+                        if (registroRuta === rutaActual && registroCola === colaActual) {
+                            const itemIndex = itemsPorCola[colaActual].findIndex(item => 
+                                item.deposito === registroDeposito && item.upc === registroUPC
+                            );
+                            
+                            if (itemIndex !== -1) {
+                                if (registroAccion === 'escaneado') {
+                                    itemsPorCola[colaActual][itemIndex].recolectado++;
+                                    if (itemsPorCola[colaActual][itemIndex].recolectado >= itemsPorCola[colaActual][itemIndex].cantidad) {
+                                        itemsPorCola[colaActual][itemIndex].completado = true;
+                                    }
+                                } else if (registroAccion === 'no_encontrado') {
+                                    itemsPorCola[colaActual][itemIndex].completado = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                guardarProgresoCola(rutaActual, colaActual, itemsPorCola[colaActual]);
+                
+            } catch (error) {
+                console.error('Error verificando progreso:', error);
+            }
+        }
+
+        function mostrarDepositoActual() {
+            if (depositoActualIndex < itemsPorCola[colaActual].length) {
+                const item = itemsPorCola[colaActual][depositoActualIndex];
+                
+                document.getElementById('pickingDeposito').textContent = item.deposito;
+                document.getElementById('pickingDescripcion').textContent = item.descripcion;
+                document.getElementById('pickingCantidad').textContent = item.cantidad;
+                document.getElementById('pickingRecolectado').textContent = item.recolectado;
+                document.getElementById('pickingPendiente').textContent = item.cantidad - item.recolectado;
+            } else {
+                actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
+                mostrarMensajeModal('Fin de la Ruta', '¡Has completado todos los depósitos de esta cola!');
+                finalizarRecoleccion();
+            }
+            
+            actualizarListaItems();
+        }
+
+        function actualizarListaItems() {
+            const container = document.getElementById('itemList');
+            container.innerHTML = '';
+            
+            if (!itemsPorCola[colaActual]) return;
+            
+            itemsPorCola[colaActual].forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `item ${item.completado ? 'item-completed' : ''} ${index === depositoActualIndex ? 'item-current' : ''}`;
+                div.innerHTML = `
+                    <div>
+                        <strong>${index + 1}. ${item.deposito}</strong><br>
+                        ${item.descripcion}
+                    </div>
+                    <div style="font-size: 16px;">
+                        ${item.completado ? '✅' : (index === depositoActualIndex ? '👉' : '⏳')}
+                    </div>
+                `;
+                div.onclick = () => {
+                    if (index !== depositoActualIndex) {
+                        depositoActualIndex = index;
+                        mostrarDepositoActual();
+                        document.getElementById('upcInput').focus();
+                    }
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function anteriorDeposito() {
+            if (depositoActualIndex > 0) {
+                depositoActualIndex--;
+                mostrarDepositoActual();
+                document.getElementById('upcInput').value = '';
+                document.getElementById('upcInput').focus();
+            }
+        }
+
+        // ================= VALIDACIÓN DE ESCANEO =================
+        document.getElementById('upcInput').addEventListener('input', function(e) {
+            const upc = e.target.value.trim();
+            
+            if (upc.length > 0) {
+                validarUPC(upc);
+            }
+        });
+
+        async function validarUPC(upc) {
+            const item = itemsPorCola[colaActual][depositoActualIndex];
+            
+            if (item.upc !== upc) {
+                mostrarMensajeModal('Código Incorrecto', 'El código UPC escaneado no coincide con el producto actual.');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            if (item.recolectado >= item.cantidad) {
+                mostrarMensajeModal('Cantidad Completa', 'Ya se ha recolectado la cantidad requerida para este producto.');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // UPC correcto, incrementar contador
+            item.recolectado++;
+            
+            // Actualizar interfaz
+            document.getElementById('pickingRecolectado').textContent = item.recolectado;
+            document.getElementById('pickingPendiente').textContent = item.cantidad - item.recolectado;
+            
+            // Guardar registro en Sheets
+            const registro = {
+                usuario: usuarioActual,
+                ruta: rutaActual,
+                cola: colaActual,
+                deposito: item.deposito,
+                upc: item.upc,
+                descripcion: item.descripcion,
+                cantidad: item.cantidad,
+                recolectado: item.recolectado,
+                accion: 'escaneado',
+                timestamp: new Date().toISOString()
+            };
+            
+            await guardarRegistroEnSheets(registro);
+            guardarRegistroLocal(registro);
+            
+            // Verificar si se completó la cantidad
+            if (item.recolectado >= item.cantidad) {
+                item.completado = true;
+                itemsCompletados.push(item);
+                
+                guardarProgresoCola(rutaActual, colaActual, itemsPorCola[colaActual]);
+                
+                setTimeout(() => {
+                    depositoActualIndex++;
+                    document.getElementById('upcInput').value = '';
+                    mostrarDepositoActual();
+                    actualizarEstadisticasPicking();
+                    actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
+                }, 500);
+            }
+            
+            document.getElementById('upcInput').value = '';
+        }
+
+        async function marcarComoNoEncontrado() {
+            const item = itemsPorCola[colaActual][depositoActualIndex];
+            
+            itemsNoEncontrados.push(item);
+            
+            const registro = {
+                usuario: usuarioActual,
+                ruta: rutaActual,
+                cola: colaActual,
+                deposito: item.deposito,
+                upc: item.upc,
+                descripcion: item.descripcion,
+                cantidad: item.cantidad,
+                recolectado: item.recolectado,
+                accion: 'no_encontrado',
+                timestamp: new Date().toISOString()
+            };
+            
+            await guardarRegistroEnSheets(registro);
+            guardarRegistroLocal(registro);
+            
+            // Marcar como completado para no volver a mostrarlo
+            item.completado = true;
+            
+            guardarProgresoCola(rutaActual, colaActual, itemsPorCola[colaActual]);
+            
+            mostrarMensaje(`⚠️ ${item.deposito} marcado como no encontrado`, true);
+            
+            depositoActualIndex++;
+            mostrarDepositoActual();
+            actualizarEstadisticasPicking();
+            actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
+            document.getElementById('upcInput').focus();
+        }
+
+        function actualizarEstadisticasPicking() {
+            const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
+            const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.recolectado, 0);
+            const pendientesUnidades = totalUnidades - completadasUnidades;
+            
+            document.getElementById('totalUnidadesPicking').textContent = totalUnidades;
+            document.getElementById('completedUnidadesPicking').textContent = completadasUnidades;
+            document.getElementById('pendingUnidadesPicking').textContent = pendientesUnidades;
+        }
+
+        // ================= GUARDAR REGISTROS =================
+        function guardarRegistroLocal(registro) {
+            try {
+                const registros = JSON.parse(localStorage.getItem('registrosRecoleccion') || '[]');
+                registros.push(registro);
+                localStorage.setItem('registrosRecoleccion', JSON.stringify(registros));
+            } catch (error) {
+                console.error('Error guardando registro local:', error);
+            }
+        }
+
+        async function finalizarRecoleccion() {
+            const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.recolectado, 0);
+            const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
+            
+            let mensaje = `¿Finalizar recolección de la cola ${colaActual}?\n\n✅ Unidades recolectadas: ${completadasUnidades}/${totalUnidades}`;
+            if (itemsNoEncontrados.length > 0) {
+                mensaje += `\n❌ No encontrados: ${itemsNoEncontrados.length}`;
+            }
+            
+            if (confirm(mensaje)) {
+                if (completadasUnidades < totalUnidades) {
+                    await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
+                } else {
+                    await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
+                }
+                
+                mostrarMensaje(`📊 Recolección finalizada: ${completadasUnidades}/${totalUnidades} unidades`, true);
+                
+                document.getElementById('pickingSection').classList.add('hidden');
+                
+                if (colasDisponibles.length === 1) {
+                    document.getElementById('userSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('colaSection').classList.remove('hidden');
+                    mostrarOpcionesColas();
+                }
+                
+                const todasColasCompletadas = colasDisponibles.every(cola => {
+                    return estadoGlobal.rutas[rutaActual] && 
+                           estadoGlobal.rutas[rutaActual][cola] && 
+                           estadoGlobal.rutas[rutaActual][cola].estado === 'completada';
+                });
+                
+                if (todasColasCompletadas) {
+                    mostrarMensajeModal('¡Felicidades!', 'Has completado todas las colas de esta ruta.');
+                    volverInicio();
+                }
+            }
+        }
+
+        // ================= REPORTES (SOLO ADMINISTRADOR) =================
+        async function descargarReporteCompleto() {
+            try {
+                const fechaInicio = document.getElementById('fechaInicio').value;
+                const fechaFin = document.getElementById('fechaFin').value;
+                
+                let registros = JSON.parse(localStorage.getItem('registrosRecoleccion') || '[]');
+                
+                // Filtrar por fecha si se especificó
+                if (fechaInicio && fechaFin) {
+                    const inicio = new Date(fechaInicio);
+                    const fin = new Date(fechaFin);
+                    fin.setHours(23, 59, 59, 999); // Incluir todo el día final
+                    
+                    registros = registros.filter(reg => {
+                        const fechaReg = new Date(reg.timestamp);
+                        return fechaReg >= inicio && fechaReg <= fin;
+                    });
+                }
+                
+                if (registros.length === 0) {
+                    mostrarMensaje('No hay registros para descargar en el rango seleccionado', false);
+                    return;
+                }
+                
+                let csvContent = "RECOLECTOR,RUTA,COLA,DEPOSITO,CODIGO_UPC,DESCRIPCION,CANTIDAD,RECOLECTADO,ACCION,FECHA,HORA\n";
+                
+                registros.forEach(reg => {
+                    const fechaHora = new Date(reg.timestamp);
+                    const fecha = fechaHora.toLocaleDateString();
+                    const hora = fechaHora.toLocaleTimeString();
+                    
+                    csvContent += `"${reg.usuario}","${reg.ruta}","${reg.cola}","${reg.deposito}","${reg.upc}","${reg.descripcion}",${reg.cantidad},${reg.recolectado},"${reg.accion}","${fecha}","${hora}"\n`;
+                });
+                
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reporte_${fechaInicio || 'completo'}_${fechaFin || ''}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                mostrarMensaje(`📊 Reporte descargado (${registros.length} registros)`, true);
+                
+            } catch (error) {
+                console.error('Error generando reporte:', error);
+                mostrarMensaje('❌ Error al generar el reporte', false);
+            }
+        }
+
+        // ================= TABLERO DE CONTROL =================
+        function actualizarTablero() {
+            const tableBody = document.getElementById('dashboardTableBody');
+            tableBody.innerHTML = '';
+            
+            const rutas = Object.keys(estadoGlobal.rutas);
+            
+            if (rutas.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6">No hay datos de rutas disponibles</td></tr>';
+                return;
+            }
+            
+            rutas.forEach(ruta => {
+                const colas = Object.keys(estadoGlobal.rutas[ruta]);
+                
+                colas.forEach(cola => {
+                    const estadoCola = estadoGlobal.rutas[ruta][cola];
+                    const row = document.createElement('tr');
+                    
+                    let estadoClass = '';
+                    let estadoText = '';
+                    
+                    switch(estadoCola.estado) {
+                        case 'completada':
+                            estadoClass = 'status-completed';
+                            estadoText = 'COMPLETADA';
+                            break;
+                        case 'en-progreso':
+                            estadoClass = 'status-in-progress';
+                            estadoText = 'EN PROGRESO';
+                            break;
+                        default:
+                            estadoClass = 'status-pending';
+                            estadoText = 'PENDIENTE';
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${ruta}</td>
+                        <td>${cola}</td>
+                        <td class="${estadoClass}">${estadoText}</td>
+                        <td>${estadoCola.recolector || '-'}</td>
+                        <td>${estadoCola.progreso || 0}/${estadoCola.total || 0}</td>
+                        <td>${new Date(estadoCola.ultimaActualizacion).toLocaleString()}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            });
+        }
+
+        function resetearProgreso() {
+            if (confirm('¿Estás seguro de que deseas resetear todo el progreso? Esta acción no se puede deshacer.')) {
+                estadoGlobal = {
+                    rutas: {},
+                    ultimaActualizacion: new Date().toISOString()
+                };
+                guardarEstadoGlobal();
+                
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('progreso_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                localStorage.removeItem('registrosRecoleccion');
+                
+                mostrarMensaje('✅ Progreso reseteado correctamente', true);
+                actualizarTablero();
+            }
+        }
+
+        // ================= ACCESO ADMINISTRADOR =================
+        function solicitarAccesoAdmin() {
+            document.getElementById('adminModal').style.display = 'flex';
+            document.getElementById('adminPassword').focus();
+        }
+
+        function verificarContrasena() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === ADMIN_PASSWORD) {
+                mostrarPanelAdmin();
+                cerrarAdminModal();
+                mostrarMensaje('✅ Acceso concedido al modo administrador', true);
+            } else {
+                mostrarMensaje('❌ Contraseña incorrecta', false);
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+
+        function cerrarAdminModal() {
+            document.getElementById('adminModal').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+        }
+
+        // ================= MODAL PARA MENSAJES =================
+        function mostrarMensajeModal(titulo, mensaje) {
+            document.getElementById('modalTitle').textContent = titulo;
+            document.getElementById('modalMessage').textContent = mensaje;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // ================= NAVEGACIÓN =================
+        function mostrarPanelAdmin() {
+            document.getElementById('userSection').classList.add('hidden');
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('adminSection').classList.remove('hidden');
+            
+            actualizarTablero();
+        }
+
+        function mostrarPanelUsuario() {
+            document.getElementById('adminSection').classList.add('hidden');
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+        }
+
+        function volverSeleccionRuta() {
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+        }
+
+        function volverInicio() {
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+            document.getElementById('upcInput').value = '';
+        }
+
+        // ================= UTILIDADES =================
+        function mostrarMensaje(mensaje, esExito) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+            statusDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
