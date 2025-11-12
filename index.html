@@ -542,9 +542,8 @@
         const ADMIN_PASSWORD = "E123456";
 
         // ================= URLs DE APPS SCRIPT =================
-        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbwxQSYOHPIB-6lAeWX_yui4yZKXOBa4CVZIViv6msx44Jo0oBb2YaSLb5MVU4ecs9u_/exec';
-        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbyUojT4gt3hRX-hr8kbbhwjX6U37ZT-TWJgluUSt9Ocsy2rEpk6oIP6d568DFbS7Hh5lQ/exec';
-        const APPS_SCRIPT_LECTURA_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbw3yXNJsLZULLQa3Rp51FOEmRnUUtpnXXE8tp6KFSvoDrRGIDsVDcGfIRxrZMazK8k-vA/exec';
+        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbw-GdcXVcaxh4NofBUUkWk1fHVvR09LkESTvvtr6vmGLUs9Qgywel0TG2b6NoAdS_n6Sw/exec';
+        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbw2GF5ctUuOe3PJUj6tOvUum6ASHvViQWjN2WU_h0xuku8rWFQKu2z44FeeyctRrsfDAg/exec';
 
         // ================= VARIABLES GLOBALES =================
         let rutasMaestras = {};
@@ -586,8 +585,9 @@
         // ================= GESTIÓN DE ESTADO GLOBAL CON GOOGLE SHEETS =================
         async function cargarEstadoGlobalDesdeSheets() {
             try {
-                const response = await fetch(APPS_SCRIPT_LECTURA_ESTADO_URL);
-                if (!response.ok) throw new Error('Error cargando estado');
+                // Usamos la misma URL de estado para leer (doGet)
+                const response = await fetch(APPS_SCRIPT_ESTADO_URL);
+                if (!response.ok) throw new Error('Error cargando estado desde Sheets');
                 
                 const estadoDesdeSheets = await response.json();
                 if (estadoDesdeSheets && Object.keys(estadoDesdeSheets).length > 0) {
@@ -677,12 +677,16 @@
                     body: JSON.stringify(estadoData)
                 });
 
-                if (!response.ok) throw new Error('Error actualizando estado');
+                const result = await response.json();
+                if (result.result !== 'success') {
+                    throw new Error(result.message || 'Error actualizando estado');
+                }
                 
                 console.log('Estado actualizado en Google Sheets:', estadoData);
                 return true;
             } catch (error) {
                 console.error('Error actualizando estado en Sheets:', error);
+                mostrarMensaje('⚠️ Estado guardado localmente (error en conexión)', true);
                 return false;
             }
         }
@@ -764,13 +768,17 @@
                     body: JSON.stringify(registro)
                 });
 
-                if (!response.ok) throw new Error('Error guardando registro');
+                const result = await response.json();
+                if (result.result !== 'success') {
+                    throw new Error(result.message || 'Error guardando registro');
+                }
                 
                 console.log('Registro guardado en Google Sheets:', registro);
                 return true;
                 
             } catch (error) {
                 console.error('Error guardando registro en Sheets:', error);
+                mostrarMensaje('⚠️ Registro guardado localmente (error en conexión)', true);
                 return false;
             }
         }
