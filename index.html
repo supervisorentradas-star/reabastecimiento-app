@@ -542,8 +542,8 @@
         const ADMIN_PASSWORD = "E123456";
 
         // ================= URLs DE APPS SCRIPT ACTUALIZADAS =================
-        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbxZ8O6Dl1kVhleH1ZlUhSm40IH_7hEHkaUvvdxwZb1SdaYjpXf_8pRZOIfmcSk2ae0brA/exec';
-        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbyqwXodwHwNFuhWBYm1R-iHyEGvCj_ZG0zLpWSYiCL3rh9gn5sjd2XMRooDo2Pir633aQ/exec';
+        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbyKSYZGJAbk-M4ECYLQ-4hES2WQ2wdbYOSYkSbLTlaf6IyfNuERGN9ROG_b7v1CRUnxmg/exec';
+        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbydYx7fMqjFTJZVkvRdSALxDx6rWsjOEz13Xgcwcf1vfHjfTTdNnkbRdifpHB8AaICs/exec';
 
         // ================= VARIABLES GLOBALES =================
         let rutasMaestras = {};
@@ -585,7 +585,8 @@
         // ================= GESTIÓN DE ESTADO GLOBAL CON GOOGLE SHEETS =================
         async function cargarEstadoGlobalDesdeSheets() {
             try {
-                const response = await fetch(APPS_SCRIPT_ESTADO_URL);
+                const url = `${APPS_SCRIPT_ESTADO_URL}?action=leerEstado`;
+                const response = await fetch(url);
                 if (!response.ok) throw new Error('Error cargando estado desde Sheets');
                 
                 const estadoDesdeSheets = await response.json();
@@ -668,13 +669,8 @@
                     ultimaActualizacion: new Date().toISOString()
                 };
 
-                const response = await fetch(APPS_SCRIPT_ESTADO_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(estadoData)
-                });
+                const url = `${APPS_SCRIPT_ESTADO_URL}?action=guardarEstado&data=${encodeURIComponent(JSON.stringify(estadoData))}`;
+                const response = await fetch(url);
 
                 const result = await response.json();
                 if (result.result !== 'success') {
@@ -761,13 +757,8 @@
             try {
                 console.log('Enviando registro a Sheets:', registro);
                 
-                const response = await fetch(APPS_SCRIPT_REGISTROS_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(registro)
-                });
+                const url = `${APPS_SCRIPT_REGISTROS_URL}?action=guardarRegistro&data=${encodeURIComponent(JSON.stringify(registro))}`;
+                const response = await fetch(url);
 
                 const result = await response.json();
                 if (result.result !== 'success') {
