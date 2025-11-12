@@ -146,7 +146,7 @@
             display: flex;
             justify-content: center;
             margin-bottom: 3px;
-            font-size: 13px; /* Tamaño aumentado como SCAN */
+            font-size: 13px;
             text-align: center;
             font-weight: bold;
         }
@@ -458,7 +458,6 @@
             </div>
             
             <div class="deposito-info">
-                <!-- Quitamos las etiquetas "DEPOSITO" y "DESCRIPCION" -->
                 <div class="deposito-row">
                     <span id="pickingDeposito">-</span>
                 </div>
@@ -539,14 +538,13 @@
     <script>
         // ================= CONFIGURACIÓN GOOGLE SHEETS =================
         const SHEET_ID = '1GoickGaR8jgPAorkpnKuno7bOrBxYQt6RMUJcfFqLhY';
-        const SHEET_ID_REGISTROS = '1p5Zji6o71L4Wkk4KthuHVpUKjbsfaq49FgEG99FjPbc';
-        const SHEET_ID_ESTADO = '1DONHbGL5HUaNbD9g77tV55Gd3fO0WuraKvYBdsV43DE';
-        
         const GOOGLE_SHEETS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
-        const GOOGLE_SHEETS_REGISTROS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID_REGISTROS}/gviz/tq?tqx=out:csv`;
-        const GOOGLE_SHEETS_ESTADO_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID_ESTADO}/gviz/tq?tqx=out:csv`;
-        
         const ADMIN_PASSWORD = "E123456";
+
+        // ================= URLs DE APPS SCRIPT =================
+        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbwxQSYOHPIB-6lAeWX_yui4yZKXOBa4CVZIViv6msx44Jo0oBb2YaSLb5MVU4ecs9u_/exec';
+        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbyUojT4gt3hRX-hr8kbbhwjX6U37ZT-TWJgluUSt9Ocsy2rEpk6oIP6d568DFbS7Hh5lQ/exec';
+        const APPS_SCRIPT_LECTURA_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbw3yXNJsLZULLQa3Rp51FOEmRnUUtpnXXE8tp6KFSvoDrRGIDsVDcGfIRxrZMazK8k-vA/exec';
 
         // ================= VARIABLES GLOBALES =================
         let rutasMaestras = {};
@@ -562,7 +560,7 @@
         let totalUnidadesGlobal = 0;
 
         // ================= INICIALIZACIÓN =================
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
             // Verificar conexión automáticamente al cargar
             verificarConexion();
             
@@ -570,8 +568,8 @@
             document.getElementById('modal').style.display = 'none';
             document.getElementById('adminModal').style.display = 'none';
             
-            // Cargar estado global desde localStorage
-            cargarEstadoGlobal();
+            // Cargar estado global desde Google Sheets
+            await cargarEstadoGlobalDesdeSheets();
             
             // Mostrar panel de usuario por defecto
             mostrarPanelUsuario();
@@ -585,8 +583,27 @@
             document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
         });
 
-        // ================= GESTIÓN DE ESTADO GLOBAL =================
-        function cargarEstadoGlobal() {
+        // ================= GESTIÓN DE ESTADO GLOBAL CON GOOGLE SHEETS =================
+        async function cargarEstadoGlobalDesdeSheets() {
+            try {
+                const response = await fetch(APPS_SCRIPT_LECTURA_ESTADO_URL);
+                if (!response.ok) throw new Error('Error cargando estado');
+                
+                const estadoDesdeSheets = await response.json();
+                if (estadoDesdeSheets && Object.keys(estadoDesdeSheets).length > 0) {
+                    estadoGlobal = estadoDesdeSheets;
+                    console.log('Estado cargado desde Google Sheets:', estadoGlobal);
+                } else {
+                    // Si no hay datos en Sheets, cargar desde localStorage
+                    cargarEstadoGlobalDesdeLocalStorage();
+                }
+            } catch (error) {
+                console.error('Error cargando estado desde Sheets:', error);
+                cargarEstadoGlobalDesdeLocalStorage();
+            }
+        }
+
+        function cargarEstadoGlobalDesdeLocalStorage() {
             const estadoGuardado = localStorage.getItem('estadoGlobalPicking');
             if (estadoGuardado) {
                 estadoGlobal = JSON.parse(estadoGuardado);
@@ -598,7 +615,7 @@
             }
         }
 
-        function guardarEstadoGlobal() {
+        function guardarEstadoGlobalEnLocalStorage() {
             estadoGlobal.ultimaActualizacion = new Date().toISOString();
             localStorage.setItem('estadoGlobalPicking', JSON.stringify(estadoGlobal));
         }
@@ -633,19 +650,40 @@
                 estadoGlobal.rutas[ruta][cola].total = totalUnidades;
             }
             
-            guardarEstadoGlobal();
+            // Guardar en localStorage como respaldo
+            guardarEstadoGlobalEnLocalStorage();
             
-            // Actualizar también en Google Sheets
+            // Guardar en Google Sheets
             await actualizarEstadoEnSheets(ruta, cola, estado, recolector);
         }
 
         async function actualizarEstadoEnSheets(ruta, cola, estado, recolector) {
             try {
-                // Aquí iría el código para actualizar la hoja de estado
-                // Por ahora solo guardamos en localStorage
-                console.log('Actualizando estado en Sheets:', {ruta, cola, estado, recolector});
+                const estadoData = {
+                    ruta: ruta,
+                    cola: cola,
+                    estado: estado,
+                    recolector: recolector || '',
+                    progreso: estadoGlobal.rutas[ruta][cola].progreso,
+                    total: estadoGlobal.rutas[ruta][cola].total,
+                    ultimaActualizacion: new Date().toISOString()
+                };
+
+                const response = await fetch(APPS_SCRIPT_ESTADO_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(estadoData)
+                });
+
+                if (!response.ok) throw new Error('Error actualizando estado');
+                
+                console.log('Estado actualizado en Google Sheets:', estadoData);
+                return true;
             } catch (error) {
                 console.error('Error actualizando estado en Sheets:', error);
+                return false;
             }
         }
 
@@ -718,31 +756,22 @@
 
         async function guardarRegistroEnSheets(registro) {
             try {
-                // Aquí implementarías la lógica para guardar en Google Sheets
-                // Por ahora solo guardamos en localStorage
-                const registros = JSON.parse(localStorage.getItem('registrosRecoleccion') || '[]');
-                registros.push(registro);
-                localStorage.setItem('registrosRecoleccion', JSON.stringify(registros));
+                const response = await fetch(APPS_SCRIPT_REGISTROS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(registro)
+                });
+
+                if (!response.ok) throw new Error('Error guardando registro');
                 
-                console.log('Registro guardado:', registro);
+                console.log('Registro guardado en Google Sheets:', registro);
                 return true;
                 
             } catch (error) {
                 console.error('Error guardando registro en Sheets:', error);
                 return false;
-            }
-        }
-
-        async function cargarRegistrosDesdeSheets() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_REGISTROS_URL);
-                if (!response.ok) throw new Error('Error cargando registros');
-                
-                const csvText = await response.text();
-                return csvText;
-            } catch (error) {
-                console.error('Error cargando registros:', error);
-                return null;
             }
         }
 
@@ -963,14 +992,17 @@
             colasDisponibles.forEach(cola => {
                 const button = document.createElement('button');
                 
-                // Verificar el estado de la cola
+                // Verificar el estado de la cola desde Google Sheets
                 const estadoCola = estadoGlobal.rutas[rutaActual] && estadoGlobal.rutas[rutaActual][cola] 
                     ? estadoGlobal.rutas[rutaActual][cola].estado 
                     : 'pendiente';
                 
                 const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
                 
-                if (estadoCola === 'completada') {
+                // Verificar si la cola está realmente completada
+                const colaRealmenteCompletada = verificarColaCompletada(cola);
+                
+                if (colaRealmenteCompletada || estadoCola === 'completada') {
                     button.className = 'cola-button cola-completed';
                     button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
                     button.disabled = true;
@@ -987,6 +1019,15 @@
             });
         }
 
+        function verificarColaCompletada(cola) {
+            if (!itemsPorCola[cola]) return false;
+            
+            const totalUnidades = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
+            const unidadesRecolectadas = itemsPorCola[cola].reduce((sum, item) => sum + item.recolectado, 0);
+            
+            return unidadesRecolectadas >= totalUnidades;
+        }
+
         async function comenzarPicking(cola) {
             colaActual = cola;
             itemsCompletados = [];
@@ -996,15 +1037,18 @@
             const progresoGuardado = cargarProgresoCola(rutaActual, colaActual);
             if (progresoGuardado) {
                 itemsPorCola[colaActual] = progresoGuardado;
-            } else {
-                // Cargar registros desde Sheets para verificar progreso
-                await verificarProgresoDesdeRegistros();
             }
+            
+            // Verificar progreso desde Google Sheets
+            await verificarProgresoDesdeRegistros();
             
             // Encontrar el primer depósito no completado
             depositoActualIndex = itemsPorCola[colaActual].findIndex(item => !item.completado);
             
-            if (depositoActualIndex === -1) {
+            // Verificar si la cola ya está completada
+            const colaCompletada = verificarColaCompletada(colaActual);
+            
+            if (depositoActualIndex === -1 || colaCompletada) {
                 await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
                 mostrarMensajeModal('Cola Completada', 'Esta cola ya ha sido completada anteriormente.');
                 if (colasDisponibles.length === 1) {
@@ -1033,43 +1077,12 @@
 
         async function verificarProgresoDesdeRegistros() {
             try {
-                const registrosText = await cargarRegistrosDesdeSheets();
-                if (!registrosText) return;
+                // Esta función verificaría los registros en Google Sheets para cargar el progreso
+                // Por ahora usamos localStorage como respaldo
+                console.log('Verificando progreso desde registros...');
                 
-                const lineas = registrosText.split('\n').filter(linea => linea.trim());
-                if (lineas.length < 2) return;
-                
-                const separador = lineas[0].includes('\t') ? '\t' : ',';
-                
-                for (let i = 1; i < lineas.length; i++) {
-                    const partes = lineas[i].split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
-                    if (partes.length >= 8) {
-                        const registroRuta = partes[1];
-                        const registroCola = partes[2];
-                        const registroDeposito = partes[3];
-                        const registroUPC = partes[4];
-                        const registroAccion = partes[8];
-                        
-                        if (registroRuta === rutaActual && registroCola === colaActual) {
-                            const itemIndex = itemsPorCola[colaActual].findIndex(item => 
-                                item.deposito === registroDeposito && item.upc === registroUPC
-                            );
-                            
-                            if (itemIndex !== -1) {
-                                if (registroAccion === 'escaneado') {
-                                    itemsPorCola[colaActual][itemIndex].recolectado++;
-                                    if (itemsPorCola[colaActual][itemIndex].recolectado >= itemsPorCola[colaActual][itemIndex].cantidad) {
-                                        itemsPorCola[colaActual][itemIndex].completado = true;
-                                    }
-                                } else if (registroAccion === 'no_encontrado') {
-                                    itemsPorCola[colaActual][itemIndex].completado = true;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                guardarProgresoCola(rutaActual, colaActual, itemsPorCola[colaActual]);
+                // En una implementación futura, aquí se cargarían los registros desde Sheets
+                // para actualizar itemsPorCola[colaActual] con los recolectados reales
                 
             } catch (error) {
                 console.error('Error verificando progreso:', error);
@@ -1163,7 +1176,8 @@
             document.getElementById('pickingRecolectado').textContent = item.recolectado;
             document.getElementById('pickingPendiente').textContent = item.cantidad - item.recolectado;
             
-            // Guardar registro en Sheets
+            // Guardar registro en Google Sheets
+            const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
                 ruta: rutaActual,
@@ -1174,7 +1188,8 @@
                 cantidad: item.cantidad,
                 recolectado: item.recolectado,
                 accion: 'escaneado',
-                timestamp: new Date().toISOString()
+                fecha: fechaHora.toLocaleDateString(),
+                hora: fechaHora.toLocaleTimeString()
             };
             
             await guardarRegistroEnSheets(registro);
@@ -1204,6 +1219,8 @@
             
             itemsNoEncontrados.push(item);
             
+            // Guardar registro en Google Sheets
+            const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
                 ruta: rutaActual,
@@ -1214,7 +1231,8 @@
                 cantidad: item.cantidad,
                 recolectado: item.recolectado,
                 accion: 'no_encontrado',
-                timestamp: new Date().toISOString()
+                fecha: fechaHora.toLocaleDateString(),
+                hora: fechaHora.toLocaleTimeString()
             };
             
             await guardarRegistroEnSheets(registro);
@@ -1265,10 +1283,13 @@
             }
             
             if (confirm(mensaje)) {
-                if (completadasUnidades < totalUnidades) {
-                    await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
-                } else {
+                // Verificar si realmente se completó la cola
+                const colaCompletada = completadasUnidades >= totalUnidades;
+                
+                if (colaCompletada) {
                     await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
+                } else {
+                    await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
                 }
                 
                 mostrarMensaje(`📊 Recolección finalizada: ${completadasUnidades}/${totalUnidades} unidades`, true);
@@ -1282,10 +1303,10 @@
                     mostrarOpcionesColas();
                 }
                 
+                // Verificar si todas las colas están completadas
                 const todasColasCompletadas = colasDisponibles.every(cola => {
-                    return estadoGlobal.rutas[rutaActual] && 
-                           estadoGlobal.rutas[rutaActual][cola] && 
-                           estadoGlobal.rutas[rutaActual][cola].estado === 'completada';
+                    const estado = estadoGlobal.rutas[rutaActual] && estadoGlobal.rutas[rutaActual][cola];
+                    return estado && estado.estado === 'completada';
                 });
                 
                 if (todasColasCompletadas) {
@@ -1310,7 +1331,7 @@
                     fin.setHours(23, 59, 59, 999); // Incluir todo el día final
                     
                     registros = registros.filter(reg => {
-                        const fechaReg = new Date(reg.timestamp);
+                        const fechaReg = new Date(reg.timestamp || new Date(reg.fecha + ' ' + reg.hora));
                         return fechaReg >= inicio && fechaReg <= fin;
                     });
                 }
@@ -1323,9 +1344,8 @@
                 let csvContent = "RECOLECTOR,RUTA,COLA,DEPOSITO,CODIGO_UPC,DESCRIPCION,CANTIDAD,RECOLECTADO,ACCION,FECHA,HORA\n";
                 
                 registros.forEach(reg => {
-                    const fechaHora = new Date(reg.timestamp);
-                    const fecha = fechaHora.toLocaleDateString();
-                    const hora = fechaHora.toLocaleTimeString();
+                    const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
+                    const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
                     
                     csvContent += `"${reg.usuario}","${reg.ruta}","${reg.cola}","${reg.deposito}","${reg.upc}","${reg.descripcion}",${reg.cantidad},${reg.recolectado},"${reg.accion}","${fecha}","${hora}"\n`;
                 });
@@ -1398,13 +1418,13 @@
             });
         }
 
-        function resetearProgreso() {
+        async function resetearProgreso() {
             if (confirm('¿Estás seguro de que deseas resetear todo el progreso? Esta acción no se puede deshacer.')) {
                 estadoGlobal = {
                     rutas: {},
                     ultimaActualizacion: new Date().toISOString()
                 };
-                guardarEstadoGlobal();
+                guardarEstadoGlobalEnLocalStorage();
                 
                 Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('progreso_')) {
@@ -1414,7 +1434,8 @@
                 
                 localStorage.removeItem('registrosRecoleccion');
                 
-                mostrarMensaje('✅ Progreso reseteado correctamente', true);
+                // También resetear en Google Sheets (esto requeriría un script adicional)
+                mostrarMensaje('✅ Progreso reseteado correctamente (local)', true);
                 actualizarTablero();
             }
         }
