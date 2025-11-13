@@ -339,6 +339,10 @@
             }
         }
     </style>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="container">
@@ -347,7 +351,7 @@
             <h1>PICKING ALM</h1>
             <div class="connection-status">
                 <div id="connectionIndicator" class="connection-indicator checking"></div>
-                <span id="estadoConexion" style="font-size: 11px;">Conectado</span>
+                <span id="estadoConexion" style="font-size: 11px;">Conectando...</span>
                 <button onclick="verificarConexion()" class="small warning" style="width: auto; padding: 3px 6px;">Conexión</button>
             </div>
         </div>
@@ -403,6 +407,11 @@
             <h2>Modo Recolección</h2>
             <button onclick="cargarRutasDesdeSheets()" class="success">🔄 Cargar Rutas</button>
             <button onclick="solicitarAccesoAdmin()" class="warning">👨‍💼 Modo Admin</button>
+            
+            <!-- === NUEVO BOTÓN AGREGADO AQUÍ === -->
+            <button onclick="irAModuloSeparacion()" class="success">📋 Módulo Separación</button>
+            <!-- ================================= -->
+            
             <div class="picking-info" id="fileInfo">
                 Presiona "Cargar Rutas" para comenzar...
             </div>
@@ -536,14 +545,25 @@
     </div>
 
     <script>
+        // ================= CONFIGURACIÓN FIREBASE =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // ================= INICIALIZAR FIREBASE =================
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         // ================= CONFIGURACIÓN GOOGLE SHEETS =================
         const SHEET_ID = '1GoickGaR8jgPAorkpnKuno7bOrBxYQt6RMUJcfFqLhY';
         const GOOGLE_SHEETS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
         const ADMIN_PASSWORD = "E123456";
-
-        // ================= URLs DE APPS SCRIPT ACTUALIZADAS =================
-        const APPS_SCRIPT_REGISTROS_URL = 'https://script.google.com/macros/s/AKfycbyKSYZGJAbk-M4ECYLQ-4hES2WQ2wdbYOSYkSbLTlaf6IyfNuERGN9ROG_b7v1CRUnxmg/exec';
-        const APPS_SCRIPT_ESTADO_URL = 'https://script.google.com/macros/s/AKfycbydYx7fMqjFTJZVkvRdSALxDx6rWsjOEz13Xgcwcf1vfHjfTTdNnkbRdifpHB8AaICs/exec';
 
         // ================= VARIABLES GLOBALES =================
         let rutasMaestras = {};
@@ -560,15 +580,15 @@
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', async function() {
-            // Verificar conexión automáticamente al cargar
-            verificarConexion();
+            // Inicializar Firebase y verificar conexión
+            inicializarFirebase();
             
             // Asegurar que los modales estén ocultos al inicio
             document.getElementById('modal').style.display = 'none';
             document.getElementById('adminModal').style.display = 'none';
             
-            // Cargar estado global desde Google Sheets
-            await cargarEstadoGlobalDesdeSheets();
+            // Cargar estado global desde Firebase
+            await cargarEstadoGlobalDesdeFirebase();
             
             // Mostrar panel de usuario por defecto
             mostrarPanelUsuario();
@@ -582,23 +602,52 @@
             document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
         });
 
-        // ================= GESTIÓN DE ESTADO GLOBAL CON GOOGLE SHEETS =================
-        async function cargarEstadoGlobalDesdeSheets() {
+        // ================= FIREBASE INTEGRATION =================
+        function inicializarFirebase() {
             try {
-                const url = `${APPS_SCRIPT_ESTADO_URL}?action=leerEstado`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Error cargando estado desde Sheets');
-                
-                const estadoDesdeSheets = await response.json();
-                if (estadoDesdeSheets && Object.keys(estadoDesdeSheets).length > 0) {
-                    estadoGlobal = estadoDesdeSheets;
-                    console.log('Estado cargado desde Google Sheets:', estadoGlobal);
-                } else {
-                    // Si no hay datos en Sheets, cargar desde localStorage
-                    cargarEstadoGlobalDesdeLocalStorage();
-                }
+                // Firebase ya está inicializado, solo verificamos conexión
+                verificarConexionFirebase();
             } catch (error) {
-                console.error('Error cargando estado desde Sheets:', error);
+                console.error('Error inicializando Firebase:', error);
+                document.getElementById('estadoConexion').innerHTML = 'Error Firebase';
+                document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
+            }
+        }
+
+        function verificarConexionFirebase() {
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", function(snap) {
+                if (snap.val() === true) {
+                    document.getElementById('estadoConexion').innerHTML = 'Conectado';
+                    document.getElementById('connectionIndicator').className = 'connection-indicator connected';
+                } else {
+                    document.getElementById('estadoConexion').innerHTML = 'Desconectado';
+                    document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
+                }
+            });
+        }
+
+        // ================= GESTIÓN DE ESTADO GLOBAL CON FIREBASE =================
+        async function cargarEstadoGlobalDesdeFirebase() {
+            try {
+                const estadoRef = database.ref('estado');
+                estadoRef.on('value', (snapshot) => {
+                    const estadoDesdeFirebase = snapshot.val();
+                    if (estadoDesdeFirebase && Object.keys(estadoDesdeFirebase).length > 0) {
+                        estadoGlobal = estadoDesdeFirebase;
+                        console.log('Estado cargado desde Firebase:', estadoGlobal);
+                        
+                        // Actualizar el tablero si está visible
+                        if (!document.getElementById('adminSection').classList.contains('hidden')) {
+                            actualizarTablero();
+                        }
+                    } else {
+                        // Si no hay datos en Firebase, cargar desde localStorage
+                        cargarEstadoGlobalDesdeLocalStorage();
+                    }
+                });
+            } catch (error) {
+                console.error('Error cargando estado desde Firebase:', error);
                 cargarEstadoGlobalDesdeLocalStorage();
             }
         }
@@ -653,15 +702,13 @@
             // Guardar en localStorage como respaldo
             guardarEstadoGlobalEnLocalStorage();
             
-            // Guardar en Google Sheets
-            await actualizarEstadoEnSheets(ruta, cola, estado, recolector);
+            // Guardar en Firebase
+            await actualizarEstadoEnFirebase(ruta, cola, estado, recolector);
         }
 
-        async function actualizarEstadoEnSheets(ruta, cola, estado, recolector) {
+        async function actualizarEstadoEnFirebase(ruta, cola, estado, recolector) {
             try {
                 const estadoData = {
-                    ruta: ruta,
-                    cola: cola,
                     estado: estado,
                     recolector: recolector || '',
                     progreso: estadoGlobal.rutas[ruta][cola].progreso,
@@ -669,36 +716,34 @@
                     ultimaActualizacion: new Date().toISOString()
                 };
 
-                const url = `${APPS_SCRIPT_ESTADO_URL}?action=guardarEstado&data=${encodeURIComponent(JSON.stringify(estadoData))}`;
-                const response = await fetch(url);
-
-                const result = await response.json();
-                if (result.result !== 'success') {
-                    throw new Error(result.message || 'Error actualizando estado');
-                }
-                
-                console.log('Estado actualizado en Google Sheets:', estadoData);
+                await database.ref(`estado/${ruta}/${cola}`).set(estadoData);
+                console.log('Estado actualizado en Firebase:', estadoData);
                 return true;
             } catch (error) {
-                console.error('Error actualizando estado en Sheets:', error);
+                console.error('Error actualizando estado en Firebase:', error);
                 mostrarMensaje('⚠️ Estado guardado localmente (error en conexión)', true);
                 return false;
             }
         }
 
-        function cargarProgresoCola(ruta, cola) {
-            const claveProgreso = `progreso_${ruta}_${cola}`;
-            const progresoGuardado = localStorage.getItem(claveProgreso);
-            
-            if (progresoGuardado) {
-                return JSON.parse(progresoGuardado);
+        // ================= GUARDAR REGISTROS EN FIREBASE =================
+        async function guardarRegistroEnFirebase(registro) {
+            try {
+                console.log('Enviando registro a Firebase:', registro);
+                
+                // Generar una clave única para el registro
+                const registroKey = database.ref().child('recolecciones').push().key;
+                
+                await database.ref(`recolecciones/${registroKey}`).set(registro);
+                console.log('Registro guardado en Firebase:', registro);
+                mostrarMensaje('✅ Registro guardado en la nube', true);
+                return true;
+                
+            } catch (error) {
+                console.error('Error guardando registro en Firebase:', error);
+                mostrarMensaje(`⚠️ Registro guardado localmente (error: ${error.message})`, true);
+                return false;
             }
-            return null;
-        }
-
-        function guardarProgresoCola(ruta, cola, items) {
-            const claveProgreso = `progreso_${ruta}_${cola}`;
-            localStorage.setItem(claveProgreso, JSON.stringify(items));
         }
 
         // ================= VERIFICAR CONEXIÓN =================
@@ -750,29 +795,6 @@
             } catch (error) {
                 console.error('Error Google Sheets:', error);
                 throw new Error('No se pudo conectar con Google Sheets: ' + error.message);
-            }
-        }
-
-        async function guardarRegistroEnSheets(registro) {
-            try {
-                console.log('Enviando registro a Sheets:', registro);
-                
-                const url = `${APPS_SCRIPT_REGISTROS_URL}?action=guardarRegistro&data=${encodeURIComponent(JSON.stringify(registro))}`;
-                const response = await fetch(url);
-
-                const result = await response.json();
-                if (result.result !== 'success') {
-                    throw new Error(result.message || 'Error guardando registro');
-                }
-                
-                console.log('Registro guardado en Google Sheets:', registro);
-                mostrarMensaje('✅ Registro guardado en Sheets', true);
-                return true;
-                
-            } catch (error) {
-                console.error('Error guardando registro en Sheets:', error);
-                mostrarMensaje(`⚠️ Registro guardado localmente (error: ${error.message})`, true);
-                return false;
             }
         }
 
@@ -993,9 +1015,9 @@
             colasDisponibles.forEach(cola => {
                 const button = document.createElement('button');
                 
-                // Verificar el estado de la cola desde Google Sheets
-                const estadoCola = estadoGlobal.rutas[rutaActual] && estadoGlobal.rutas[rutaActual][cola] 
-                    ? estadoGlobal.rutas[rutaActual][cola].estado 
+                // Verificar el estado de la cola desde Firebase
+                const estadoCola = estadoGlobal[rutaActual] && estadoGlobal[rutaActual][cola] 
+                    ? estadoGlobal[rutaActual][cola].estado 
                     : 'pendiente';
                 
                 const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
@@ -1040,7 +1062,7 @@
                 itemsPorCola[colaActual] = progresoGuardado;
             }
             
-            // Verificar progreso desde Google Sheets
+            // Verificar progreso desde Firebase
             await verificarProgresoDesdeRegistros();
             
             // Encontrar el primer depósito no completado
@@ -1079,7 +1101,7 @@
         async function verificarProgresoDesdeRegistros() {
             try {
                 console.log('Verificando progreso desde registros...');
-                // En una implementación futura, aquí se cargarían los registros desde Sheets
+                // En una implementación futura, aquí se cargarían los registros desde Firebase
                 // para actualizar itemsPorCola[colaActual] con los recolectados reales
             } catch (error) {
                 console.error('Error verificando progreso:', error);
@@ -1173,7 +1195,7 @@
             document.getElementById('pickingRecolectado').textContent = item.recolectado;
             document.getElementById('pickingPendiente').textContent = item.cantidad - item.recolectado;
             
-            // Guardar registro en Google Sheets
+            // Guardar registro en Firebase
             const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
@@ -1186,10 +1208,11 @@
                 recolectado: item.recolectado,
                 accion: 'escaneado',
                 fecha: fechaHora.toLocaleDateString(),
-                hora: fechaHora.toLocaleTimeString()
+                hora: fechaHora.toLocaleTimeString(),
+                timestamp: fechaHora.getTime()
             };
             
-            await guardarRegistroEnSheets(registro);
+            await guardarRegistroEnFirebase(registro);
             guardarRegistroLocal(registro);
             
             // Verificar si se completó la cantidad
@@ -1216,7 +1239,7 @@
             
             itemsNoEncontrados.push(item);
             
-            // Guardar registro en Google Sheets
+            // Guardar registro en Firebase
             const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
@@ -1229,10 +1252,11 @@
                 recolectado: item.recolectado,
                 accion: 'no_encontrado',
                 fecha: fechaHora.toLocaleDateString(),
-                hora: fechaHora.toLocaleTimeString()
+                hora: fechaHora.toLocaleTimeString(),
+                timestamp: fechaHora.getTime()
             };
             
-            await guardarRegistroEnSheets(registro);
+            await guardarRegistroEnFirebase(registro);
             guardarRegistroLocal(registro);
             
             // Marcar como completado para no volver a mostrarlo
@@ -1270,6 +1294,21 @@
             }
         }
 
+        function cargarProgresoCola(ruta, cola) {
+            const claveProgreso = `progreso_${ruta}_${cola}`;
+            const progresoGuardado = localStorage.getItem(claveProgreso);
+            
+            if (progresoGuardado) {
+                return JSON.parse(progresoGuardado);
+            }
+            return null;
+        }
+
+        function guardarProgresoCola(ruta, cola, items) {
+            const claveProgreso = `progreso_${ruta}_${cola}`;
+            localStorage.setItem(claveProgreso, JSON.stringify(items));
+        }
+
         async function finalizarRecoleccion() {
             const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.recolectado, 0);
             const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
@@ -1302,7 +1341,7 @@
                 
                 // Verificar si todas las colas están completadas
                 const todasColasCompletadas = colasDisponibles.every(cola => {
-                    const estado = estadoGlobal.rutas[rutaActual] && estadoGlobal.rutas[rutaActual][cola];
+                    const estado = estadoGlobal[rutaActual] && estadoGlobal[rutaActual][cola];
                     return estado && estado.estado === 'completada';
                 });
                 
@@ -1370,7 +1409,7 @@
             const tableBody = document.getElementById('dashboardTableBody');
             tableBody.innerHTML = '';
             
-            const rutas = Object.keys(estadoGlobal.rutas);
+            const rutas = Object.keys(estadoGlobal);
             
             if (rutas.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="6">No hay datos de rutas disponibles</td></tr>';
@@ -1378,10 +1417,10 @@
             }
             
             rutas.forEach(ruta => {
-                const colas = Object.keys(estadoGlobal.rutas[ruta]);
+                const colas = Object.keys(estadoGlobal[ruta]);
                 
                 colas.forEach(cola => {
-                    const estadoCola = estadoGlobal.rutas[ruta][cola];
+                    const estadoCola = estadoGlobal[ruta][cola];
                     const row = document.createElement('tr');
                     
                     let estadoClass = '';
@@ -1423,15 +1462,22 @@
                 };
                 guardarEstadoGlobalEnLocalStorage();
                 
+                // Limpiar Firebase
+                try {
+                    await database.ref('estado').remove();
+                    await database.ref('recolecciones').remove();
+                } catch (error) {
+                    console.error('Error limpiando Firebase:', error);
+                }
+                
+                // Limpiar localStorage
                 Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('progreso_')) {
+                    if (key.startsWith('progreso_') || key === 'registrosRecoleccion') {
                         localStorage.removeItem(key);
                     }
                 });
                 
-                localStorage.removeItem('registrosRecoleccion');
-                
-                mostrarMensaje('✅ Progreso reseteado correctamente (local)', true);
+                mostrarMensaje('✅ Progreso reseteado correctamente', true);
                 actualizarTablero();
             }
         }
@@ -1500,6 +1546,11 @@
             document.getElementById('pickingSection').classList.add('hidden');
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('upcInput').value = '';
+        }
+
+        // ================= NAVEGACIÓN ENTRE MÓDULOS =================
+        function irAModuloSeparacion() {
+            window.location.href = 'separacion.html';
         }
 
         // ================= UTILIDADES =================
