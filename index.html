@@ -640,17 +640,10 @@
         }
 
         function volverAInterfazPrincipal() {
-            // Verificar si hay escaneos pendientes
+            // Verificar si hay escaneos pendientes sin guardar
             if (tieneEscaneosPendientes) {
                 mostrarMensajeModal('Escaneos Pendientes', 
                     'Tienes escaneos pendientes de guardar. Debes finalizar la recolección antes de volver a la interfaz principal.');
-                return;
-            }
-            
-            // Verificar si hay una cola en progreso
-            if (colaActual && document.getElementById('pickingSection').classList.contains('hidden') === false) {
-                mostrarMensajeModal('Recolección en Progreso', 
-                    'Tienes una recolección en progreso. Debes finalizar la recolección antes de volver a la interfaz principal.');
                 return;
             }
             
@@ -1092,7 +1085,7 @@
             colasDisponibles.forEach(cola => {
                 const button = document.createElement('button');
                 
-                // Verificar el estado REAL de la cola desde Firebase
+                // Verificar el estado REAL de la cola desde Firebase (con filtro por fecha)
                 verificarEstadoRealCola(rutaActual, cola).then(estadoReal => {
                     const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
                     
@@ -1114,10 +1107,15 @@
             });
         }
 
-        // ================= VALIDACIÓN CRUZADA SHEETS-FIREBASE =================
+        // ================= VALIDACIÓN CRUZADA SHEETS-FIREBASE (CON FECHA) =================
         async function verificarEstadoRealCola(ruta, cola) {
             try {
-                // Obtener todos los registros de Firebase para esta ruta y cola
+                // Obtener la fecha actual para filtrar
+                const hoy = new Date();
+                const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
+                const finDia = inicioDia + (24 * 60 * 60 * 1000) - 1;
+                
+                // Obtener todos los registros de Firebase para esta ruta
                 const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
                 const registros = snapshot.val();
                 
@@ -1125,13 +1123,13 @@
                     return { completada: false, enProgreso: false };
                 }
                 
-                // Filtrar registros por cola y calcular totales
+                // Filtrar registros por cola y por fecha (solo registros de hoy)
                 let totalRecolectado = 0;
                 let totalNoEncontrado = 0;
-                const itemsCola = itemsPorCola[cola];
                 
                 Object.values(registros).forEach(registro => {
-                    if (registro.cola === cola) {
+                    // Filtrar por cola y por fecha (solo hoy)
+                    if (registro.cola === cola && registro.timestamp >= inicioDia && registro.timestamp <= finDia) {
                         if (registro.accion === 'escaneado') {
                             totalRecolectado += registro.recolectado;
                         } else if (registro.accion === 'no_encontrado') {
@@ -1141,13 +1139,14 @@
                 });
                 
                 // Calcular total planificado desde Sheets
+                const itemsCola = itemsPorCola[cola];
                 const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
                 
                 // Verificar si está completada (considerando ambos tipos de registros)
                 const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
                 const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
                 
-                console.log(`Cola ${cola}: Planificado=${totalPlanificado}, Recolectado=${totalRecolectado}, NoEncontrado=${totalNoEncontrado}, Completada=${completada}`);
+                console.log(`Cola ${cola} (Hoy): Planificado=${totalPlanificado}, Recolectado=${totalRecolectado}, NoEncontrado=${totalNoEncontrado}, Completada=${completada}`);
                 
                 return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
                 
@@ -1175,7 +1174,7 @@
             // Encontrar el primer depósito no completado
             depositoActualIndex = itemsPorCola[colaActual].findIndex(item => !item.completado);
             
-            // Verificar si la cola ya está completada (validación cruzada)
+            // Verificar si la cola ya está completada (validación cruzada con fecha)
             const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
             
             if (depositoActualIndex === -1 || estadoReal.completada) {
@@ -1483,7 +1482,7 @@
             }
             
             if (confirm(mensaje)) {
-                // Verificar si realmente se completó la cola (validación cruzada)
+                // Verificar si realmente se completó la cola (validación cruzada con fecha)
                 const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
                 
                 if (estadoReal.completada) {
