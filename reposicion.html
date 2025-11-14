@@ -625,6 +625,7 @@
             }
         }
 
+        // ================= FUNCIÓN CORREGIDA PARA GUARDAR EN FIREBASE =================
         async function guardarEnFirebase() {
             try {
                 if (escaneosTemporales.length === 0) {
@@ -634,42 +635,33 @@
                 
                 mostrarEstado('💾 Guardando en Firebase...', 'info');
                 
-                // Preparar datos para Firebase
+                // Preparar datos para Firebase - ESTRUCTURA CORREGIDA
                 const datosFirebase = {};
                 const fecha = new Date().toISOString().split('T')[0];
                 const hora = new Date().toLocaleTimeString();
                 
-                // Agrupar escaneos por depósito
-                const escaneosPorDeposito = {};
-                escaneosTemporales.forEach(escaneo => {
-                    if (!escaneosPorDeposito[escaneo.deposito]) {
-                        escaneosPorDeposito[escaneo.deposito] = [];
-                    }
-                    escaneosPorDeposito[escaneo.deposito].push(escaneo);
-                });
-                
-                // Actualizar Firebase
-                for (const [deposito, escaneos] of Object.entries(escaneosPorDeposito)) {
-                    const totalEscaneado = escaneos.length;
+                // Crear una clave única para cada depósito
+                escaneosTemporales.forEach((escaneo, index) => {
+                    const claveUnica = `${escaneo.deposito}_${fecha}_${hora.replace(/:/g, '-')}_${index}`;
                     
-                    datosFirebase[deposito] = {
-                        deposito: deposito,
-                        upc: escaneos[0].upc,
-                        articulo: escaneos[0].articulo,
-                        cantidad_solicitada: datosReposicion[rutaSeleccionada].depositos[deposito].cantidadTotal,
-                        cantidad_escaneada: totalEscaneado,
-                        reponedor: usuarioActual,
+                    datosFirebase[claveUnica] = {
+                        deposito: escaneo.deposito,
+                        upc: escaneo.upc,
+                        articulo: escaneo.articulo,
+                        cantidad: escaneo.cantidad,
+                        reponedor: escaneo.reponedor,
                         fecha: fecha,
                         hora: hora,
                         timestamp: new Date().getTime(),
                         ultima_actualizacion: new Date().toISOString()
                     };
-                }
+                });
                 
-                // Guardar en Firebase
+                // Guardar en Firebase - MÉTODO CORREGIDO
                 await database.ref('reposiciones').update(datosFirebase);
                 
                 console.log('✅ Datos guardados en Firebase:', datosFirebase);
+                mostrarEstado(`✅ ${escaneosTemporales.length} escaneos guardados en Firebase`, 'success');
                 return true;
                 
             } catch (error) {
