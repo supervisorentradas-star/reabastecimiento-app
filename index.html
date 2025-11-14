@@ -322,6 +322,12 @@
             padding: 5px;
             font-size: 10px;
         }
+        .nav-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin: 8px 0;
+        }
         @media (max-width: 600px) {
             .info-grid {
                 grid-template-columns: 1fr 1fr 1fr;
@@ -354,6 +360,12 @@
                 <span id="estadoConexion" style="font-size: 11px;">Conectando...</span>
                 <button onclick="verificarConexion()" class="small warning" style="width: auto; padding: 3px 6px;">Conexión</button>
             </div>
+        </div>
+
+        <!-- BOTONES DE NAVEGACIÓN ENTRE MÓDULOS -->
+        <div class="nav-buttons">
+            <button onclick="irAModuloReposicion()" class="success">📦 Módulo Reposición</button>
+            <button onclick="irAModuloSeparacion()" class="success">📋 Módulo Separación</button>
         </div>
 
         <!-- SECCIÓN ADMINISTRADOR -->
@@ -407,10 +419,6 @@
             <h2>Modo Recolección</h2>
             <button onclick="cargarRutasDesdeSheets()" class="success">🔄 Cargar Rutas</button>
             <button onclick="solicitarAccesoAdmin()" class="warning">👨‍💼 Modo Admin</button>
-            
-            <!-- === NUEVO BOTÓN AGREGADO AQUÍ === -->
-            <button onclick="irAModuloSeparacion()" class="success">📋 Módulo Separación</button>
-            <!-- ================================= -->
             
             <div class="picking-info" id="fileInfo">
                 Presiona "Cargar Rutas" para comenzar...
@@ -601,6 +609,15 @@
             document.getElementById('fechaInicio').value = haceUnaSemana.toISOString().split('T')[0];
             document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
         });
+
+        // ================= NAVEGACIÓN ENTRE MÓDULOS =================
+        function irAModuloReposicion() {
+            window.location.href = 'reposicion.html';
+        }
+
+        function irAModuloSeparacion() {
+            window.location.href = 'separacion.html';
+        }
 
         // ================= FIREBASE INTEGRATION =================
         function inicializarFirebase() {
@@ -1546,11 +1563,6 @@
             document.getElementById('pickingSection').classList.add('hidden');
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('upcInput').value = '';
-        }
-
-        // ================= NAVEGACIÓN ENTRE MÓDULOS =================
-        function irAModuloSeparacion() {
-            window.location.href = 'separacion.html';
         }
 
         // ================= UTILIDADES =================

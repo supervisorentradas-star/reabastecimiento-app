@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Reposición</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f0f2f5;
+            padding: 10px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+        .load-section {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 12px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .rutas-section {
+            margin-bottom: 20px;
+        }
+        .ruta-item {
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .ruta-item:hover {
+            border-color: #3498db;
+        }
+        .ruta-item.selected {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        .ruta-info {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            border: 2px solid #3498db;
+        }
+        .ruta-header {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .current-deposito {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 2px solid #bdc3c7;
+        }
+        .deposito-header {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .articulo-info {
+            font-size: 1em;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        .counters {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .counter-box {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .counter-label {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        .counter-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .scan-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 2px dashed #bdc3c7;
+        }
+        .scan-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 15px;
+            background: white;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .depositos-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .deposito-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #ecf0f1;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .deposito-row:hover {
+            background: #f8f9fa;
+        }
+        .deposito-row.selected {
+            background: #3498db;
+            color: white;
+        }
+        .deposito-row.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .deposito-header-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-pending {
+            background: #f39c12;
+        }
+        .status-completed {
+            background: #27ae60;
+        }
+        .status-selected {
+            background: #3498db;
+        }
+        .status-section {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .hidden {
+            display: none;
+        }
+        .cache-info {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- CABECERA -->
+        <div class="header">
+            <h1>MÓDULO DE REPOSICIÓN</h1>
+            <div class="load-section">
+                <button class="btn-small" onclick="cargarDatosReposicion()">📥 Cargar Datos Reposición</button>
+            </div>
+        </div>
+
+        <!-- ESTADO DE DATOS -->
+        <div class="status-section status-info" id="dataStatus">
+            📊 Presiona "Cargar Datos Reposición" para comenzar
+        </div>
+
+        <!-- SELECCIÓN DE RUTAS -->
+        <div class="rutas-section hidden" id="rutasSection">
+            <h3>SELECCIONA UNA RUTA:</h3>
+            <div id="rutasContainer">
+                <!-- Las rutas se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+
+        <!-- INFORMACIÓN DE RUTA ACTUAL -->
+        <div class="ruta-info hidden" id="rutaInfoSection">
+            <div class="ruta-header" id="rutaActual">RUTA: -</div>
+        </div>
+
+        <!-- DEPÓSITO ACTUAL -->
+        <div class="current-deposito hidden" id="currentDepositoSection">
+            <div class="deposito-header" id="currentDeposito">-</div>
+            <div class="articulo-info" id="currentArticulo">-</div>
+            
+            <div class="counters">
+                <div class="counter-box">
+                    <div class="counter-label">SOLICITADA</div>
+                    <div class="counter-value" id="counterSolicitada">0</div>
+                </div>
+                <div class="counter-box">
+                    <div class="counter-label">SCANEADA</div>
+                    <div class="counter-value" id="counterEscaneada">0</div>
+                </div>
+                <div class="counter-box">
+                    <div class="counter-label">PENDIENTE</div>
+                    <div class="counter-value" id="counterPendiente">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE ESCANEO -->
+        <div class="scan-section hidden" id="scanSection">
+            <h3>SCAN DEPÓSITO</h3>
+            <input type="text" 
+                   id="depositoInput" 
+                   class="scan-input" 
+                   placeholder="Escanear código depósito" 
+                   autocomplete="off">
+            
+            <h3>SCANEAR CODIGO UPC</h3>
+            <input type="text" 
+                   id="upcInput" 
+                   class="scan-input" 
+                   placeholder="Escanear código UPC" 
+                   autocomplete="off"
+                   disabled>
+            
+            <div class="controls">
+                <button class="btn-warning" onclick="siguientePosicion()">⏭️ SIGUIENTE POSICIÓN</button>
+                <button class="btn-success" onclick="finalizarReposicion()">🏁 FINALIZAR</button>
+            </div>
+        </div>
+
+        <!-- LISTA DE DEPÓSITOS -->
+        <div class="depositos-list hidden" id="depositosListSection">
+            <div class="deposito-header-row">
+                <div>ESTADO</div>
+                <div>DEPÓSITO - ARTÍCULO</div>
+                <div>CANTIDAD</div>
+                <div>ESCANEADO</div>
+            </div>
+            <div id="depositosGrid">
+                <!-- Los depósitos se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+
+        <!-- INFORMACIÓN DE CACHE -->
+        <div class="cache-info" id="cacheInfo">
+            Última actualización: No disponible
+        </div>
+
+        <!-- BOTÓN VOLVER AL PRINCIPAL -->
+        <button class="btn-primary" onclick="volverAlPrincipal()" style="width: 100%; margin-top: 15px;">
+            ↩️ Volver al Sistema Principal
+        </button>
+    </div>
+
+    <script>
+        // ================= CONFIGURACIÓN CORREGIDA =================
+        // URL CORREGIDA - Usando la URL pública que proporcionaste
+        const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+        // Configuración Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // ================= INICIALIZAR FIREBASE =================
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ================= VARIABLES GLOBALES =================
+        let datosReposicion = {};
+        let rutasDisponibles = [];
+        let depositosDisponibles = [];
+        let depositoActual = null;
+        let usuarioActual = null;
+        let escaneosTemporales = [];
+        let escaneosFirebase = {};
+        let ultimaActualizacion = null;
+        let rutaSeleccionada = null;
+
+        // ================= INICIALIZACIÓN =================
+        window.addEventListener('load', function() {
+            // Cargar datos desde cache si existen
+            cargarDatosDesdeCache();
+            
+            // Configurar eventos de escaneo
+            document.getElementById('depositoInput').addEventListener('input', function(e) {
+                const deposito = e.target.value.trim();
+                if (deposito) {
+                    validarDeposito(deposito);
+                }
+            });
+
+            document.getElementById('upcInput').addEventListener('input', function(e) {
+                const upc = e.target.value.trim();
+                if (upc.length >= 8) {
+                    validarUPC(upc);
+                }
+            });
+        });
+
+        // ================= CARGA DE DATOS - VERSIÓN CORREGIDA =================
+        async function cargarDatosReposicion() {
+            try {
+                mostrarEstado('📥 Conectando con Google Sheets...', 'info');
+                
+                let csvText = '';
+                let error = null;
+                
+                // Intentar con la URL pública corregida
+                try {
+                    csvText = await cargarDesdeGoogleSheets(GOOGLE_SHEETS_URL);
+                } catch (err1) {
+                    error = err1;
+                    // Si falla, intentar con proxy CORS como respaldo
+                    try {
+                        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+                        const response = await fetch(PROXY_URL + GOOGLE_SHEETS_URL);
+                        
+                        if (!response.ok) {
+                            throw new Error(`Error ${response.status}: No se pudo conectar`);
+                        }
+                        
+                        csvText = await response.text();
+                        
+                        if (!csvText || csvText.includes('error') || csvText.length < 10) {
+                            throw new Error('No hay datos disponibles');
+                        }
+                    } catch (err2) {
+                        throw new Error('Todos los métodos de conexión fallaron: ' + err1.message);
+                    }
+                }
+                
+                procesarCSVReposicion(csvText, 'Google Sheets');
+                guardarEnCache(csvText);
+                mostrarEstado('✅ Datos cargados correctamente', 'success');
+                
+            } catch (error) {
+                console.error('Error crítico:', error);
+                mostrarEstado(`❌ ${error.message}`, 'error');
+                
+                // Intentar cargar desde cache como último recurso
+                if (!cargarDatosDesdeCache()) {
+                    mostrarEstado('⚠️ No hay datos en cache. Verifica la conexión.', 'error');
+                }
+            }
+        }
+
+        // ================= FUNCIÓN DE CARGA SIMPLIFICADA =================
+        async function cargarDesdeGoogleSheets(url) {
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: No se pudo conectar`);
+            }
+            
+            const csvText = await response.text();
+            
+            if (!csvText || csvText.includes('error') || csvText.length < 10) {
+                throw new Error('No hay datos disponibles en la respuesta');
+            }
+            
+            return csvText;
+        }
+
+        // ================= PROCESAMIENTO CSV MEJORADO =================
+        function procesarCSVReposicion(csvText, fuente) {
+            datosReposicion = {};
+            rutasDisponibles = [];
+            depositosDisponibles = [];
+            
+            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            
+            console.log('Procesando', lineas.length, 'líneas desde:', fuente);
+            
+            if (lineas.length < 2) {
+                throw new Error('El archivo CSV está vacío o no tiene datos');
+            }
+            
+            // Detectar separador
+            const primeraLinea = lineas[0];
+            const separador = primeraLinea.includes('\t') ? '\t' : ',';
+            
+            console.log('Usando separador:', separador);
+            
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (!linea) continue;
+                
+                const partes = linea.split(separador).map(part => 
+                    part.trim().replace(/^"|"$/g, '')
+                );
+                
+                // ORDEN CORRECTO: DEPOSITO, CODIGO_UPC, ARTICULO, CANTIDAD
+                if (partes.length >= 4) {
+                    const deposito = partes[0];
+                    const upc = partes[1];
+                    const articulo = partes[2];
+                    const cantidad = parseInt(partes[3]) || 0;
+                    
+                    if (deposito && upc && cantidad > 0) {
+                        // Extraer ruta del depósito
+                        const ruta = extraerRuta(deposito);
+                        
+                        // Agrupar por ruta
+                        if (!datosReposicion[ruta]) {
+                            datosReposicion[ruta] = {
+                                depositos: {},
+                                cantidadTotal: 0,
+                                nombre: `Ruta ${ruta}`
+                            };
+                            if (!rutasDisponibles.includes(ruta)) {
+                                rutasDisponibles.push(ruta);
+                            }
+                        }
+                        
+                        // Agrupar por depósito
+                        if (!datosReposicion[ruta].depositos[deposito]) {
+                            datosReposicion[ruta].depositos[deposito] = {
+                                upcs: {},
+                                cantidadTotal: 0,
+                                articulo: articulo,
+                                escaneado: 0
+                            };
+                            if (!depositosDisponibles.includes(deposito)) {
+                                depositosDisponibles.push(deposito);
+                            }
+                        }
+                        
+                        // Agregar UPC al depósito
+                        datosReposicion[ruta].depositos[deposito].upcs[upc] = {
+                            articulo: articulo,
+                            cantidad: cantidad
+                        };
+                        datosReposicion[ruta].depositos[deposito].cantidadTotal += cantidad;
+                        datosReposicion[ruta].cantidadTotal += cantidad;
+                    }
+                }
+            }
+            
+            // Ordenar rutas y depósitos
+            rutasDisponibles.sort((a, b) => {
+                const numA = parseInt(a.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.replace(/\D/g, '')) || 0;
+                return numA - numB;
+            });
+            
+            depositosDisponibles.sort(ordenarDepositos);
+            
+            ultimaActualizacion = new Date();
+            actualizarInfoCache();
+            
+            console.log(`📊 Datos procesados: ${rutasDisponibles.length} rutas, ${depositosDisponibles.length} depósitos`);
+            console.log('Rutas encontradas:', rutasDisponibles);
+            
+            // Mostrar selección de rutas
+            mostrarSeleccionRuta();
+        }
+
+        function extraerRuta(deposito) {
+            // Extraer número de ruta del depósito 
+            // P01-005-A → "01", 8-002-2-A → "8", P18-052-B → "18"
+            const match = deposito.match(/(?:P)?(\d+)/);
+            return match ? match[1] : deposito;
+        }
+
+        function ordenarDepositos(a, b) {
+            // Ordenar por ruta, columna y nivel
+            const partesA = a.split('-');
+            const partesB = b.split('-');
+            
+            // Comparar ruta
+            const rutaA = parseInt(partesA[0].replace('P', '')) || 0;
+            const rutaB = parseInt(partesB[0].replace('P', '')) || 0;
+            
+            if (rutaA !== rutaB) return rutaA - rutaB;
+            
+            // Comparar columna
+            const columnaA = parseInt(partesA[1]) || 0;
+            const columnaB = parseInt(partesB[1]) || 0;
+            if (columnaA !== columnaB) return columnaA - columnaB;
+            
+            // Comparar nivel
+            const nivelA = partesA[2] || '';
+            const nivelB = partesB[2] || '';
+            return nivelA.localeCompare(nivelB);
+        }
+
+        // ================= FIREBASE INTEGRATION =================
+        async function cargarEstadoDesdeFirebase() {
+            try {
+                mostrarEstado('📡 Cargando estado desde Firebase...', 'info');
+                escaneosFirebase = {};
+                
+                const snapshot = await database.ref('reposiciones').once('value');
+                const data = snapshot.val();
+                
+                if (data) {
+                    escaneosFirebase = data;
+                    console.log('✅ Estado de Firebase cargado:', escaneosFirebase);
+                } else {
+                    console.log('ℹ️ No hay datos en Firebase');
+                }
+                
+            } catch (error) {
+                console.error('Error cargando estado desde Firebase:', error);
+            }
+        }
+
+        async function guardarEnFirebase() {
+            try {
+                if (escaneosTemporales.length === 0) {
+                    console.log('ℹ️ No hay escaneos para guardar');
+                    return true;
+                }
+                
+                mostrarEstado('💾 Guardando en Firebase...', 'info');
+                
+                // Preparar datos para Firebase
+                const datosFirebase = {};
+                const fecha = new Date().toISOString().split('T')[0];
+                const hora = new Date().toLocaleTimeString();
+                
+                // Agrupar escaneos por depósito
+                const escaneosPorDeposito = {};
+                escaneosTemporales.forEach(escaneo => {
+                    if (!escaneosPorDeposito[escaneo.deposito]) {
+                        escaneosPorDeposito[escaneo.deposito] = [];
+                    }
+                    escaneosPorDeposito[escaneo.deposito].push(escaneo);
+                });
+                
+                // Actualizar Firebase
+                for (const [deposito, escaneos] of Object.entries(escaneosPorDeposito)) {
+                    const totalEscaneado = escaneos.length;
+                    
+                    datosFirebase[deposito] = {
+                        deposito: deposito,
+                        upc: escaneos[0].upc,
+                        articulo: escaneos[0].articulo,
+                        cantidad_solicitada: datosReposicion[rutaSeleccionada].depositos[deposito].cantidadTotal,
+                        cantidad_escaneada: totalEscaneado,
+                        reponedor: usuarioActual,
+                        fecha: fecha,
+                        hora: hora,
+                        timestamp: new Date().getTime(),
+                        ultima_actualizacion: new Date().toISOString()
+                    };
+                }
+                
+                // Guardar en Firebase
+                await database.ref('reposiciones').update(datosFirebase);
+                
+                console.log('✅ Datos guardados en Firebase:', datosFirebase);
+                return true;
+                
+            } catch (error) {
+                console.error('Error guardando en Firebase:', error);
+                mostrarEstado(`❌ Error guardando en Firebase: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        function obtenerEscaneosDeposito(deposito) {
+            const escaneosTemp = escaneosTemporales.filter(e => e.deposito === deposito);
+            
+            // También considerar escaneos previos de Firebase
+            const escaneosFB = escaneosFirebase[deposito] ? 
+                Array(escaneosFirebase[deposito].cantidad_escaneada || 0).fill({}) : [];
+            
+            return [...escaneosTemp, ...escaneosFB];
+        }
+
+        // ================= INTERFAZ DE RUTAS =================
+        function mostrarSeleccionRuta() {
+            // Primero cargar estado de Firebase
+            cargarEstadoDesdeFirebase().then(() => {
+                document.getElementById('rutasSection').classList.remove('hidden');
+                actualizarListaRutas();
+            });
+        }
+
+        function actualizarListaRutas() {
+            const container = document.getElementById('rutasContainer');
+            container.innerHTML = '';
+            
+            if (rutasDisponibles.length === 0) {
+                container.innerHTML = '<p>No se encontraron rutas en los datos</p>';
+                return;
+            }
+            
+            rutasDisponibles.forEach(ruta => {
+                const datosRuta = datosReposicion[ruta];
+                const div = document.createElement('div');
+                div.className = 'ruta-item';
+                div.innerHTML = `
+                    <strong>RUTA ${ruta}</strong><br>
+                    <small>${datosRuta.cantidadTotal} unidades - ${Object.keys(datosRuta.depositos).length} depósitos</small>
+                `;
+                div.onclick = () => seleccionarRuta(ruta);
+                container.appendChild(div);
+            });
+        }
+
+        function seleccionarRuta(ruta) {
+            rutaSeleccionada = ruta;
+            
+            // Actualizar información de ruta
+            document.getElementById('rutaActual').textContent = `RUTA: ${ruta}`;
+            document.getElementById('rutaInfoSection').classList.remove('hidden');
+            
+            // Solicitar usuario
+            const usuario = prompt("👤 Ingresa tu nombre:", "Reponedor");
+            if (!usuario) {
+                document.getElementById('rutaInfoSection').classList.add('hidden');
+                return;
+            }
+            
+            usuarioActual = usuario;
+            
+            document.getElementById('rutasSection').classList.add('hidden');
+            mostrarInterfazReposicion();
+            mostrarEstado(`✅ Ruta ${ruta} seleccionada - Usuario: ${usuario}`, 'success');
+        }
+
+        function mostrarInterfazReposicion() {
+            document.getElementById('currentDepositoSection').classList.remove('hidden');
+            document.getElementById('scanSection').classList.remove('hidden');
+            document.getElementById('depositosListSection').classList.remove('hidden');
+            
+            actualizarListaDepositos();
+            
+            // Seleccionar automáticamente el primer depósito no completado
+            seleccionarPrimerDepositoPendiente();
+            
+            document.getElementById('depositoInput').focus();
+        }
+
+        function seleccionarPrimerDepositoPendiente() {
+            if (!rutaSeleccionada) return;
+            
+            const depositosRuta = Object.keys(datosReposicion[rutaSeleccionada].depositos).sort(ordenarDepositos);
+            
+            for (const deposito of depositosRuta) {
+                const datos = datosReposicion[rutaSeleccionada].depositos[deposito];
+                const escaneos = obtenerEscaneosDeposito(deposito);
+                const cantidadEscaneada = escaneos.length;
+                
+                if (cantidadEscaneada < datos.cantidadTotal) {
+                    seleccionarDepositoManual(deposito);
+                    break;
+                }
+            }
+        }
+
+        function actualizarListaDepositos() {
+            const grid = document.getElementById('depositosGrid');
+            grid.innerHTML = '';
+            
+            if (!rutaSeleccionada) return;
+            
+            const depositosRuta = Object.keys(datosReposicion[rutaSeleccionada].depositos).sort(ordenarDepositos);
+            
+            depositosRuta.forEach(deposito => {
+                const datos = datosReposicion[rutaSeleccionada].depositos[deposito];
+                const escaneos = obtenerEscaneosDeposito(deposito);
+                const cantidadEscaneada = escaneos.length;
+                const completado = cantidadEscaneada >= datos.cantidadTotal;
+                const seleccionado = deposito === depositoActual;
+                
+                const row = document.createElement('div');
+                row.className = `deposito-row ${completado ? 'completed' : ''} ${seleccionado ? 'selected' : ''}`;
+                
+                row.innerHTML = `
+                    <div>
+                        <span class="status-indicator ${completado ? 'status-completed' : seleccionado ? 'status-selected' : 'status-pending'}"></span>
+                    </div>
+                    <div>
+                        <strong>${deposito}</strong><br>
+                        <small>${datos.articulo}</small>
+                    </div>
+                    <div>${datos.cantidadTotal}</div>
+                    <div>${cantidadEscaneada}</div>
+                `;
+                
+                row.onclick = () => seleccionarDepositoManual(deposito);
+                grid.appendChild(row);
+            });
+        }
+
+        // ================= GESTIÓN DE DEPÓSITOS =================
+        function validarDeposito(deposito) {
+            if (!rutaSeleccionada || !datosReposicion[rutaSeleccionada].depositos[deposito]) {
+                mostrarEstado('❌ Depósito no encontrado en la ruta seleccionada', 'error');
+                document.getElementById('depositoInput').value = '';
+                return;
+            }
+            
+            seleccionarDepositoManual(deposito);
+        }
+
+        function seleccionarDepositoManual(deposito) {
+            depositoActual = deposito;
+            actualizarInterfazDeposito();
+            document.getElementById('depositoInput').value = '';
+            document.getElementById('upcInput').disabled = false;
+            document.getElementById('upcInput').focus();
+            mostrarEstado(`✅ Depósito ${deposito} seleccionado`, 'success');
+        }
+
+        function actualizarInterfazDeposito() {
+            if (!depositoActual || !rutaSeleccionada) return;
+            
+            const datos = datosReposicion[rutaSeleccionada].depositos[depositoActual];
+            const escaneos = obtenerEscaneosDeposito(depositoActual);
+            const cantidadEscaneada = escaneos.length;
+            const pendiente = datos.cantidadTotal - cantidadEscaneada;
+            
+            document.getElementById('currentDeposito').textContent = depositoActual;
+            document.getElementById('currentArticulo').textContent = datos.articulo;
+            document.getElementById('counterSolicitada').textContent = datos.cantidadTotal;
+            document.getElementById('counterEscaneada').textContent = cantidadEscaneada;
+            document.getElementById('counterPendiente').textContent = pendiente;
+            
+            // Actualizar lista de depósitos
+            actualizarListaDepositos();
+            
+            // Si se completó automáticamente, activar siguiente posición
+            if (pendiente <= 0) {
+                mostrarEstado('🎉 ¡Depósito completado! Pasando al siguiente...', 'success');
+                setTimeout(() => {
+                    siguientePosicion();
+                }, 1500);
+            }
+        }
+
+        // ================= VALIDACIÓN DE UPC =================
+        function validarUPC(upc) {
+            if (!depositoActual || !rutaSeleccionada) {
+                mostrarEstado('❌ Primero selecciona un depósito', 'error');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            const datosDeposito = datosReposicion[rutaSeleccionada].depositos[depositoActual];
+            
+            // Verificar si el UPC pertenece a este depósito
+            const upcValido = Object.keys(datosDeposito.upcs).some(upcExistente => 
+                upcExistente === upc
+            );
+            
+            if (!upcValido) {
+                mostrarEstado('❌ UPC no pertenece a este depósito', 'error');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // Verificar límite de cantidad
+            const escaneos = obtenerEscaneosDeposito(depositoActual);
+            if (escaneos.length >= datosDeposito.cantidadTotal) {
+                mostrarEstado('✅ Depósito completado', 'success');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // Agregar escaneo temporal
+            const escaneo = {
+                deposito: depositoActual,
+                upc: upc,
+                articulo: datosDeposito.articulo,
+                cantidad: 1,
+                reponedor: usuarioActual,
+                fecha: new Date().toLocaleDateString(),
+                hora: new Date().toLocaleTimeString(),
+                timestamp: new Date().getTime()
+            };
+            
+            escaneosTemporales.push(escaneo);
+            
+            // Actualizar interfaz
+            actualizarInterfazDeposito();
+            document.getElementById('upcInput').value = '';
+            
+            const nuevosEscaneos = obtenerEscaneosDeposito(depositoActual).length;
+            mostrarEstado(`✅ UPC escaneado - ${nuevosEscaneos}/${datosDeposito.cantidadTotal}`, 'success');
+        }
+
+        // ================= BOTONES DE ACCIÓN =================
+        function siguientePosicion() {
+            if (!depositoActual || !rutaSeleccionada) {
+                mostrarEstado('❌ No hay depósito activo', 'error');
+                return;
+            }
+            
+            const datosDeposito = datosReposicion[rutaSeleccionada].depositos[depositoActual];
+            const escaneos = obtenerEscaneosDeposito(depositoActual);
+            
+            if (escaneos.length === 0) {
+                if (!confirm(`¿Estás seguro de saltar el depósito ${depositoActual} sin escanear?`)) {
+                    return;
+                }
+            }
+            
+            mostrarEstado(`📦 Progreso guardado para ${depositoActual}`, 'success');
+            
+            // Buscar siguiente depósito no completado en la misma ruta
+            const depositosRuta = Object.keys(datosReposicion[rutaSeleccionada].depositos).sort(ordenarDepositos);
+            const currentIndex = depositosRuta.indexOf(depositoActual);
+            let siguienteDeposito = null;
+            
+            for (let i = currentIndex + 1; i < depositosRuta.length; i++) {
+                const deposito = depositosRuta[i];
+                const datos = datosReposicion[rutaSeleccionada].depositos[deposito];
+                const escaneosDep = obtenerEscaneosDeposito(deposito);
+                if (escaneosDep.length < datos.cantidadTotal) {
+                    siguienteDeposito = deposito;
+                    break;
+                }
+            }
+            
+            if (siguienteDeposito) {
+                depositoActual = siguienteDeposito;
+                actualizarInterfazDeposito();
+                document.getElementById('upcInput').focus();
+            } else {
+                mostrarEstado('🎉 ¡Todos los depósitos de esta ruta están completados!', 'success');
+                depositoActual = null;
+                document.getElementById('currentDepositoSection').classList.add('hidden');
+            }
+        }
+
+        async function finalizarReposicion() {
+            if (escaneosTemporales.length === 0) {
+                mostrarEstado('❌ No hay escaneos para guardar', 'error');
+                return;
+            }
+            
+            if (!confirm(`¿Finalizar reposición y guardar ${escaneosTemporales.length} escaneos en Firebase?`)) {
+                return;
+            }
+            
+            try {
+                mostrarEstado('💾 Guardando en Firebase...', 'info');
+                
+                const exito = await guardarEnFirebase();
+                
+                if (exito) {
+                    mostrarEstado(`✅ ${escaneosTemporales.length} escaneos guardados correctamente en Firebase`, 'success');
+                    escaneosTemporales = [];
+                    
+                    // Recargar estado desde Firebase para actualizar la interfaz
+                    await cargarEstadoDesdeFirebase();
+                    actualizarListaDepositos();
+                    
+                    // Verificar si todos los depósitos están completados
+                    const depositosRuta = Object.keys(datosReposicion[rutaSeleccionada].depositos);
+                    const todosCompletados = depositosRuta.every(deposito => {
+                        const datos = datosReposicion[rutaSeleccionada].depositos[deposito];
+                        const escaneos = obtenerEscaneosDeposito(deposito);
+                        return escaneos.length >= datos.cantidadTotal;
+                    });
+                    
+                    if (todosCompletados) {
+                        mostrarEstado('🏁 ¡FIN DE LA REPOSICIÓN! Ruta completada', 'success');
+                    }
+                    
+                    depositoActual = null;
+                    actualizarInterfazDeposito();
+                    
+                } else {
+                    mostrarEstado('❌ Error al guardar en Firebase', 'error');
+                }
+                
+            } catch (error) {
+                mostrarEstado(`❌ Error al guardar: ${error.message}`, 'error');
+            }
+        }
+
+        // ================= SISTEMA DE CACHE MEJORADO =================
+        function cargarDatosDesdeCache() {
+            const cacheData = localStorage.getItem('cacheReposicion');
+            const cacheTime = localStorage.getItem('cacheReposicionTime');
+            
+            if (cacheData && cacheTime) {
+                const ahora = new Date().getTime();
+                const tiempoTranscurrido = ahora - parseInt(cacheTime);
+                
+                if (tiempoTranscurrido < CACHE_DURATION) {
+                    procesarCSVReposicion(cacheData, 'Cache Local');
+                    mostrarEstado('✅ Datos cargados desde cache', 'success');
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function guardarEnCache(csvText) {
+            localStorage.setItem('cacheReposicion', csvText);
+            localStorage.setItem('cacheReposicionTime', new Date().getTime().toString());
+            actualizarInfoCache();
+        }
+
+        function actualizarInfoCache() {
+            const infoDiv = document.getElementById('cacheInfo');
+            if (ultimaActualizacion) {
+                infoDiv.textContent = `Última actualización: ${ultimaActualizacion.toLocaleString()}`;
+            }
+        }
+
+        // ================= UTILIDADES =================
+        function mostrarEstado(mensaje, tipo) {
+            const statusDiv = document.getElementById('dataStatus');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = 'status-section';
+            
+            if (tipo === 'success') {
+                statusDiv.classList.add('status-success');
+            } else if (tipo === 'error') {
+                statusDiv.classList.add('status-error');
+            } else if (tipo === 'info') {
+                statusDiv.classList.add('status-info');
+            }
+        }
+
+        function volverAlPrincipal() {
+            window.location.href = 'index.html';
+        }
+
+        // Actualización automática cada 5 minutos
+        setInterval(() => {
+            if (rutasDisponibles.length > 0) {
+                cargarDatosReposicion();
+            }
+        }, CACHE_DURATION);
+    </script>
+</body>
+</html>
