@@ -328,6 +328,10 @@
             gap: 5px;
             margin: 8px 0;
         }
+        .interface-button {
+            background: #8e44ad;
+            margin-top: 8px;
+        }
         @media (max-width: 600px) {
             .info-grid {
                 grid-template-columns: 1fr 1fr 1fr;
@@ -362,8 +366,8 @@
             </div>
         </div>
 
-        <!-- BOTONES DE NAVEGACIÓN ENTRE MÓDULOS -->
-        <div class="nav-buttons">
+        <!-- BOTONES DE NAVEGACIÓN ENTRE MÓDULOS (SOLO EN VENTANA PRINCIPAL) -->
+        <div class="nav-buttons" id="navButtons">
             <button onclick="irAModuloReposicion()" class="success">📦 Módulo Reposición</button>
             <button onclick="irAModuloSeparacion()" class="success">📋 Módulo Separación</button>
         </div>
@@ -412,6 +416,9 @@
             <button onclick="actualizarDesdeSheets()" class="warning">🔄 Actualizar desde Sheets</button>
             <button onclick="mostrarPanelUsuario()" class="warning">👥 Modo Usuario</button>
             <button onclick="resetearProgreso()" class="danger">🔄 Resetear Progreso</button>
+            
+            <!-- BOTÓN INTERFAZ -->
+            <button onclick="volverAInterfazPrincipal()" class="interface-button">🏠 Interfaz</button>
         </div>
 
         <!-- SECCIÓN USUARIO -->
@@ -453,6 +460,9 @@
             <div class="cola-selector" id="colaSelector"></div>
             
             <button onclick="volverSeleccionRuta()" class="warning">↩️ Volver</button>
+            
+            <!-- BOTÓN INTERFAZ -->
+            <button onclick="volverAInterfazPrincipal()" class="interface-button">🏠 Interfaz</button>
         </div>
 
         <!-- SECCIÓN PICKING -->
@@ -524,6 +534,9 @@
             
             <!-- LISTA DE DEPÓSITOS PARA NAVEGACIÓN MANUAL -->
             <div class="item-list" id="itemList"></div>
+            
+            <!-- BOTÓN INTERFAZ -->
+            <button onclick="volverAInterfazPrincipal()" class="interface-button">🏠 Interfaz</button>
         </div>
 
         <!-- MENSAJES DE ESTADO -->
@@ -585,6 +598,7 @@
         let colasDisponibles = [];
         let estadoGlobal = {};
         let totalUnidadesGlobal = 0;
+        let tieneEscaneosPendientes = false;
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', async function() {
@@ -608,6 +622,12 @@
             
             document.getElementById('fechaInicio').value = haceUnaSemana.toISOString().split('T')[0];
             document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
+            
+            // Ocultar botones de navegación en secciones que no son la principal
+            ocultarBotonesNavegacion();
+            
+            // Cargar progreso guardado si existe
+            cargarProgresoRecuperacion();
         });
 
         // ================= NAVEGACIÓN ENTRE MÓDULOS =================
@@ -617,6 +637,43 @@
 
         function irAModuloSeparacion() {
             window.location.href = 'separacion.html';
+        }
+
+        function volverAInterfazPrincipal() {
+            // Verificar si hay escaneos pendientes
+            if (tieneEscaneosPendientes) {
+                mostrarMensajeModal('Escaneos Pendientes', 
+                    'Tienes escaneos pendientes de guardar. Debes finalizar la recolección antes de volver a la interfaz principal.');
+                return;
+            }
+            
+            // Verificar si hay una cola en progreso
+            if (colaActual && document.getElementById('pickingSection').classList.contains('hidden') === false) {
+                mostrarMensajeModal('Recolección en Progreso', 
+                    'Tienes una recolección en progreso. Debes finalizar la recolección antes de volver a la interfaz principal.');
+                return;
+            }
+            
+            // Si no hay problemas, volver a la interfaz principal
+            document.getElementById('adminSection').classList.add('hidden');
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+            
+            // Mostrar botones de navegación
+            document.getElementById('navButtons').style.display = 'grid';
+            
+            mostrarMensaje('🏠 Volviendo a la interfaz principal', true);
+        }
+
+        function ocultarBotonesNavegacion() {
+            // Solo mostrar botones de navegación en la sección principal
+            const secciones = ['adminSection', 'colaSection', 'pickingSection'];
+            const currentSection = secciones.find(sec => !document.getElementById(sec).classList.contains('hidden'));
+            
+            if (currentSection) {
+                document.getElementById('navButtons').style.display = 'none';
+            }
         }
 
         // ================= FIREBASE INTEGRATION =================
@@ -975,6 +1032,9 @@
             document.getElementById('totalUnidadesCola').textContent = totalUnidadesRuta;
             
             mostrarOpcionesColas();
+            
+            // Ocultar botones de navegación
+            ocultarBotonesNavegacion();
         }
 
         function agruparPorColas(ruta) {
@@ -1032,46 +1092,76 @@
             colasDisponibles.forEach(cola => {
                 const button = document.createElement('button');
                 
-                // Verificar el estado de la cola desde Firebase
-                const estadoCola = estadoGlobal[rutaActual] && estadoGlobal[rutaActual][cola] 
-                    ? estadoGlobal[rutaActual][cola].estado 
-                    : 'pendiente';
-                
-                const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
-                
-                // Verificar si la cola está realmente completada
-                const colaRealmenteCompletada = verificarColaCompletada(cola);
-                
-                if (colaRealmenteCompletada || estadoCola === 'completada') {
-                    button.className = 'cola-button cola-completed';
-                    button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
-                    button.disabled = true;
-                } else if (estadoCola === 'en-progreso') {
-                    button.className = 'cola-button cola-in-progress';
-                    button.textContent = `🔄 COLA: ${cola} (EN PROGRESO)`;
-                } else {
-                    button.className = 'cola-button cola-pending';
-                    button.textContent = `COLA: ${cola} (${totalUnidadesCola})`;
-                }
-                
-                button.onclick = () => comenzarPicking(cola);
-                selector.appendChild(button);
+                // Verificar el estado REAL de la cola desde Firebase
+                verificarEstadoRealCola(rutaActual, cola).then(estadoReal => {
+                    const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
+                    
+                    if (estadoReal.completada) {
+                        button.className = 'cola-button cola-completed';
+                        button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
+                        button.disabled = true;
+                    } else if (estadoReal.enProgreso) {
+                        button.className = 'cola-button cola-in-progress';
+                        button.textContent = `🔄 COLA: ${cola} (EN PROGRESO)`;
+                    } else {
+                        button.className = 'cola-button cola-pending';
+                        button.textContent = `COLA: ${cola} (${totalUnidadesCola})`;
+                    }
+                    
+                    button.onclick = () => comenzarPicking(cola);
+                    selector.appendChild(button);
+                });
             });
         }
 
-        function verificarColaCompletada(cola) {
-            if (!itemsPorCola[cola]) return false;
-            
-            const totalUnidades = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
-            const unidadesRecolectadas = itemsPorCola[cola].reduce((sum, item) => sum + item.recolectado, 0);
-            
-            return unidadesRecolectadas >= totalUnidades;
+        // ================= VALIDACIÓN CRUZADA SHEETS-FIREBASE =================
+        async function verificarEstadoRealCola(ruta, cola) {
+            try {
+                // Obtener todos los registros de Firebase para esta ruta y cola
+                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
+                const registros = snapshot.val();
+                
+                if (!registros) {
+                    return { completada: false, enProgreso: false };
+                }
+                
+                // Filtrar registros por cola y calcular totales
+                let totalRecolectado = 0;
+                let totalNoEncontrado = 0;
+                const itemsCola = itemsPorCola[cola];
+                
+                Object.values(registros).forEach(registro => {
+                    if (registro.cola === cola) {
+                        if (registro.accion === 'escaneado') {
+                            totalRecolectado += registro.recolectado;
+                        } else if (registro.accion === 'no_encontrado') {
+                            totalNoEncontrado += 1;
+                        }
+                    }
+                });
+                
+                // Calcular total planificado desde Sheets
+                const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
+                
+                // Verificar si está completada (considerando ambos tipos de registros)
+                const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
+                const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
+                
+                console.log(`Cola ${cola}: Planificado=${totalPlanificado}, Recolectado=${totalRecolectado}, NoEncontrado=${totalNoEncontrado}, Completada=${completada}`);
+                
+                return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
+                
+            } catch (error) {
+                console.error('Error verificando estado real de cola:', error);
+                return { completada: false, enProgreso: false };
+            }
         }
 
         async function comenzarPicking(cola) {
             colaActual = cola;
             itemsCompletados = [];
             itemsNoEncontrados = [];
+            tieneEscaneosPendientes = false;
             
             // Cargar progreso guardado si existe
             const progresoGuardado = cargarProgresoCola(rutaActual, colaActual);
@@ -1085,10 +1175,10 @@
             // Encontrar el primer depósito no completado
             depositoActualIndex = itemsPorCola[colaActual].findIndex(item => !item.completado);
             
-            // Verificar si la cola ya está completada
-            const colaCompletada = verificarColaCompletada(colaActual);
+            // Verificar si la cola ya está completada (validación cruzada)
+            const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
             
-            if (depositoActualIndex === -1 || colaCompletada) {
+            if (depositoActualIndex === -1 || estadoReal.completada) {
                 await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
                 mostrarMensajeModal('Cola Completada', 'Esta cola ya ha sido completada anteriormente.');
                 if (colasDisponibles.length === 1) {
@@ -1113,6 +1203,9 @@
             actualizarListaItems();
             
             document.getElementById('upcInput').focus();
+            
+            // Ocultar botones de navegación
+            ocultarBotonesNavegacion();
         }
 
         async function verificarProgresoDesdeRegistros() {
@@ -1207,6 +1300,7 @@
             
             // UPC correcto, incrementar contador
             item.recolectado++;
+            tieneEscaneosPendientes = true;
             
             // Actualizar interfaz
             document.getElementById('pickingRecolectado').textContent = item.recolectado;
@@ -1255,6 +1349,7 @@
             const item = itemsPorCola[colaActual][depositoActualIndex];
             
             itemsNoEncontrados.push(item);
+            tieneEscaneosPendientes = true;
             
             // Guardar registro en Firebase
             const fechaHora = new Date();
@@ -1326,6 +1421,58 @@
             localStorage.setItem(claveProgreso, JSON.stringify(items));
         }
 
+        // ================= RECUPERACIÓN DE PROGRESO =================
+        function cargarProgresoRecuperacion() {
+            // Verificar si hay una sesión activa guardada
+            const sesionActiva = localStorage.getItem('sesionActiva');
+            if (sesionActiva) {
+                const sesion = JSON.parse(sesionActiva);
+                rutaActual = sesion.ruta;
+                usuarioActual = sesion.usuario;
+                colaActual = sesion.cola;
+                depositoActualIndex = sesion.depositoActualIndex || 0;
+                
+                // Cargar el progreso de la cola
+                const progreso = cargarProgresoCola(rutaActual, colaActual);
+                if (progreso) {
+                    itemsPorCola[colaActual] = progreso;
+                    tieneEscaneosPendientes = true;
+                    
+                    // Continuar desde donde se quedó
+                    document.getElementById('userSection').classList.add('hidden');
+                    document.getElementById('colaSection').classList.add('hidden');
+                    document.getElementById('pickingSection').classList.remove('hidden');
+                    
+                    document.getElementById('pickingRecolector').textContent = usuarioActual;
+                    document.getElementById('pickingRuta').textContent = rutaActual;
+                    document.getElementById('pickingCola').textContent = colaActual;
+                    
+                    mostrarDepositoActual();
+                    actualizarEstadisticasPicking();
+                    actualizarListaItems();
+                    
+                    mostrarMensaje('🔄 Sesión recuperada. Continuando desde donde te quedaste.', true);
+                }
+            }
+        }
+
+        function guardarSesionActiva() {
+            if (rutaActual && usuarioActual && colaActual) {
+                const sesion = {
+                    ruta: rutaActual,
+                    usuario: usuarioActual,
+                    cola: colaActual,
+                    depositoActualIndex: depositoActualIndex,
+                    timestamp: new Date().getTime()
+                };
+                localStorage.setItem('sesionActiva', JSON.stringify(sesion));
+            }
+        }
+
+        function limpiarSesionActiva() {
+            localStorage.removeItem('sesionActiva');
+        }
+
         async function finalizarRecoleccion() {
             const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.recolectado, 0);
             const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
@@ -1336,10 +1483,10 @@
             }
             
             if (confirm(mensaje)) {
-                // Verificar si realmente se completó la cola
-                const colaCompletada = completadasUnidades >= totalUnidades;
+                // Verificar si realmente se completó la cola (validación cruzada)
+                const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
                 
-                if (colaCompletada) {
+                if (estadoReal.completada) {
                     await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
                 } else {
                     await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
@@ -1347,20 +1494,22 @@
                 
                 mostrarMensaje(`📊 Recolección finalizada: ${completadasUnidades}/${totalUnidades} unidades`, true);
                 
+                // Limpiar sesión activa
+                limpiarSesionActiva();
+                tieneEscaneosPendientes = false;
+                
                 document.getElementById('pickingSection').classList.add('hidden');
                 
                 if (colasDisponibles.length === 1) {
                     document.getElementById('userSection').classList.remove('hidden');
+                    document.getElementById('navButtons').style.display = 'grid';
                 } else {
                     document.getElementById('colaSection').classList.remove('hidden');
                     mostrarOpcionesColas();
                 }
                 
                 // Verificar si todas las colas están completadas
-                const todasColasCompletadas = colasDisponibles.every(cola => {
-                    const estado = estadoGlobal[rutaActual] && estadoGlobal[rutaActual][cola];
-                    return estado && estado.estado === 'completada';
-                });
+                const todasColasCompletadas = await verificarTodasColasCompletadas();
                 
                 if (todasColasCompletadas) {
                     mostrarMensajeModal('¡Felicidades!', 'Has completado todas las colas de esta ruta.');
@@ -1369,13 +1518,24 @@
             }
         }
 
-        // ================= REPORTES (SOLO ADMINISTRADOR) =================
+        async function verificarTodasColasCompletadas() {
+            for (const cola of colasDisponibles) {
+                const estadoReal = await verificarEstadoRealCola(rutaActual, cola);
+                if (!estadoReal.completada) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // ================= REPORTES DESDE FIREBASE =================
         async function descargarReporteCompleto() {
             try {
                 const fechaInicio = document.getElementById('fechaInicio').value;
                 const fechaFin = document.getElementById('fechaFin').value;
                 
-                let registros = JSON.parse(localStorage.getItem('registrosRecoleccion') || '[]');
+                // Obtener registros desde Firebase
+                let registros = await obtenerRegistrosFirebase();
                 
                 // Filtrar por fecha si se especificó
                 if (fechaInicio && fechaFin) {
@@ -1384,7 +1544,7 @@
                     fin.setHours(23, 59, 59, 999); // Incluir todo el día final
                     
                     registros = registros.filter(reg => {
-                        const fechaReg = new Date(reg.timestamp || new Date(reg.fecha + ' ' + reg.hora));
+                        const fechaReg = new Date(reg.timestamp);
                         return fechaReg >= inicio && fechaReg <= fin;
                     });
                 }
@@ -1394,20 +1554,20 @@
                     return;
                 }
                 
-                let csvContent = "RECOLECTOR,RUTA,COLA,DEPOSITO,CODIGO_UPC,DESCRIPCION,CANTIDAD,RECOLECTADO,ACCION,FECHA,HORA\n";
+                let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,CODIGO_UPC,DESCRIPCION,CANTIDAD,RECOLECTADO,ACCION,FECHA,HORA,TIMESTAMP\n";
                 
                 registros.forEach(reg => {
                     const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
                     const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
                     
-                    csvContent += `"${reg.usuario}","${reg.ruta}","${reg.cola}","${reg.deposito}","${reg.upc}","${reg.descripcion}",${reg.cantidad},${reg.recolectado},"${reg.accion}","${fecha}","${hora}"\n`;
+                    csvContent += `"${reg.usuario}","${reg.ruta}","${reg.cola}","${reg.deposito}","${reg.upc}","${reg.descripcion}",${reg.cantidad},${reg.recolectado},"${reg.accion}","${fecha}","${hora}",${reg.timestamp}\n`;
                 });
                 
                 const blob = new Blob([csvContent], { type: 'text/csv' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `reporte_${fechaInicio || 'completo'}_${fechaFin || ''}.csv`;
+                a.download = `reporte_recoleccion_${fechaInicio || 'completo'}_${fechaFin || ''}.csv`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1418,6 +1578,24 @@
             } catch (error) {
                 console.error('Error generando reporte:', error);
                 mostrarMensaje('❌ Error al generar el reporte', false);
+            }
+        }
+
+        async function obtenerRegistrosFirebase() {
+            try {
+                const snapshot = await database.ref('recolecciones').once('value');
+                const registrosFirebase = snapshot.val();
+                
+                if (!registrosFirebase) {
+                    return [];
+                }
+                
+                // Convertir objeto Firebase a array
+                return Object.values(registrosFirebase);
+            } catch (error) {
+                console.error('Error obteniendo registros de Firebase:', error);
+                mostrarMensaje('❌ Error al obtener registros de Firebase', false);
+                return [];
             }
         }
 
@@ -1489,7 +1667,7 @@
                 
                 // Limpiar localStorage
                 Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('progreso_') || key === 'registrosRecoleccion') {
+                    if (key.startsWith('progreso_') || key === 'registrosRecoleccion' || key === 'sesionActiva') {
                         localStorage.removeItem(key);
                     }
                 });
@@ -1543,6 +1721,9 @@
             document.getElementById('adminSection').classList.remove('hidden');
             
             actualizarTablero();
+            
+            // Ocultar botones de navegación
+            ocultarBotonesNavegacion();
         }
 
         function mostrarPanelUsuario() {
@@ -1550,12 +1731,18 @@
             document.getElementById('colaSection').classList.add('hidden');
             document.getElementById('pickingSection').classList.add('hidden');
             document.getElementById('userSection').classList.remove('hidden');
+            
+            // Mostrar botones de navegación
+            document.getElementById('navButtons').style.display = 'grid';
         }
 
         function volverSeleccionRuta() {
             document.getElementById('colaSection').classList.add('hidden');
             document.getElementById('pickingSection').classList.add('hidden');
             document.getElementById('userSection').classList.remove('hidden');
+            
+            // Mostrar botones de navegación
+            document.getElementById('navButtons').style.display = 'grid';
         }
 
         function volverInicio() {
@@ -1563,6 +1750,9 @@
             document.getElementById('pickingSection').classList.add('hidden');
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('upcInput').value = '';
+            
+            // Mostrar botones de navegación
+            document.getElementById('navButtons').style.display = 'grid';
         }
 
         // ================= UTILIDADES =================
@@ -1576,6 +1766,13 @@
                 statusDiv.classList.add('hidden');
             }, 4000);
         }
+
+        // Guardar sesión activa periódicamente
+        setInterval(() => {
+            if (rutaActual && usuarioActual && colaActual) {
+                guardarSesionActiva();
+            }
+        }, 30000); // Guardar cada 30 segundos
     </script>
 </body>
 </html>

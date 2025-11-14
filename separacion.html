@@ -13,34 +13,34 @@
         }
         body {
             background-color: #f0f2f5;
-            padding: 10px;
+            padding: 8px;
         }
         .container {
             background: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 500px;
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            max-width: 100%;
             margin: 0 auto;
         }
         .header {
             text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #3498db;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #3498db;
         }
         h1 {
             color: #2c3e50;
-            font-size: 1.4em;
-            margin-bottom: 10px;
+            font-size: 1.2em;
+            margin-bottom: 8px;
         }
         .load-section {
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         .btn-small {
-            padding: 8px 15px;
-            font-size: 12px;
+            padding: 6px 12px;
+            font-size: 11px;
             background: #27ae60;
             color: white;
             border: none;
@@ -49,73 +49,75 @@
         }
         .scan-section {
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
             text-align: center;
-            border: 2px dashed #bdc3c7;
+            border: 1px dashed #bdc3c7;
         }
         .upc-input {
             width: 100%;
-            padding: 15px;
-            font-size: 18px;
+            padding: 12px;
+            font-size: 16px;
             border: 2px solid #3498db;
             border-radius: 6px;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             background: white;
         }
         .result-section {
             background: #e8f4fc;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 2px solid #3498db;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #3498db;
         }
         .result-header {
             text-align: center;
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: #2c3e50;
-            font-size: 1.2em;
+            font-size: 1em;
         }
-        .result-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .result-cell {
             background: white;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        .result-table th {
-            background: #3498db;
-            color: white;
-            padding: 12px;
+            padding: 10px;
+            border-radius: 4px;
             text-align: center;
             font-weight: bold;
         }
-        .result-table td {
-            padding: 15px;
-            text-align: center;
-            border-bottom: 1px solid #ecf0f1;
-            font-size: 1.1em;
-            font-weight: bold;
+        .result-label {
+            font-size: 0.75em;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        .result-value {
+            font-size: 0.9em;
+            color: #2c3e50;
         }
         .articulo-info {
             background: white;
-            padding: 15px;
-            border-radius: 6px;
-            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
             text-align: center;
             font-style: italic;
             color: #7f8c8d;
+            font-size: 0.85em;
         }
         .status-section {
-            margin: 15px 0;
-            padding: 12px;
-            border-radius: 6px;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
             text-align: center;
             font-weight: bold;
+            font-size: 0.85em;
         }
         .status-success {
             background: #d4edda;
@@ -135,14 +137,14 @@
         .controls {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 8px;
+            margin-top: 10px;
         }
         button {
-            padding: 10px 20px;
+            padding: 8px 15px;
             border: none;
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 4px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
@@ -162,10 +164,20 @@
             display: none;
         }
         .cache-info {
-            font-size: 0.9em;
+            font-size: 0.8em;
             color: #7f8c8d;
             text-align: center;
-            margin-top: 10px;
+            margin-top: 8px;
+        }
+        .deposito-display {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.3em;
         }
     </style>
 </head>
@@ -202,26 +214,31 @@
         <div class="result-section hidden" id="resultSection">
             <div class="result-header">REPORTE DE REABASTECIMIENTO</div>
             
-            <table class="result-table">
-                <thead>
-                    <tr>
-                        <th>RUTA</th>
-                        <th>BLOQUE</th>
-                        <th>DEPOSITO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td id="resultRuta">-</td>
-                        <td id="resultBloque">-</td>
-                        <td id="resultDeposito">-</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="result-grid">
+                <div class="result-cell">
+                    <div class="result-label">RUTA</div>
+                    <div class="result-value" id="resultRuta">-</div>
+                </div>
+                <div class="result-cell">
+                    <div class="result-label">BLOQUE</div>
+                    <div class="result-value" id="resultBloque">-</div>
+                </div>
+                <div class="result-cell">
+                    <div class="result-label">NIVEL</div>
+                    <div class="result-value" id="resultNivel">-</div>
+                </div>
+            </div>
+
+            <div class="deposito-display" id="resultDeposito">-</div>
 
             <div class="articulo-info">
                 <strong>Artículo:</strong> <span id="resultArticulo">-</span>
             </div>
+        </div>
+
+        <!-- MENSAJE DE ESTADO (PARTE INFERIOR) -->
+        <div class="status-section status-info hidden" id="actionStatus">
+            Listo para escanear
         </div>
 
         <!-- INFORMACIÓN DE CACHE -->
@@ -230,7 +247,7 @@
         </div>
 
         <!-- BOTÓN VOLVER AL PRINCIPAL -->
-        <button class="btn-primary" onclick="volverAlPrincipal()" style="width: 100%; margin-top: 15px;">
+        <button class="btn-primary" onclick="volverAlPrincipal()" style="width: 100%; margin-top: 10px;">
             ↩️ Volver al Sistema Principal
         </button>
     </div>
@@ -427,10 +444,14 @@
         function consultarDestino(upc) {
             const resultado = datosDestino[upc];
             const resultSection = document.getElementById('resultSection');
+            const actionStatus = document.getElementById('actionStatus');
             
             if (!resultado) {
                 mostrarEstado('❌ UPC no encontrado', 'error');
                 resultSection.classList.add('hidden');
+                actionStatus.textContent = "❌ UPC no encontrado";
+                actionStatus.className = "status-section status-error";
+                actionStatus.classList.remove('hidden');
                 return;
             }
             
@@ -438,11 +459,17 @@
             
             document.getElementById('resultRuta').textContent = info.ruta;
             document.getElementById('resultBloque').textContent = info.bloque;
+            document.getElementById('resultNivel').textContent = info.nivel;
             document.getElementById('resultDeposito').textContent = resultado.deposito;
             document.getElementById('resultArticulo').textContent = resultado.articulo;
             
             resultSection.classList.remove('hidden');
-            mostrarEstado('✅ Destino encontrado', 'success');
+            mostrarEstado('✅ Datos listos', 'success');
+            
+            // Actualizar estado en la parte inferior
+            actionStatus.textContent = "✅ Destino encontrado";
+            actionStatus.className = "status-section status-success";
+            actionStatus.classList.remove('hidden');
             
             // Auto-limpiar después de mostrar resultados
             setTimeout(() => {
@@ -453,6 +480,7 @@
         function extraerInformacionDeposito(deposito) {
             let ruta = '';
             let bloque = '';
+            let nivel = '';
             
             // Extraer ruta
             const matchRuta = deposito.match(/(?:P)?(\d+)/);
@@ -473,6 +501,12 @@
                 }
             }
             
+            // Extraer nivel (última letra)
+            const matchNivel = deposito.match(/([A-Z])$/);
+            if (matchNivel) {
+                nivel = matchNivel[1];
+            }
+            
             // Determinar bloque según reglas
             const rutaNum = parseInt(ruta);
             if (rutaNum >= 1 && rutaNum <= 8) {
@@ -481,7 +515,7 @@
                 bloque = 'Toldo';
             }
             
-            return { ruta, bloque, numeroDeposito };
+            return { ruta, bloque, nivel, numeroDeposito };
         }
 
         // ================= UTILIDADES =================
@@ -500,6 +534,7 @@
         function limpiarConsulta() {
             document.getElementById('upcInput').value = '';
             document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('actionStatus').classList.add('hidden');
             document.getElementById('upcInput').focus();
             mostrarEstado('Consulta limpiada - Listo para escanear', 'info');
         }
