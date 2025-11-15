@@ -3,570 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Picking ALM</title>
+    <title>REABASTECIMIENTO SOKSO</title>
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            background-color: #f0f2f5;
-            padding: 6px;
-        }
-        .container {
-            background: white;
-            border-radius: 6px;
-            padding: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            max-width: 100%;
-            margin: 0 auto;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #ddd;
-        }
-        h1 {
-            color: #2c3e50;
-            font-size: 1em;
-        }
-        h2 {
-            font-size: 0.9em;
-            margin-bottom: 6px;
-        }
-        h3 {
-            font-size: 0.85em;
-            margin-bottom: 4px;
-        }
-        .section {
-            margin-bottom: 10px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background: #fafafa;
-        }
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 11px;
-            margin: 3px 0;
-            width: 100%;
-            transition: background 0.3s;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        button.success {
-            background: #27ae60;
-        }
-        button.success:active {
-            background: #219653;
-        }
-        button.warning {
-            background: #f39c12;
-        }
-        button.danger {
-            background: #e74c3c;
-        }
-        button.small {
-            padding: 5px;
-            font-size: 9px;
-        }
-        button:disabled {
-            background: #95a5a6;
-            cursor: not-allowed;
-        }
-        .hidden {
-            display: none;
-        }
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .connection-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        .connected {
-            background-color: #27ae60;
-        }
-        .disconnected {
-            background-color: #e74c3c;
-        }
-        .checking {
-            background-color: #f39c12;
-        }
-        .picking-info {
-            background: #e8f4fc;
-            padding: 8px;
-            border-radius: 4px;
-            margin: 6px 0;
-            font-size: 11px;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-            margin: 6px 0;
-        }
-        .info-item {
-            text-align: center;
-            padding: 5px;
-            background: white;
-            border-radius: 3px;
-            border: 1px solid #ddd;
-            font-size: 10px;
-        }
-        .info-label {
-            font-weight: bold;
-            font-size: 9px;
-        }
-        .info-value {
-            font-size: 10px;
-        }
-        .deposito-info {
-            background: white;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border: 1px solid #ddd;
-        }
-        .deposito-row {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 3px;
-            font-size: 13px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .scan-area {
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 5px;
-            margin: 8px 0;
-            text-align: center;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 12px;
-            text-align: center;
-        }
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin-top: 6px;
-        }
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            margin: 6px 0;
-            gap: 5px;
-        }
-        .stat-box {
-            flex: 1;
-            text-align: center;
-            padding: 5px;
-            background: #e8f4fc;
-            border-radius: 3px;
-            font-size: 10px;
-        }
-        .cola-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin: 6px 0;
-        }
-        .cola-button {
-            flex: 1;
-            min-width: 70px;
-            padding: 6px;
-            font-size: 10px;
-        }
-        .cola-completed {
-            background: #27ae60;
-        }
-        .cola-in-progress {
-            background: #f39c12;
-        }
-        .cola-pending {
-            background: #3498db;
-        }
-        .status-message {
-            padding: 6px;
-            border-radius: 3px;
-            margin: 5px 0;
-            text-align: center;
-            font-weight: bold;
-            font-size: 10px;
-        }
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .dashboard {
-            background: white;
-            border-radius: 5px;
-            padding: 8px;
-            margin: 8px 0;
-            border: 1px solid #ddd;
-        }
-        .dashboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-        }
-        .dashboard-table th, .dashboard-table td {
-            border: 1px solid #ddd;
-            padding: 4px;
-            text-align: center;
-        }
-        .dashboard-table th {
-            background: #f2f2f2;
-        }
-        .status-completed {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status-in-progress {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .status-pending {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .item-list {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin: 8px 0;
-        }
-        .item {
-            padding: 6px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .item:last-child {
-            border-bottom: none;
-        }
-        .item-completed {
-            background-color: #d4edda;
-            text-decoration: line-through;
-        }
-        .item-current {
-            background-color: #cce7ff;
-            font-weight: bold;
-        }
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 15px;
-            border-radius: 6px;
-            text-align: center;
-            max-width: 80%;
-        }
-        .report-filters {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin: 8px 0;
-        }
-        .filter-item {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-        .filter-item label {
-            font-size: 10px;
-            font-weight: bold;
-        }
-        .filter-item input {
-            padding: 5px;
-            font-size: 10px;
-        }
-        .nav-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin: 8px 0;
-        }
-        .interface-button {
-            background: #8e44ad;
-            margin-top: 8px;
-        }
-        @media (max-width: 600px) {
-            .info-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-            }
-            .controls-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        @media (max-width: 400px) {
-            .info-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-            }
-            .controls-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
+        *{box-sizing:border-box;font-family:Arial,sans-serif;margin:0;padding:0}
+        body{background-color:white;padding:10px;color:black}
+        .container{max-width:100%;margin:0 auto;background:white;border-radius:8px;padding:15px}
+        .header{text-align:center;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #f0f0f0}
+        h1{color:#6600a1;font-size:22px;margin-bottom:8px}
+        .connection-status{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:10px}
+        .connection-indicator{width:10px;height:10px;border-radius:50%}
+        .connected{background-color:#27ae60}
+        .disconnected{background-color:#e74c3c}
+        .checking{background-color:#f39c12}
+        .modules-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+        .module-button{background:rgb(102,0,161);color:white;border:none;padding:15px 10px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:bold;transition:all 0.3s;text-align:center}
+        .module-button:hover{transform:translateY(-1px)}
+        .module-button.admin{background:rgb(82,0,130)}
+        .footer{text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #f0f0f0}
+        .back-button{background:#6600a1;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px}
+        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:1000}
+        .modal-content{background:white;padding:20px;border-radius:8px;text-align:center;max-width:350px;width:90%}
+        .modal h3{color:#6600a1;margin-bottom:10px;font-size:18px}
+        .modal p{margin-bottom:15px;color:#333;font-size:14px}
+        input[type="text"],input[type="password"]{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:4px;font-size:14px;text-align:center}
+        .modal-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+        .modal-button{padding:10px;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+        .modal-button.success{background:#6600a1;color:white}
+        .modal-button.warning{background:#f0f0f0;color:#333}
+        .status-message{padding:8px;border-radius:4px;margin:10px 0;text-align:center;font-weight:bold;display:none;font-size:12px}
+        .success-message{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+        .error-message{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+        @media (max-width:480px){.modules-grid{grid-template-columns:1fr;gap:8px}h1{font-size:20px}.module-button{padding:12px 8px;font-size:13px}}
     </style>
-    
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA COMPACTA -->
         <div class="header">
-            <h1>PICKING ALM</h1>
+            <h1>REABASTECIMIENTO SOKSO</h1>
             <div class="connection-status">
                 <div id="connectionIndicator" class="connection-indicator checking"></div>
-                <span id="estadoConexion" style="font-size: 11px;">Conectando...</span>
-                <button onclick="verificarConexion()" class="small warning" style="width: auto; padding: 3px 6px;">Conexión</button>
+                <span id="estadoConexion" style="font-size:14px">Conectando...</span>
             </div>
         </div>
-
-        <!-- BOTONES DE NAVEGACIÓN ENTRE MÓDULOS (SOLO EN VENTANA PRINCIPAL) -->
-        <div class="nav-buttons" id="navButtons">
-            <button onclick="irAModuloReposicion()" class="success">📦 Módulo Reposición</button>
-            <button onclick="irAModuloSeparacion()" class="success">📋 Módulo Separación</button>
+        <div id="statusMessage" class="status-message"></div>
+        <div class="modules-grid">
+            <button class="module-button" onclick="solicitarUsuario('recoleccion')">📦 Recolección</button>
+            <button class="module-button" onclick="redirigirModulo('separacion')">📋 Separación</button>
+            <button class="module-button" onclick="redirigirModulo('reposicion')">🔄 Reposición</button>
+            <button class="module-button admin" onclick="solicitarAccesoAdmin()">👨‍💼 Admin</button>
+            <button class="module-button" onclick="redirigirModulo('productividad')">📊 Productividad</button>
         </div>
-
-        <!-- SECCIÓN ADMINISTRADOR -->
-        <div class="section admin-panel hidden" id="adminSection">
-            <h2>Panel Administrador</h2>
-            
-            <div class="dashboard">
-                <h3>📊 Tablero de Control - Estado de Rutas</h3>
-                <div id="dashboardContent">
-                    <table class="dashboard-table">
-                        <thead>
-                            <tr>
-                                <th>Ruta</th>
-                                <th>Cola</th>
-                                <th>Estado</th>
-                                <th>Recolector</th>
-                                <th>Progreso</th>
-                                <th>Última Actualización</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dashboardTableBody">
-                            <!-- Los datos se llenarán dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- FILTROS PARA REPORTES -->
-            <div class="dashboard">
-                <h3>📊 Generar Reporte</h3>
-                <div class="report-filters">
-                    <div class="filter-item">
-                        <label for="fechaInicio">Fecha Inicio:</label>
-                        <input type="date" id="fechaInicio">
-                    </div>
-                    <div class="filter-item">
-                        <label for="fechaFin">Fecha Fin:</label>
-                        <input type="date" id="fechaFin">
-                    </div>
-                </div>
-                <button onclick="descargarReporteCompleto()" class="success">📊 Descargar Reporte</button>
-            </div>
-            
-            <button onclick="actualizarDesdeSheets()" class="warning">🔄 Actualizar desde Sheets</button>
-            <button onclick="mostrarPanelUsuario()" class="warning">👥 Modo Usuario</button>
-            <button onclick="resetearProgreso()" class="danger">🔄 Resetear Progreso</button>
-            
-            <!-- BOTÓN INTERFAZ -->
-            <button onclick="volverAInterfazPrincipal()" class="interface-button">🏠 Interfaz</button>
+        <div class="footer">
+            <button class="back-button" onclick="salirSistema()">🚪 Salir</button>
         </div>
-
-        <!-- SECCIÓN USUARIO -->
-        <div class="section user-panel" id="userSection">
-            <h2>Modo Recolección</h2>
-            <button onclick="cargarRutasDesdeSheets()" class="success">🔄 Cargar Rutas</button>
-            <button onclick="solicitarAccesoAdmin()" class="warning">👨‍💼 Modo Admin</button>
-            
-            <div class="picking-info" id="fileInfo">
-                Presiona "Cargar Rutas" para comenzar...
-            </div>
-            <div id="rutasContainer" class="hidden">
-                <h3>Selecciona tu Ruta:</h3>
-                <div class="route-selector" id="routeSelector"></div>
-            </div>
-        </div>
-
-        <!-- SECCIÓN SELECCIÓN DE COLA -->
-        <div class="section hidden" id="colaSection">
-            <h2>Selección de Cola</h2>
-            <div class="picking-info">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">RECOLECTOR</div>
-                        <div class="info-value" id="recolectorNombre">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">RUTA</div>
-                        <div class="info-value" id="rutaActual">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">TOTAL UNIDADES</div>
-                        <div class="info-value" id="totalUnidadesCola">0</div>
-                    </div>
-                </div>
-            </div>
-            
-            <h3>Selecciona una cola:</h3>
-            <div class="cola-selector" id="colaSelector"></div>
-            
-            <button onclick="volverSeleccionRuta()" class="warning">↩️ Volver</button>
-            
-            <!-- BOTÓN INTERFAZ -->
-            <button onclick="volverAInterfazPrincipal()" class="interface-button">🏠 Interfaz</button>
-        </div>
-
-        <!-- SECCIÓN PICKING -->
-        <div class="section hidden" id="pickingSection">
-            <div class="picking-info">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">RECOLECTOR</div>
-                        <div class="info-value" id="pickingRecolector">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">RUTA</div>
-                        <div class="info-value" id="pickingRuta">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">COLA</div>
-                        <div class="info-value" id="pickingCola">-</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="deposito-info">
-                <div class="deposito-row">
-                    <span id="pickingDeposito">-</span>
-                </div>
-                <div class="deposito-row">
-                    <span id="pickingDescripcion">-</span>
-                </div>
-                <div class="info-grid" style="margin-top: 6px;">
-                    <div class="info-item">
-                        <div class="info-label">CANTIDAD</div>
-                        <div class="info-value" id="pickingCantidad">0</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">RECOLECTADO</div>
-                        <div class="info-value" id="pickingRecolectado">0</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">PENDIENTE</div>
-                        <div class="info-value" id="pickingPendiente">0</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="scan-area">
-                <h3>SCAN</h3>
-                <input type="text" id="upcInput" placeholder="Escanear código UPC" autocomplete="off">
-                <div class="controls-grid">
-                    <button onclick="marcarComoNoEncontrado()" class="danger">❌ No Encontrado</button>
-                    <button onclick="anteriorDeposito()" class="warning">⏮️ Atrás</button>
-                    <button onclick="finalizarRecoleccion()" class="success">🏁 Finalizar</button>
-                </div>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-box">
-                    <h4>TOTAL</h4>
-                    <span id="totalUnidadesPicking">0</span>
-                </div>
-                <div class="stat-box">
-                    <h4>COMPLETADO</h4>
-                    <span id="completedUnidadesPicking">0</span>
-                </div>
-                <div class="stat-box">
-                    <h4>PENDIENTE</h4>
-                    <span id="pendingUnidadesPicking">0</span>
-                </div>
-            </div>
-            
-            <!-- LISTA DE DEPÓSITOS PARA NAVEGACIÓN MANUAL -->
-            <div class="item-list" id="itemList"></div>
-            
-            <!-- BOTÓN INTERFAZ -->
-            <button onclick="volverAInterfazPrincipal()" class="interface-button">🏠 Interfaz</button>
-        </div>
-
-        <!-- MENSAJES DE ESTADO -->
-        <div id="statusMessage" class="status-message hidden"></div>
     </div>
 
-    <!-- MODAL PARA MENSAJES EMERGENTES -->
-    <div id="modal" class="modal">
+    <div id="userModal" class="modal">
         <div class="modal-content">
-            <h3 id="modalTitle">Mensaje</h3>
-            <p id="modalMessage"></p>
-            <button onclick="cerrarModal()" class="success" style="margin-top: 8px;">Aceptar</button>
+            <h3>Ingresar Usuario</h3>
+            <p>Ingresa tu nombre de usuario:</p>
+            <input type="text" id="userName" placeholder="Usuario" autocomplete="off">
+            <div class="modal-buttons">
+                <button onclick="verificarUsuario()" class="modal-button success">Aceptar</button>
+                <button onclick="cerrarUserModal()" class="modal-button warning">Cancelar</button>
+            </div>
         </div>
     </div>
 
-    <!-- MODAL PARA CONTRASEÑA ADMIN -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <h3>Acceso Administrador</h3>
             <p>Ingresa la contraseña:</p>
-            <input type="password" id="adminPassword" placeholder="Contraseña">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px;">
-                <button onclick="verificarContrasena()" class="success">Aceptar</button>
-                <button onclick="cerrarAdminModal()" class="warning">Cancelar</button>
+            <input type="password" id="adminPassword" placeholder="Contraseña" autocomplete="off">
+            <div class="modal-buttons">
+                <button onclick="verificarContrasena()" class="modal-button success">Aceptar</button>
+                <button onclick="cerrarAdminModal()" class="modal-button warning">Cancelar</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ================= CONFIGURACIÓN FIREBASE =================
         const firebaseConfig = {
             apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
             authDomain: "reabastecimiento-d71a1.firebaseapp.com",
@@ -577,105 +95,27 @@
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
 
-        // ================= INICIALIZAR FIREBASE =================
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-
-        // ================= CONFIGURACIÓN GOOGLE SHEETS =================
-        const SHEET_ID = '1GoickGaR8jgPAorkpnKuno7bOrBxYQt6RMUJcfFqLhY';
-        const GOOGLE_SHEETS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
         const ADMIN_PASSWORD = "E123456";
+        let moduloDestino = "";
+        let usuarioActual = "";
 
-        // ================= VARIABLES GLOBALES =================
-        let rutasMaestras = {};
-        let rutaActual = null;
-        let usuarioActual = null;
-        let colaActual = null;
-        let itemsCompletados = [];
-        let itemsNoEncontrados = [];
-        let itemsPorCola = {};
-        let depositoActualIndex = 0;
-        let colasDisponibles = [];
-        let estadoGlobal = {};
-        let totalUnidadesGlobal = 0;
-        let tieneEscaneosPendientes = false;
-
-        // ================= INICIALIZACIÓN =================
-        window.addEventListener('load', async function() {
-            // Inicializar Firebase y verificar conexión
+        window.addEventListener('load', function() {
             inicializarFirebase();
-            
-            // Asegurar que los modales estén ocultos al inicio
-            document.getElementById('modal').style.display = 'none';
+            document.getElementById('userModal').style.display = 'none';
             document.getElementById('adminModal').style.display = 'none';
-            
-            // Cargar estado global desde Firebase
-            await cargarEstadoGlobalDesdeFirebase();
-            
-            // Mostrar panel de usuario por defecto
-            mostrarPanelUsuario();
-            
-            // Establecer fechas por defecto para reportes
-            const hoy = new Date();
-            const haceUnaSemana = new Date();
-            haceUnaSemana.setDate(hoy.getDate() - 7);
-            
-            document.getElementById('fechaInicio').value = haceUnaSemana.toISOString().split('T')[0];
-            document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
-            
-            // Ocultar botones de navegación en secciones que no son la principal
-            ocultarBotonesNavegacion();
-            
-            // Cargar progreso guardado si existe
-            cargarProgresoRecuperacion();
+            const usuarioGuardado = localStorage.getItem('usuarioActual');
+            if (usuarioGuardado) {
+                usuarioActual = usuarioGuardado;
+                mostrarMensaje(`Bienvenido ${usuarioActual}`, true);
+            }
         });
 
-        // ================= NAVEGACIÓN ENTRE MÓDULOS =================
-        function irAModuloReposicion() {
-            window.location.href = 'reposicion.html';
-        }
-
-        function irAModuloSeparacion() {
-            window.location.href = 'separacion.html';
-        }
-
-        function volverAInterfazPrincipal() {
-            // Verificar si hay escaneos pendientes sin guardar
-            if (tieneEscaneosPendientes) {
-                mostrarMensajeModal('Escaneos Pendientes', 
-                    'Tienes escaneos pendientes de guardar. Debes finalizar la recolección antes de volver a la interfaz principal.');
-                return;
-            }
-            
-            // Si no hay problemas, volver a la interfaz principal
-            document.getElementById('adminSection').classList.add('hidden');
-            document.getElementById('colaSection').classList.add('hidden');
-            document.getElementById('pickingSection').classList.add('hidden');
-            document.getElementById('userSection').classList.remove('hidden');
-            
-            // Mostrar botones de navegación
-            document.getElementById('navButtons').style.display = 'grid';
-            
-            mostrarMensaje('🏠 Volviendo a la interfaz principal', true);
-        }
-
-        function ocultarBotonesNavegacion() {
-            // Solo mostrar botones de navegación en la sección principal
-            const secciones = ['adminSection', 'colaSection', 'pickingSection'];
-            const currentSection = secciones.find(sec => !document.getElementById(sec).classList.contains('hidden'));
-            
-            if (currentSection) {
-                document.getElementById('navButtons').style.display = 'none';
-            }
-        }
-
-        // ================= FIREBASE INTEGRATION =================
         function inicializarFirebase() {
             try {
-                // Firebase ya está inicializado, solo verificamos conexión
                 verificarConexionFirebase();
             } catch (error) {
-                console.error('Error inicializando Firebase:', error);
                 document.getElementById('estadoConexion').innerHTML = 'Error Firebase';
                 document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
             }
@@ -694,989 +134,28 @@
             });
         }
 
-        // ================= GESTIÓN DE ESTADO GLOBAL CON FIREBASE =================
-        async function cargarEstadoGlobalDesdeFirebase() {
-            try {
-                const estadoRef = database.ref('estado');
-                estadoRef.on('value', (snapshot) => {
-                    const estadoDesdeFirebase = snapshot.val();
-                    if (estadoDesdeFirebase && Object.keys(estadoDesdeFirebase).length > 0) {
-                        estadoGlobal = estadoDesdeFirebase;
-                        console.log('Estado cargado desde Firebase:', estadoGlobal);
-                        
-                        // Actualizar el tablero si está visible
-                        if (!document.getElementById('adminSection').classList.contains('hidden')) {
-                            actualizarTablero();
-                        }
-                    } else {
-                        // Si no hay datos en Firebase, cargar desde localStorage
-                        cargarEstadoGlobalDesdeLocalStorage();
-                    }
-                });
-            } catch (error) {
-                console.error('Error cargando estado desde Firebase:', error);
-                cargarEstadoGlobalDesdeLocalStorage();
-            }
+        function solicitarUsuario(modulo) {
+            moduloDestino = modulo;
+            document.getElementById('userModal').style.display = 'flex';
+            document.getElementById('userName').focus();
         }
 
-        function cargarEstadoGlobalDesdeLocalStorage() {
-            const estadoGuardado = localStorage.getItem('estadoGlobalPicking');
-            if (estadoGuardado) {
-                estadoGlobal = JSON.parse(estadoGuardado);
-            } else {
-                estadoGlobal = {
-                    rutas: {},
-                    ultimaActualizacion: new Date().toISOString()
-                };
-            }
+        function redirigirModulo(modulo) {
+            window.location.href = modulo + '.html';
         }
 
-        function guardarEstadoGlobalEnLocalStorage() {
-            estadoGlobal.ultimaActualizacion = new Date().toISOString();
-            localStorage.setItem('estadoGlobalPicking', JSON.stringify(estadoGlobal));
-        }
-
-        async function actualizarEstadoRuta(ruta, cola, estado, recolector = null) {
-            if (!estadoGlobal.rutas[ruta]) {
-                estadoGlobal.rutas[ruta] = {};
-            }
-            
-            if (!estadoGlobal.rutas[ruta][cola]) {
-                estadoGlobal.rutas[ruta][cola] = {
-                    estado: 'pendiente',
-                    recolector: null,
-                    progreso: 0,
-                    total: 0,
-                    ultimaActualizacion: new Date().toISOString()
-                };
-            }
-            
-            estadoGlobal.rutas[ruta][cola].estado = estado;
-            estadoGlobal.rutas[ruta][cola].ultimaActualizacion = new Date().toISOString();
-            
-            if (recolector) {
-                estadoGlobal.rutas[ruta][cola].recolector = recolector;
-            }
-            
-            // Calcular progreso
-            if (itemsPorCola[cola]) {
-                const totalUnidades = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
-                const completadasUnidades = itemsPorCola[cola].reduce((sum, item) => sum + item.recolectado, 0);
-                estadoGlobal.rutas[ruta][cola].progreso = completadasUnidades;
-                estadoGlobal.rutas[ruta][cola].total = totalUnidades;
-            }
-            
-            // Guardar en localStorage como respaldo
-            guardarEstadoGlobalEnLocalStorage();
-            
-            // Guardar en Firebase
-            await actualizarEstadoEnFirebase(ruta, cola, estado, recolector);
-        }
-
-        async function actualizarEstadoEnFirebase(ruta, cola, estado, recolector) {
-            try {
-                const estadoData = {
-                    estado: estado,
-                    recolector: recolector || '',
-                    progreso: estadoGlobal.rutas[ruta][cola].progreso,
-                    total: estadoGlobal.rutas[ruta][cola].total,
-                    ultimaActualizacion: new Date().toISOString()
-                };
-
-                await database.ref(`estado/${ruta}/${cola}`).set(estadoData);
-                console.log('Estado actualizado en Firebase:', estadoData);
-                return true;
-            } catch (error) {
-                console.error('Error actualizando estado en Firebase:', error);
-                mostrarMensaje('⚠️ Estado guardado localmente (error en conexión)', true);
-                return false;
-            }
-        }
-
-        // ================= GUARDAR REGISTROS EN FIREBASE =================
-        async function guardarRegistroEnFirebase(registro) {
-            try {
-                console.log('Enviando registro a Firebase:', registro);
-                
-                // Generar una clave única para el registro
-                const registroKey = database.ref().child('recolecciones').push().key;
-                
-                await database.ref(`recolecciones/${registroKey}`).set(registro);
-                console.log('Registro guardado en Firebase:', registro);
-                mostrarMensaje('✅ Registro guardado en la nube', true);
-                return true;
-                
-            } catch (error) {
-                console.error('Error guardando registro en Firebase:', error);
-                mostrarMensaje(`⚠️ Registro guardado localmente (error: ${error.message})`, true);
-                return false;
-            }
-        }
-
-        // ================= VERIFICAR CONEXIÓN =================
-        async function verificarConexion() {
-            try {
-                document.getElementById('estadoConexion').innerHTML = 'Verificando...';
-                document.getElementById('connectionIndicator').className = 'connection-indicator checking';
-                
-                const response = await fetch(GOOGLE_SHEETS_URL);
-                
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}`);
-                }
-                
-                const csvText = await response.text();
-                
-                if (csvText.includes('error')) {
-                    throw new Error('Google Sheets no accesible');
-                }
-                
-                document.getElementById('estadoConexion').innerHTML = 'Conectado';
-                document.getElementById('connectionIndicator').className = 'connection-indicator connected';
-                mostrarMensaje('✅ Conexión con Google Sheets verificada', true);
-                
-            } catch (error) {
-                document.getElementById('estadoConexion').innerHTML = 'Error conexión';
-                document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
-                mostrarMensaje(`❌ Error de conexión: ${error.message}`, false);
-            }
-        }
-
-        // ================= GOOGLE SHEETS INTEGRATION =================
-        async function cargarDesdeGoogleSheets() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_URL);
-                
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: No se pudo cargar desde Google Sheets`);
-                }
-                
-                const csvText = await response.text();
-                
-                if (!csvText || csvText.includes('error') || csvText.length < 10) {
-                    throw new Error('No hay datos en Google Sheets o la hoja no es accesible');
-                }
-                
-                return csvText;
-                
-            } catch (error) {
-                console.error('Error Google Sheets:', error);
-                throw new Error('No se pudo conectar con Google Sheets: ' + error.message);
-            }
-        }
-
-        // ================= FUNCIONES PRINCIPALES =================
-        async function cargarRutasDesdeSheets() {
-            try {
-                mostrarMensaje('📥 Cargando desde Google Sheets...', true);
-                
-                let csvText = '';
-                let fuente = '';
-                
-                // Intentar desde Google Sheets primero
-                try {
-                    csvText = await cargarDesdeGoogleSheets();
-                    fuente = 'Google Sheets';
-                } catch (error) {
-                    // Fallback a localStorage
-                    csvText = localStorage.getItem('rutasCSV');
-                    fuente = localStorage.getItem('fuente') || 'Respaldo Local';
-                    
-                    if (!csvText) {
-                        throw new Error('No hay datos disponibles. El administrador debe subir un archivo CSV primero.');
-                    }
-                }
-                
-                procesarCSV(csvText, fuente);
-                mostrarMensaje(`✅ Rutas cargadas desde ${fuente}`, true);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                mostrarMensaje(`❌ ${error.message}`, false);
-            }
-        }
-
-        async function actualizarDesdeSheets() {
-            try {
-                mostrarMensaje('🔄 Actualizando desde Google Sheets...', true);
-                
-                const csvText = await cargarDesdeGoogleSheets();
-                localStorage.setItem('rutasCSV', csvText);
-                localStorage.setItem('ultimaActualizacion', new Date().toISOString());
-                localStorage.setItem('fuente', 'Google Sheets');
-                
-                procesarCSV(csvText, 'Google Sheets');
-                mostrarMensaje('✅ Datos actualizados desde Google Sheets', true);
-                
-            } catch (error) {
-                mostrarMensaje(`❌ ${error.message}`, false);
-            }
-        }
-
-        // ================= PROCESAMIENTO CSV =================
-        function procesarCSV(csvText, fuente) {
-            try {
-                rutasMaestras = {};
-                totalUnidadesGlobal = 0;
-                const lineas = csvText.split('\n').filter(linea => linea.trim());
-                
-                console.log('Procesando', lineas.length, 'líneas desde:', fuente);
-                
-                if (lineas.length < 2) {
-                    throw new Error('El archivo CSV está vacío o no tiene datos');
-                }
-                
-                // Detectar separador
-                const primeraLinea = lineas[0];
-                const separador = primeraLinea.includes('\t') ? '\t' : ',';
-                
-                for (let i = 1; i < lineas.length; i++) {
-                    const linea = lineas[i].trim();
-                    if (!linea) continue;
-                    
-                    const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
-                    
-                    if (partes.length >= 4) {
-                        const deposito = partes[0];
-                        const upc = partes[1].replace(',', '.');
-                        const descripcion = partes[2];
-                        const cantidad = parseInt(partes[3]) || 0;
-                        
-                        if (deposito && upc) {
-                            // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
-                            const rutaMatch = deposito.match(/^[A-Z](\d+)/);
-                            let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
-                            ruta = 'Ruta ' + ruta;
-                            
-                            if (!rutasMaestras[ruta]) {
-                                rutasMaestras[ruta] = [];
-                            }
-                            
-                            rutasMaestras[ruta].push({
-                                deposito,
-                                upc,
-                                descripcion,
-                                cantidad,
-                                recolectado: 0,
-                                completado: false
-                            });
-                            
-                            totalUnidadesGlobal += cantidad;
-                        }
-                    }
-                }
-                
-                if (Object.keys(rutasMaestras).length === 0) {
-                    throw new Error('No se encontraron datos válidos en el archivo');
-                }
-                
-                mostrarInfoRutas(fuente);
-                mostrarOpcionesRutas();
-                
-            } catch (error) {
-                throw new Error('Error procesando CSV: ' + error.message);
-            }
-        }
-
-        function mostrarInfoRutas(fuente) {
-            const totalRutas = Object.keys(rutasMaestras).length;
-            
-            document.getElementById('fileInfo').innerHTML = 
-                `<strong>✅ Fuente: ${fuente}</strong><br>
-                 <strong>📊 Rutas disponibles: ${totalRutas}</strong><br>
-                 <strong>📦 Total Unidades: ${totalUnidadesGlobal}</strong>`;
-        }
-
-        function mostrarOpcionesRutas() {
-            const container = document.getElementById('rutasContainer');
-            const selector = document.getElementById('routeSelector');
-            
-            selector.innerHTML = '';
-            
-            Object.keys(rutasMaestras).forEach(ruta => {
-                const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
-                const button = document.createElement('button');
-                button.className = 'route-button success';
-                button.textContent = `📍 ${ruta} (${totalUnidadesRuta})`;
-                button.onclick = () => seleccionarRuta(ruta);
-                selector.appendChild(button);
-            });
-            
-            container.classList.remove('hidden');
-        }
-
-        function seleccionarRuta(ruta) {
-            const usuario = prompt("👤 Ingresa tu nombre:", "Operador");
-            if (!usuario) return;
-            
-            rutaActual = ruta;
-            usuarioActual = usuario;
-            
-            // Agrupar por colas (A, B, CDE, F)
-            agruparPorColas(ruta);
-            
-            document.getElementById('userSection').classList.add('hidden');
-            document.getElementById('colaSection').classList.remove('hidden');
-            
-            document.getElementById('recolectorNombre').textContent = usuario;
-            document.getElementById('rutaActual').textContent = ruta;
-            
-            const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
-            document.getElementById('totalUnidadesCola').textContent = totalUnidadesRuta;
-            
-            mostrarOpcionesColas();
-            
-            // Ocultar botones de navegación
-            ocultarBotonesNavegacion();
-        }
-
-        function agruparPorColas(ruta) {
-            itemsPorCola = {};
-            colasDisponibles = [];
-            
-            // Inicializar las colas
-            itemsPorCola['A'] = [];
-            itemsPorCola['B'] = [];
-            itemsPorCola['CDE'] = [];
-            itemsPorCola['F'] = [];
-            
-            rutasMaestras[ruta].forEach(item => {
-                const partes = item.deposito.split('-');
-                if (partes.length >= 3) {
-                    const nivel = partes[2].charAt(0);
-                    
-                    if (nivel === 'A') {
-                        itemsPorCola['A'].push(item);
-                    } else if (nivel === 'B') {
-                        itemsPorCola['B'].push(item);
-                    } else if (['C', 'D', 'E'].includes(nivel)) {
-                        itemsPorCola['CDE'].push(item);
-                    } else if (nivel === 'F') {
-                        itemsPorCola['F'].push(item);
-                    }
-                }
-            });
-            
-            // Ordenar cada cola según la nomenclatura
-            Object.keys(itemsPorCola).forEach(cola => {
-                itemsPorCola[cola].sort((a, b) => {
-                    return a.deposito.localeCompare(b.deposito);
-                });
-            });
-            
-            // Definir colas disponibles (solo las que tienen elementos)
-            colasDisponibles = Object.keys(itemsPorCola).filter(cola => itemsPorCola[cola].length > 0);
-            
-            // Si solo hay una cola, mostrar directamente el picking
-            if (colasDisponibles.length === 1) {
-                comenzarPicking(colasDisponibles[0]);
-            }
-        }
-
-        function mostrarOpcionesColas() {
-            const selector = document.getElementById('colaSelector');
-            selector.innerHTML = '';
-            
-            if (colasDisponibles.length === 0) {
-                selector.innerHTML = '<p>No hay colas disponibles para esta ruta</p>';
+        function verificarUsuario() {
+            const userName = document.getElementById('userName').value.trim();
+            if (!userName) {
+                mostrarMensaje('Ingresa tu nombre de usuario', false);
                 return;
             }
-            
-            colasDisponibles.forEach(cola => {
-                const button = document.createElement('button');
-                
-                // Verificar el estado REAL de la cola desde Firebase (con filtro por fecha)
-                verificarEstadoRealCola(rutaActual, cola).then(estadoReal => {
-                    const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
-                    
-                    if (estadoReal.completada) {
-                        button.className = 'cola-button cola-completed';
-                        button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
-                        button.disabled = true;
-                    } else if (estadoReal.enProgreso) {
-                        button.className = 'cola-button cola-in-progress';
-                        button.textContent = `🔄 COLA: ${cola} (EN PROGRESO)`;
-                    } else {
-                        button.className = 'cola-button cola-pending';
-                        button.textContent = `COLA: ${cola} (${totalUnidadesCola})`;
-                    }
-                    
-                    button.onclick = () => comenzarPicking(cola);
-                    selector.appendChild(button);
-                });
-            });
+            usuarioActual = userName;
+            localStorage.setItem('usuarioActual', usuarioActual);
+            cerrarUserModal();
+            window.location.href = moduloDestino + '.html';
         }
 
-        // ================= VALIDACIÓN CRUZADA SHEETS-FIREBASE (CON FECHA) =================
-        async function verificarEstadoRealCola(ruta, cola) {
-            try {
-                // Obtener la fecha actual para filtrar
-                const hoy = new Date();
-                const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
-                const finDia = inicioDia + (24 * 60 * 60 * 1000) - 1;
-                
-                // Obtener todos los registros de Firebase para esta ruta
-                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
-                const registros = snapshot.val();
-                
-                if (!registros) {
-                    return { completada: false, enProgreso: false };
-                }
-                
-                // Filtrar registros por cola y por fecha (solo registros de hoy)
-                let totalRecolectado = 0;
-                let totalNoEncontrado = 0;
-                
-                Object.values(registros).forEach(registro => {
-                    // Filtrar por cola y por fecha (solo hoy)
-                    if (registro.cola === cola && registro.timestamp >= inicioDia && registro.timestamp <= finDia) {
-                        if (registro.accion === 'escaneado') {
-                            totalRecolectado += registro.recolectado;
-                        } else if (registro.accion === 'no_encontrado') {
-                            totalNoEncontrado += 1;
-                        }
-                    }
-                });
-                
-                // Calcular total planificado desde Sheets
-                const itemsCola = itemsPorCola[cola];
-                const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
-                
-                // Verificar si está completada (considerando ambos tipos de registros)
-                const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
-                const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
-                
-                console.log(`Cola ${cola} (Hoy): Planificado=${totalPlanificado}, Recolectado=${totalRecolectado}, NoEncontrado=${totalNoEncontrado}, Completada=${completada}`);
-                
-                return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
-                
-            } catch (error) {
-                console.error('Error verificando estado real de cola:', error);
-                return { completada: false, enProgreso: false };
-            }
-        }
-
-        async function comenzarPicking(cola) {
-            colaActual = cola;
-            itemsCompletados = [];
-            itemsNoEncontrados = [];
-            tieneEscaneosPendientes = false;
-            
-            // Cargar progreso guardado si existe
-            const progresoGuardado = cargarProgresoCola(rutaActual, colaActual);
-            if (progresoGuardado) {
-                itemsPorCola[colaActual] = progresoGuardado;
-            }
-            
-            // Verificar progreso desde Firebase
-            await verificarProgresoDesdeRegistros();
-            
-            // Encontrar el primer depósito no completado
-            depositoActualIndex = itemsPorCola[colaActual].findIndex(item => !item.completado);
-            
-            // Verificar si la cola ya está completada (validación cruzada con fecha)
-            const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
-            
-            if (depositoActualIndex === -1 || estadoReal.completada) {
-                await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
-                mostrarMensajeModal('Cola Completada', 'Esta cola ya ha sido completada anteriormente.');
-                if (colasDisponibles.length === 1) {
-                    volverSeleccionRuta();
-                } else {
-                    mostrarOpcionesColas();
-                }
-                return;
-            }
-            
-            await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
-            
-            document.getElementById('colaSection').classList.add('hidden');
-            document.getElementById('pickingSection').classList.remove('hidden');
-            
-            document.getElementById('pickingRecolector').textContent = usuarioActual;
-            document.getElementById('pickingRuta').textContent = rutaActual;
-            document.getElementById('pickingCola').textContent = colaActual;
-            
-            mostrarDepositoActual();
-            actualizarEstadisticasPicking();
-            actualizarListaItems();
-            
-            document.getElementById('upcInput').focus();
-            
-            // Ocultar botones de navegación
-            ocultarBotonesNavegacion();
-        }
-
-        async function verificarProgresoDesdeRegistros() {
-            try {
-                console.log('Verificando progreso desde registros...');
-                // En una implementación futura, aquí se cargarían los registros desde Firebase
-                // para actualizar itemsPorCola[colaActual] con los recolectados reales
-            } catch (error) {
-                console.error('Error verificando progreso:', error);
-            }
-        }
-
-        function mostrarDepositoActual() {
-            if (depositoActualIndex < itemsPorCola[colaActual].length) {
-                const item = itemsPorCola[colaActual][depositoActualIndex];
-                
-                document.getElementById('pickingDeposito').textContent = item.deposito;
-                document.getElementById('pickingDescripcion').textContent = item.descripcion;
-                document.getElementById('pickingCantidad').textContent = item.cantidad;
-                document.getElementById('pickingRecolectado').textContent = item.recolectado;
-                document.getElementById('pickingPendiente').textContent = item.cantidad - item.recolectado;
-            } else {
-                actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
-                mostrarMensajeModal('Fin de la Ruta', '¡Has completado todos los depósitos de esta cola!');
-                finalizarRecoleccion();
-            }
-            
-            actualizarListaItems();
-        }
-
-        function actualizarListaItems() {
-            const container = document.getElementById('itemList');
-            container.innerHTML = '';
-            
-            if (!itemsPorCola[colaActual]) return;
-            
-            itemsPorCola[colaActual].forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = `item ${item.completado ? 'item-completed' : ''} ${index === depositoActualIndex ? 'item-current' : ''}`;
-                div.innerHTML = `
-                    <div>
-                        <strong>${index + 1}. ${item.deposito}</strong><br>
-                        ${item.descripcion}
-                    </div>
-                    <div style="font-size: 16px;">
-                        ${item.completado ? '✅' : (index === depositoActualIndex ? '👉' : '⏳')}
-                    </div>
-                `;
-                div.onclick = () => {
-                    if (index !== depositoActualIndex) {
-                        depositoActualIndex = index;
-                        mostrarDepositoActual();
-                        document.getElementById('upcInput').focus();
-                    }
-                };
-                container.appendChild(div);
-            });
-        }
-
-        function anteriorDeposito() {
-            if (depositoActualIndex > 0) {
-                depositoActualIndex--;
-                mostrarDepositoActual();
-                document.getElementById('upcInput').value = '';
-                document.getElementById('upcInput').focus();
-            }
-        }
-
-        // ================= VALIDACIÓN DE ESCANEO =================
-        document.getElementById('upcInput').addEventListener('input', function(e) {
-            const upc = e.target.value.trim();
-            
-            if (upc.length > 0) {
-                validarUPC(upc);
-            }
-        });
-
-        async function validarUPC(upc) {
-            const item = itemsPorCola[colaActual][depositoActualIndex];
-            
-            if (item.upc !== upc) {
-                mostrarMensajeModal('Código Incorrecto', 'El código UPC escaneado no coincide con el producto actual.');
-                document.getElementById('upcInput').value = '';
-                return;
-            }
-            
-            if (item.recolectado >= item.cantidad) {
-                mostrarMensajeModal('Cantidad Completa', 'Ya se ha recolectado la cantidad requerida para este producto.');
-                document.getElementById('upcInput').value = '';
-                return;
-            }
-            
-            // UPC correcto, incrementar contador
-            item.recolectado++;
-            tieneEscaneosPendientes = true;
-            
-            // Actualizar interfaz
-            document.getElementById('pickingRecolectado').textContent = item.recolectado;
-            document.getElementById('pickingPendiente').textContent = item.cantidad - item.recolectado;
-            
-            // Guardar registro en Firebase
-            const fechaHora = new Date();
-            const registro = {
-                usuario: usuarioActual,
-                ruta: rutaActual,
-                cola: colaActual,
-                deposito: item.deposito,
-                upc: item.upc,
-                descripcion: item.descripcion,
-                cantidad: item.cantidad,
-                recolectado: item.recolectado,
-                accion: 'escaneado',
-                fecha: fechaHora.toLocaleDateString(),
-                hora: fechaHora.toLocaleTimeString(),
-                timestamp: fechaHora.getTime()
-            };
-            
-            await guardarRegistroEnFirebase(registro);
-            guardarRegistroLocal(registro);
-            
-            // Verificar si se completó la cantidad
-            if (item.recolectado >= item.cantidad) {
-                item.completado = true;
-                itemsCompletados.push(item);
-                
-                guardarProgresoCola(rutaActual, colaActual, itemsPorCola[colaActual]);
-                
-                setTimeout(() => {
-                    depositoActualIndex++;
-                    document.getElementById('upcInput').value = '';
-                    mostrarDepositoActual();
-                    actualizarEstadisticasPicking();
-                    actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
-                }, 500);
-            }
-            
-            document.getElementById('upcInput').value = '';
-        }
-
-        async function marcarComoNoEncontrado() {
-            const item = itemsPorCola[colaActual][depositoActualIndex];
-            
-            itemsNoEncontrados.push(item);
-            tieneEscaneosPendientes = true;
-            
-            // Guardar registro en Firebase
-            const fechaHora = new Date();
-            const registro = {
-                usuario: usuarioActual,
-                ruta: rutaActual,
-                cola: colaActual,
-                deposito: item.deposito,
-                upc: item.upc,
-                descripcion: item.descripcion,
-                cantidad: item.cantidad,
-                recolectado: item.recolectado,
-                accion: 'no_encontrado',
-                fecha: fechaHora.toLocaleDateString(),
-                hora: fechaHora.toLocaleTimeString(),
-                timestamp: fechaHora.getTime()
-            };
-            
-            await guardarRegistroEnFirebase(registro);
-            guardarRegistroLocal(registro);
-            
-            // Marcar como completado para no volver a mostrarlo
-            item.completado = true;
-            
-            guardarProgresoCola(rutaActual, colaActual, itemsPorCola[colaActual]);
-            
-            mostrarMensaje(`⚠️ ${item.deposito} marcado como no encontrado`, true);
-            
-            depositoActualIndex++;
-            mostrarDepositoActual();
-            actualizarEstadisticasPicking();
-            actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
-            document.getElementById('upcInput').focus();
-        }
-
-        function actualizarEstadisticasPicking() {
-            const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
-            const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.recolectado, 0);
-            const pendientesUnidades = totalUnidades - completadasUnidades;
-            
-            document.getElementById('totalUnidadesPicking').textContent = totalUnidades;
-            document.getElementById('completedUnidadesPicking').textContent = completadasUnidades;
-            document.getElementById('pendingUnidadesPicking').textContent = pendientesUnidades;
-        }
-
-        // ================= GUARDAR REGISTROS =================
-        function guardarRegistroLocal(registro) {
-            try {
-                const registros = JSON.parse(localStorage.getItem('registrosRecoleccion') || '[]');
-                registros.push(registro);
-                localStorage.setItem('registrosRecoleccion', JSON.stringify(registros));
-            } catch (error) {
-                console.error('Error guardando registro local:', error);
-            }
-        }
-
-        function cargarProgresoCola(ruta, cola) {
-            const claveProgreso = `progreso_${ruta}_${cola}`;
-            const progresoGuardado = localStorage.getItem(claveProgreso);
-            
-            if (progresoGuardado) {
-                return JSON.parse(progresoGuardado);
-            }
-            return null;
-        }
-
-        function guardarProgresoCola(ruta, cola, items) {
-            const claveProgreso = `progreso_${ruta}_${cola}`;
-            localStorage.setItem(claveProgreso, JSON.stringify(items));
-        }
-
-        // ================= RECUPERACIÓN DE PROGRESO =================
-        function cargarProgresoRecuperacion() {
-            // Verificar si hay una sesión activa guardada
-            const sesionActiva = localStorage.getItem('sesionActiva');
-            if (sesionActiva) {
-                const sesion = JSON.parse(sesionActiva);
-                rutaActual = sesion.ruta;
-                usuarioActual = sesion.usuario;
-                colaActual = sesion.cola;
-                depositoActualIndex = sesion.depositoActualIndex || 0;
-                
-                // Cargar el progreso de la cola
-                const progreso = cargarProgresoCola(rutaActual, colaActual);
-                if (progreso) {
-                    itemsPorCola[colaActual] = progreso;
-                    tieneEscaneosPendientes = true;
-                    
-                    // Continuar desde donde se quedó
-                    document.getElementById('userSection').classList.add('hidden');
-                    document.getElementById('colaSection').classList.add('hidden');
-                    document.getElementById('pickingSection').classList.remove('hidden');
-                    
-                    document.getElementById('pickingRecolector').textContent = usuarioActual;
-                    document.getElementById('pickingRuta').textContent = rutaActual;
-                    document.getElementById('pickingCola').textContent = colaActual;
-                    
-                    mostrarDepositoActual();
-                    actualizarEstadisticasPicking();
-                    actualizarListaItems();
-                    
-                    mostrarMensaje('🔄 Sesión recuperada. Continuando desde donde te quedaste.', true);
-                }
-            }
-        }
-
-        function guardarSesionActiva() {
-            if (rutaActual && usuarioActual && colaActual) {
-                const sesion = {
-                    ruta: rutaActual,
-                    usuario: usuarioActual,
-                    cola: colaActual,
-                    depositoActualIndex: depositoActualIndex,
-                    timestamp: new Date().getTime()
-                };
-                localStorage.setItem('sesionActiva', JSON.stringify(sesion));
-            }
-        }
-
-        function limpiarSesionActiva() {
-            localStorage.removeItem('sesionActiva');
-        }
-
-        async function finalizarRecoleccion() {
-            const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.recolectado, 0);
-            const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
-            
-            let mensaje = `¿Finalizar recolección de la cola ${colaActual}?\n\n✅ Unidades recolectadas: ${completadasUnidades}/${totalUnidades}`;
-            if (itemsNoEncontrados.length > 0) {
-                mensaje += `\n❌ No encontrados: ${itemsNoEncontrados.length}`;
-            }
-            
-            if (confirm(mensaje)) {
-                // Verificar si realmente se completó la cola (validación cruzada con fecha)
-                const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
-                
-                if (estadoReal.completada) {
-                    await actualizarEstadoRuta(rutaActual, colaActual, 'completada', usuarioActual);
-                } else {
-                    await actualizarEstadoRuta(rutaActual, colaActual, 'en-progreso', usuarioActual);
-                }
-                
-                mostrarMensaje(`📊 Recolección finalizada: ${completadasUnidades}/${totalUnidades} unidades`, true);
-                
-                // Limpiar sesión activa
-                limpiarSesionActiva();
-                tieneEscaneosPendientes = false;
-                
-                document.getElementById('pickingSection').classList.add('hidden');
-                
-                if (colasDisponibles.length === 1) {
-                    document.getElementById('userSection').classList.remove('hidden');
-                    document.getElementById('navButtons').style.display = 'grid';
-                } else {
-                    document.getElementById('colaSection').classList.remove('hidden');
-                    mostrarOpcionesColas();
-                }
-                
-                // Verificar si todas las colas están completadas
-                const todasColasCompletadas = await verificarTodasColasCompletadas();
-                
-                if (todasColasCompletadas) {
-                    mostrarMensajeModal('¡Felicidades!', 'Has completado todas las colas de esta ruta.');
-                    volverInicio();
-                }
-            }
-        }
-
-        async function verificarTodasColasCompletadas() {
-            for (const cola of colasDisponibles) {
-                const estadoReal = await verificarEstadoRealCola(rutaActual, cola);
-                if (!estadoReal.completada) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        // ================= REPORTES DESDE FIREBASE =================
-        async function descargarReporteCompleto() {
-            try {
-                const fechaInicio = document.getElementById('fechaInicio').value;
-                const fechaFin = document.getElementById('fechaFin').value;
-                
-                // Obtener registros desde Firebase
-                let registros = await obtenerRegistrosFirebase();
-                
-                // Filtrar por fecha si se especificó
-                if (fechaInicio && fechaFin) {
-                    const inicio = new Date(fechaInicio);
-                    const fin = new Date(fechaFin);
-                    fin.setHours(23, 59, 59, 999); // Incluir todo el día final
-                    
-                    registros = registros.filter(reg => {
-                        const fechaReg = new Date(reg.timestamp);
-                        return fechaReg >= inicio && fechaReg <= fin;
-                    });
-                }
-                
-                if (registros.length === 0) {
-                    mostrarMensaje('No hay registros para descargar en el rango seleccionado', false);
-                    return;
-                }
-                
-                let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,CODIGO_UPC,DESCRIPCION,CANTIDAD,RECOLECTADO,ACCION,FECHA,HORA,TIMESTAMP\n";
-                
-                registros.forEach(reg => {
-                    const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
-                    const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
-                    
-                    csvContent += `"${reg.usuario}","${reg.ruta}","${reg.cola}","${reg.deposito}","${reg.upc}","${reg.descripcion}",${reg.cantidad},${reg.recolectado},"${reg.accion}","${fecha}","${hora}",${reg.timestamp}\n`;
-                });
-                
-                const blob = new Blob([csvContent], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `reporte_recoleccion_${fechaInicio || 'completo'}_${fechaFin || ''}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-                mostrarMensaje(`📊 Reporte descargado (${registros.length} registros)`, true);
-                
-            } catch (error) {
-                console.error('Error generando reporte:', error);
-                mostrarMensaje('❌ Error al generar el reporte', false);
-            }
-        }
-
-        async function obtenerRegistrosFirebase() {
-            try {
-                const snapshot = await database.ref('recolecciones').once('value');
-                const registrosFirebase = snapshot.val();
-                
-                if (!registrosFirebase) {
-                    return [];
-                }
-                
-                // Convertir objeto Firebase a array
-                return Object.values(registrosFirebase);
-            } catch (error) {
-                console.error('Error obteniendo registros de Firebase:', error);
-                mostrarMensaje('❌ Error al obtener registros de Firebase', false);
-                return [];
-            }
-        }
-
-        // ================= TABLERO DE CONTROL =================
-        function actualizarTablero() {
-            const tableBody = document.getElementById('dashboardTableBody');
-            tableBody.innerHTML = '';
-            
-            const rutas = Object.keys(estadoGlobal);
-            
-            if (rutas.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="6">No hay datos de rutas disponibles</td></tr>';
-                return;
-            }
-            
-            rutas.forEach(ruta => {
-                const colas = Object.keys(estadoGlobal[ruta]);
-                
-                colas.forEach(cola => {
-                    const estadoCola = estadoGlobal[ruta][cola];
-                    const row = document.createElement('tr');
-                    
-                    let estadoClass = '';
-                    let estadoText = '';
-                    
-                    switch(estadoCola.estado) {
-                        case 'completada':
-                            estadoClass = 'status-completed';
-                            estadoText = 'COMPLETADA';
-                            break;
-                        case 'en-progreso':
-                            estadoClass = 'status-in-progress';
-                            estadoText = 'EN PROGRESO';
-                            break;
-                        default:
-                            estadoClass = 'status-pending';
-                            estadoText = 'PENDIENTE';
-                    }
-                    
-                    row.innerHTML = `
-                        <td>${ruta}</td>
-                        <td>${cola}</td>
-                        <td class="${estadoClass}">${estadoText}</td>
-                        <td>${estadoCola.recolector || '-'}</td>
-                        <td>${estadoCola.progreso || 0}/${estadoCola.total || 0}</td>
-                        <td>${new Date(estadoCola.ultimaActualizacion).toLocaleString()}</td>
-                    `;
-                    
-                    tableBody.appendChild(row);
-                });
-            });
-        }
-
-        async function resetearProgreso() {
-            if (confirm('¿Estás seguro de que deseas resetear todo el progreso? Esta acción no se puede deshacer.')) {
-                estadoGlobal = {
-                    rutas: {},
-                    ultimaActualizacion: new Date().toISOString()
-                };
-                guardarEstadoGlobalEnLocalStorage();
-                
-                // Limpiar Firebase
-                try {
-                    await database.ref('estado').remove();
-                    await database.ref('recolecciones').remove();
-                } catch (error) {
-                    console.error('Error limpiando Firebase:', error);
-                }
-                
-                // Limpiar localStorage
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('progreso_') || key === 'registrosRecoleccion' || key === 'sesionActiva') {
-                        localStorage.removeItem(key);
-                    }
-                });
-                
-                mostrarMensaje('✅ Progreso reseteado correctamente', true);
-                actualizarTablero();
-            }
-        }
-
-        // ================= ACCESO ADMINISTRADOR =================
         function solicitarAccesoAdmin() {
             document.getElementById('adminModal').style.display = 'flex';
             document.getElementById('adminPassword').focus();
@@ -1684,16 +163,28 @@
 
         function verificarContrasena() {
             const password = document.getElementById('adminPassword').value;
-            
             if (password === ADMIN_PASSWORD) {
-                mostrarPanelAdmin();
                 cerrarAdminModal();
-                mostrarMensaje('✅ Acceso concedido al modo administrador', true);
+                window.location.href = 'admin.html';
             } else {
-                mostrarMensaje('❌ Contraseña incorrecta', false);
+                mostrarMensaje('Contraseña incorrecta', false);
                 document.getElementById('adminPassword').value = '';
                 document.getElementById('adminPassword').focus();
             }
+        }
+
+        function salirSistema() {
+            if (confirm('¿Salir del sistema?')) {
+                localStorage.removeItem('usuarioActual');
+                usuarioActual = '';
+                mostrarMensaje('Sesión cerrada', true);
+            }
+        }
+
+        function cerrarUserModal() {
+            document.getElementById('userModal').style.display = 'none';
+            document.getElementById('userName').value = '';
+            moduloDestino = '';
         }
 
         function cerrarAdminModal() {
@@ -1701,77 +192,18 @@
             document.getElementById('adminPassword').value = '';
         }
 
-        // ================= MODAL PARA MENSAJES =================
-        function mostrarMensajeModal(titulo, mensaje) {
-            document.getElementById('modalTitle').textContent = titulo;
-            document.getElementById('modalMessage').textContent = mensaje;
-            document.getElementById('modal').style.display = 'flex';
-        }
-
-        function cerrarModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
-
-        // ================= NAVEGACIÓN =================
-        function mostrarPanelAdmin() {
-            document.getElementById('userSection').classList.add('hidden');
-            document.getElementById('colaSection').classList.add('hidden');
-            document.getElementById('pickingSection').classList.add('hidden');
-            document.getElementById('adminSection').classList.remove('hidden');
-            
-            actualizarTablero();
-            
-            // Ocultar botones de navegación
-            ocultarBotonesNavegacion();
-        }
-
-        function mostrarPanelUsuario() {
-            document.getElementById('adminSection').classList.add('hidden');
-            document.getElementById('colaSection').classList.add('hidden');
-            document.getElementById('pickingSection').classList.add('hidden');
-            document.getElementById('userSection').classList.remove('hidden');
-            
-            // Mostrar botones de navegación
-            document.getElementById('navButtons').style.display = 'grid';
-        }
-
-        function volverSeleccionRuta() {
-            document.getElementById('colaSection').classList.add('hidden');
-            document.getElementById('pickingSection').classList.add('hidden');
-            document.getElementById('userSection').classList.remove('hidden');
-            
-            // Mostrar botones de navegación
-            document.getElementById('navButtons').style.display = 'grid';
-        }
-
-        function volverInicio() {
-            document.getElementById('colaSection').classList.add('hidden');
-            document.getElementById('pickingSection').classList.add('hidden');
-            document.getElementById('userSection').classList.remove('hidden');
-            document.getElementById('upcInput').value = '';
-            
-            // Mostrar botones de navegación
-            document.getElementById('navButtons').style.display = 'grid';
-        }
-
-        // ================= UTILIDADES =================
         function mostrarMensaje(mensaje, esExito) {
             const statusDiv = document.getElementById('statusMessage');
             statusDiv.textContent = mensaje;
             statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
-            statusDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 4000);
+            statusDiv.style.display = 'block';
+            setTimeout(() => {statusDiv.style.display = 'none'}, 3000);
         }
 
-        // Guardar sesión activa periódicamente
-        setInterval(() => {
-            if (rutaActual && usuarioActual && colaActual) {
-                guardarSesionActiva();
-            }
-        }, 30000); // Guardar cada 30 segundos
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('userModal')) cerrarUserModal();
+            if (event.target === document.getElementById('adminModal')) cerrarAdminModal();
+        }
     </script>
 </body>
 </html>

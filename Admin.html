@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - REABASTECIMIENTO SOKSO</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: white;
+            padding: 20px;
+            color: black;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        h1 {
+            color: #6600a1;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            color: #6600a1;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        .connection-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .connection-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .module-selector {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .module-tab {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .module-tab.active {
+            background: #6600a1;
+            color: white;
+        }
+        .admin-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .admin-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .admin-button:hover {
+            background: #55008a;
+        }
+        .admin-button.warning {
+            background: #f39c12;
+        }
+        .admin-button.warning:hover {
+            background: #e67e22;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        .dashboard-table th, .dashboard-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .dashboard-table th {
+            background: #6600a1;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+            font-weight: bold;
+        }
+        .status-pending {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
+        .report-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .filter-item label {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .filter-item input {
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        .back-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .back-button:hover {
+            background: #55008a;
+        }
+        .status-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            font-size: 14px;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 16px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6600a1;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .consistency-check {
+            margin: 15px 0;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 6px;
+            border: 1px solid #ffeaa7;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Admin - REABASTECIMIENTO SOKSO</h1>
+            <div class="connection-status">
+                <div class="connection-item">
+                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                    <span>FIRE</span>
+                </div>
+                <div class="connection-item">
+                    <div id="sheetsIndicator" class="connection-indicator checking"></div>
+                    <span>GS</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- SELECTOR DE MÓDULO -->
+        <div class="module-selector">
+            <button class="module-tab active" onclick="cambiarModulo('recoleccion')">📦 Recolección</button>
+            <button class="module-tab" onclick="cambiarModulo('reposicion')">🔄 Reposición</button>
+        </div>
+
+        <!-- ESTADÍSTICAS RÁPIDAS -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalRutas">0</div>
+                <div class="stat-label">Rutas Activas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="rutasCompletadas">0</div>
+                <div class="stat-label">Rutas Completadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalOperarios">0</div>
+                <div class="stat-label">Operarios Activos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalRegistros">0</div>
+                <div class="stat-label">Total Registros</div>
+            </div>
+        </div>
+
+        <!-- CONTROLES ADMIN -->
+        <div class="admin-controls">
+            <button class="admin-button" onclick="actualizarDesdeSheets()">🔄 Actualizar desde Sheets</button>
+            <button class="admin-button warning" onclick="verificarConsistencia()">🔍 Verificar Consistencia</button>
+            <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
+        </div>
+
+        <!-- VERIFICACIÓN DE CONSISTENCIA -->
+        <div id="consistencyResults" class="consistency-check hidden">
+            <h3>Resultados de Verificación</h3>
+            <div id="consistencyContent"></div>
+        </div>
+
+        <!-- PANEL DE CONTROL - ESTADO DE RUTAS -->
+        <div class="section">
+            <h2 id="panelTitulo">Estado de Rutas - Recolección</h2>
+            <div id="dashboardLoading" class="loading">Cargando estado de rutas...</div>
+            <table class="dashboard-table" id="dashboardTable" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Ruta</th>
+                        <th>Cola</th>
+                        <th>Estado</th>
+                        <th>Recolector</th>
+                        <th>Progreso</th>
+                        <th>Última Actualización</th>
+                    </tr>
+                </thead>
+                <tbody id="dashboardTableBody">
+                    <!-- Los datos se llenarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- REPORTES -->
+        <div class="section">
+            <h2>Generar Reportes</h2>
+            
+            <div class="report-filters">
+                <div class="filter-item">
+                    <label for="fechaInicioRecoleccion">Fecha Inicio:</label>
+                    <input type="date" id="fechaInicioRecoleccion">
+                </div>
+                <div class="filter-item">
+                    <label for="fechaFinRecoleccion">Fecha Fin:</label>
+                    <input type="date" id="fechaFinRecoleccion">
+                </div>
+            </div>
+            
+            <button class="admin-button" onclick="descargarReporteRecoleccion()" style="width:100%;margin-bottom:15px">
+                📊 Descargar Reporte Recolección
+            </button>
+
+            <div class="report-filters">
+                <div class="filter-item">
+                    <label for="fechaInicioReposicion">Fecha Inicio:</label>
+                    <input type="date" id="fechaInicioReposicion">
+                </div>
+                <div class="filter-item">
+                    <label for="fechaFinReposicion">Fecha Fin:</label>
+                    <input type="date" id="fechaFinReposicion">
+                </div>
+            </div>
+
+            <button class="admin-button" onclick="descargarReporteReposicion()" style="width:100%">
+                📋 Descargar Reporte Reposición
+            </button>
+        </div>
+
+        <div class="footer">
+            <button class="back-button" onclick="volverInterfazPrincipal()">↩️ Regresar a Interfaz Principal</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURACIÓN FIREBASE Y SHEETS =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // URLs públicas de Google Sheets que funcionan
+        const GOOGLE_SHEETS_RECOLECCION_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
+        const GOOGLE_SHEETS_REPOSICION_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
+
+        // ================= INICIALIZAR FIREBASE =================
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ================= VARIABLES GLOBALES =================
+        let moduloActual = 'recoleccion';
+        let rutasRecoleccionDesdeSheets = {};
+        let rutasReposicionDesdeSheets = {};
+        let estadoDesdeFirebase = {};
+        let registrosRecoleccion = [];
+        let registrosReposicion = [];
+
+        // ================= INICIALIZACIÓN =================
+        window.addEventListener('load', function() {
+            inicializarFirebase();
+            
+            // Establecer fechas por defecto (últimos 7 días)
+            const hoy = new Date();
+            const haceSieteDias = new Date();
+            haceSieteDias.setDate(hoy.getDate() - 7);
+            
+            document.getElementById('fechaInicioRecoleccion').value = haceSieteDias.toISOString().split('T')[0];
+            document.getElementById('fechaFinRecoleccion').value = hoy.toISOString().split('T')[0];
+            document.getElementById('fechaInicioReposicion').value = haceSieteDias.toISOString().split('T')[0];
+            document.getElementById('fechaFinReposicion').value = hoy.toISOString().split('T')[0];
+            
+            cargarDashboard();
+        });
+
+        // ================= CONEXIONES FIREBASE Y SHEETS =================
+        function inicializarFirebase() {
+            try {
+                verificarConexionFirebase();
+                verificarConexionSheets();
+            } catch (error) {
+                document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+            }
+        }
+
+        function verificarConexionFirebase() {
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", function(snap) {
+                if (snap.val() === true) {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
+                } else {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+                }
+            });
+        }
+
+        async function verificarConexionSheets() {
+            try {
+                // Verificar conexión a Sheets de recolección
+                const response = await fetch(GOOGLE_SHEETS_RECOLECCION_URL);
+                if (response.ok) {
+                    document.getElementById('sheetsIndicator').className = 'connection-indicator connected';
+                } else {
+                    document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
+                }
+            } catch (error) {
+                document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
+            }
+        }
+
+        // ================= CAMBIO DE MÓDULO =================
+        function cambiarModulo(modulo) {
+            moduloActual = modulo;
+            
+            // Actualizar pestañas activas
+            document.querySelectorAll('.module-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Actualizar título del panel
+            document.getElementById('panelTitulo').textContent = 
+                `Estado de Rutas - ${modulo === 'recoleccion' ? 'Recolección' : 'Reposición'}`;
+            
+            // Recargar datos del módulo seleccionado
+            cargarDashboard();
+        }
+
+        // ================= CARGAR DASHBOARD =================
+        async function cargarDashboard() {
+            try {
+                mostrarMensaje('Cargando datos del sistema...', true);
+                
+                // Cargar datos de Firebase
+                await cargarDatosFirebase();
+                
+                // Cargar datos de Sheets según el módulo
+                if (moduloActual === 'recoleccion') {
+                    await cargarDatosSheetsRecoleccion();
+                } else {
+                    await cargarDatosSheetsReposicion();
+                }
+                
+                // Procesar y mostrar datos
+                actualizarEstadisticas();
+                actualizarTablaEstadoRutas();
+                
+                mostrarMensaje('Dashboard actualizado correctamente', true);
+                
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+                mostrarMensaje('Error al cargar el dashboard: ' + error.message, false);
+            }
+        }
+
+        async function cargarDatosFirebase() {
+            return new Promise((resolve, reject) => {
+                // Cargar estado de rutas desde Firebase
+                database.ref('estado').once('value')
+                    .then(snapshot => {
+                        estadoDesdeFirebase = snapshot.val() || {};
+                        console.log('Estado cargado desde Firebase:', estadoDesdeFirebase);
+                        
+                        // Cargar registros de recolección
+                        return database.ref('recolecciones').once('value');
+                    })
+                    .then(snapshot => {
+                        const registros = snapshot.val();
+                        registrosRecoleccion = registros ? Object.values(registros) : [];
+                        console.log('Registros de recolección cargados:', registrosRecoleccion.length);
+                        
+                        // Cargar registros de reposición (si existen)
+                        return database.ref('reposiciones').once('value');
+                    })
+                    .then(snapshot => {
+                        const registros = snapshot.val();
+                        registrosReposicion = registros ? Object.values(registros) : [];
+                        console.log('Registros de reposición cargados:', registrosReposicion.length);
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error('Error cargando datos de Firebase:', error);
+                        reject(error);
+                    });
+            });
+        }
+
+        async function cargarDatosSheetsRecoleccion() {
+            try {
+                const response = await fetch(GOOGLE_SHEETS_RECOLECCION_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: No se pudo cargar desde Google Sheets`);
+                }
+                
+                const csvText = await response.text();
+                
+                if (!csvText || csvText.includes('error') || csvText.length < 10) {
+                    throw new Error('No hay datos en Google Sheets o la hoja no es accesible');
+                }
+                
+                rutasRecoleccionDesdeSheets = procesarCSVRecoleccion(csvText);
+                console.log('Datos de recolección cargados desde Sheets:', rutasRecoleccionDesdeSheets);
+                
+            } catch (error) {
+                console.error('Error cargando datos de recolección de Sheets:', error);
+                throw new Error('No se pudo conectar con Google Sheets Recolección: ' + error.message);
+            }
+        }
+
+        async function cargarDatosSheetsReposicion() {
+            try {
+                const response = await fetch(GOOGLE_SHEETS_REPOSICION_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: No se pudo cargar desde Google Sheets`);
+                }
+                
+                const csvText = await response.text();
+                
+                if (!csvText || csvText.includes('error') || csvText.length < 10) {
+                    throw new Error('No hay datos en Google Sheets o la hoja no es accesible');
+                }
+                
+                rutasReposicionDesdeSheets = procesarCSVReposicion(csvText);
+                console.log('Datos de reposición cargados desde Sheets:', rutasReposicionDesdeSheets);
+                
+            } catch (error) {
+                console.error('Error cargando datos de reposición de Sheets:', error);
+                throw new Error('No se pudo conectar con Google Sheets Reposición: ' + error.message);
+            }
+        }
+
+        // ================= PROCESAMIENTO DE DATOS RECOLECCIÓN =================
+        function procesarCSVRecoleccion(csvText) {
+            const rutas = {};
+            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            
+            if (lineas.length < 2) {
+                return {};
+            }
+            
+            const separador = csvText.includes('\t') ? '\t' : ',';
+            
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (!linea) continue;
+                
+                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                
+                if (partes.length >= 4) {
+                    const deposito = partes[0];
+                    const upc = partes[1];
+                    const descripcion = partes[2];
+                    const cantidad = parseInt(partes[3]) || 0;
+                    
+                    if (deposito && upc) {
+                        // Procesar formato: A01-005-B0056
+                        const match = deposito.match(/^A(\d+)-/);
+                        if (match) {
+                            const rutaNum = match[1].padStart(2, '0');
+                            const ruta = `Ruta ${rutaNum}`;
+                            
+                            // Determinar cola por nivel (B, CDE, F)
+                            let cola = 'N/A';
+                            if (deposito.includes('-B')) cola = 'B';
+                            else if (deposito.includes('-C') || deposito.includes('-D') || deposito.includes('-E')) cola = 'CDE';
+                            else if (deposito.includes('-F')) cola = 'F';
+                            
+                            if (!rutas[ruta]) {
+                                rutas[ruta] = {};
+                            }
+                            if (!rutas[ruta][cola]) {
+                                rutas[ruta][cola] = {
+                                    totalUnidades: 0,
+                                    depositos: []
+                                };
+                            }
+                            
+                            rutas[ruta][cola].totalUnidades += cantidad;
+                            rutas[ruta][cola].depositos.push({
+                                deposito,
+                                upc,
+                                descripcion,
+                                cantidad
+                            });
+                        }
+                    }
+                }
+            }
+            
+            return rutas;
+        }
+
+        // ================= PROCESAMIENTO DE DATOS REPOSICIÓN =================
+        function procesarCSVReposicion(csvText) {
+            const rutas = {};
+            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            
+            if (lineas.length < 2) {
+                return {};
+            }
+            
+            const separador = csvText.includes('\t') ? '\t' : ',';
+            
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (!linea) continue;
+                
+                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                
+                if (partes.length >= 4) {
+                    const deposito = partes[0];
+                    const upc = partes[1];
+                    const descripcion = partes[2];
+                    const cantidad = parseInt(partes[3]) || 0;
+                    
+                    if (deposito && upc) {
+                        // Procesar formatos: P01-005-A y 8-009-2-A
+                        let rutaNum, cola;
+                        
+                        if (deposito.startsWith('P')) {
+                            // Formato: P01-005-A
+                            const match = deposito.match(/^P(\d+)-/);
+                            if (match) {
+                                rutaNum = match[1].padStart(2, '0');
+                                cola = deposito.split('-').pop(); // Última letra
+                            }
+                        } else if (/^\d+-/.test(deposito)) {
+                            // Formato: 8-009-2-A
+                            const match = deposito.match(/^(\d+)-/);
+                            if (match) {
+                                rutaNum = match[1].padStart(2, '0');
+                                cola = deposito.split('-').pop(); // Última letra
+                            }
+                        }
+                        
+                        if (rutaNum && cola) {
+                            const ruta = `Ruta ${rutaNum}`;
+                            
+                            if (!rutas[ruta]) {
+                                rutas[ruta] = {};
+                            }
+                            if (!rutas[ruta][cola]) {
+                                rutas[ruta][cola] = {
+                                    totalUnidades: 0,
+                                    depositos: []
+                                };
+                            }
+                            
+                            rutas[ruta][cola].totalUnidades += cantidad;
+                            rutas[ruta][cola].depositos.push({
+                                deposito,
+                                upc,
+                                descripcion,
+                                cantidad
+                            });
+                        }
+                    }
+                }
+            }
+            
+            return rutas;
+        }
+
+        // ================= ACTUALIZAR INTERFAZ =================
+        function actualizarEstadisticas() {
+            let rutasActivas, rutasCompletadas, operariosUnicos, totalRegistros;
+            
+            if (moduloActual === 'recoleccion') {
+                rutasActivas = Object.keys(rutasRecoleccionDesdeSheets).length;
+                rutasCompletadas = calcularRutasCompletadasRecoleccion();
+                operariosUnicos = new Set();
+                totalRegistros = registrosRecoleccion.length;
+                
+                registrosRecoleccion.forEach(registro => {
+                    if (registro.usuario) operariosUnicos.add(registro.usuario);
+                });
+            } else {
+                rutasActivas = Object.keys(rutasReposicionDesdeSheets).length;
+                rutasCompletadas = calcularRutasCompletadasReposicion();
+                operariosUnicos = new Set();
+                totalRegistros = registrosReposicion.length;
+                
+                registrosReposicion.forEach(registro => {
+                    if (registro.usuario) operariosUnicos.add(registro.usuario);
+                });
+            }
+            
+            // Actualizar UI
+            document.getElementById('totalRutas').textContent = rutasActivas;
+            document.getElementById('rutasCompletadas').textContent = rutasCompletadas;
+            document.getElementById('totalOperarios').textContent = operariosUnicos.size;
+            document.getElementById('totalRegistros').textContent = totalRegistros;
+        }
+
+        function calcularRutasCompletadasRecoleccion() {
+            let completadas = 0;
+            Object.keys(rutasRecoleccionDesdeSheets).forEach(ruta => {
+                Object.keys(rutasRecoleccionDesdeSheets[ruta]).forEach(cola => {
+                    const progreso = calcularProgresoRecoleccion(ruta, cola);
+                    if (progreso.porcentaje === 100) completadas++;
+                });
+            });
+            return completadas;
+        }
+
+        function calcularRutasCompletadasReposicion() {
+            let completadas = 0;
+            Object.keys(rutasReposicionDesdeSheets).forEach(ruta => {
+                Object.keys(rutasReposicionDesdeSheets[ruta]).forEach(cola => {
+                    const progreso = calcularProgresoReposicion(ruta, cola);
+                    if (progreso.porcentaje === 100) completadas++;
+                });
+            });
+            return completadas;
+        }
+
+        function actualizarTablaEstadoRutas() {
+            const tbody = document.getElementById('dashboardTableBody');
+            tbody.innerHTML = '';
+            
+            let datos;
+            if (moduloActual === 'recoleccion') {
+                datos = rutasRecoleccionDesdeSheets;
+            } else {
+                datos = rutasReposicionDesdeSheets;
+            }
+            
+            if (Object.keys(datos).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No hay datos disponibles para este módulo</td></tr>';
+            } else {
+                Object.keys(datos).forEach(ruta => {
+                    Object.keys(datos[ruta]).forEach(cola => {
+                        let progreso, estadoClass, estadoText, recolector, ultimaActualizacion;
+                        
+                        if (moduloActual === 'recoleccion') {
+                            progreso = calcularProgresoRecoleccion(ruta, cola);
+                        } else {
+                            progreso = calcularProgresoReposicion(ruta, cola);
+                        }
+                        
+                        // Determinar estado
+                        if (progreso.porcentaje === 100) {
+                            estadoClass = 'status-completed';
+                            estadoText = 'COMPLETADA';
+                        } else if (progreso.porcentaje > 0) {
+                            estadoClass = 'status-in-progress';
+                            estadoText = 'EN PROGRESO';
+                        } else {
+                            estadoClass = 'status-pending';
+                            estadoText = 'PENDIENTE';
+                        }
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${ruta}</td>
+                            <td>${cola}</td>
+                            <td class="${estadoClass}">${estadoText}</td>
+                            <td>${progreso.recolector || '-'}</td>
+                            <td>${progreso.completado}/${progreso.total} (${progreso.porcentaje}%)</td>
+                            <td>${progreso.ultimaActualizacion || '-'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+            }
+            
+            document.getElementById('dashboardLoading').style.display = 'none';
+            document.getElementById('dashboardTable').style.display = 'table';
+        }
+
+        // ================= CÁLCULO DE PROGRESO =================
+        function calcularProgresoRecoleccion(ruta, cola) {
+            const datosSheets = rutasRecoleccionDesdeSheets[ruta][cola];
+            const total = datosSheets.totalUnidades;
+            let completado = 0;
+            let recolector = '';
+            let ultimaActualizacion = '';
+            
+            // Calcular progreso basado en registros de Firebase
+            datosSheets.depositos.forEach(deposito => {
+                const registrosDeposito = registrosRecoleccion.filter(reg => 
+                    reg.deposito === deposito.deposito && reg.accion === 'escaneado'
+                );
+                
+                if (registrosDeposito.length > 0) {
+                    completado += Math.min(deposito.cantidad, registrosDeposito[0].recolectado || 0);
+                    
+                    // Obtener info del último recolector
+                    const ultimoRegistro = registrosDeposito[registrosDeposito.length - 1];
+                    if (ultimoRegistro.usuario && !recolector) {
+                        recolector = ultimoRegistro.usuario;
+                    }
+                    if (ultimoRegistro.timestamp && !ultimaActualizacion) {
+                        ultimaActualizacion = new Date(ultimoRegistro.timestamp).toLocaleString();
+                    }
+                }
+            });
+            
+            const porcentaje = total > 0 ? Math.round((completado / total) * 100) : 0;
+            
+            return {
+                completado,
+                total,
+                porcentaje,
+                recolector,
+                ultimaActualizacion
+            };
+        }
+
+        function calcularProgresoReposicion(ruta, cola) {
+            const datosSheets = rutasReposicionDesdeSheets[ruta][cola];
+            const total = datosSheets.totalUnidades;
+            let completado = 0;
+            let recolector = '';
+            let ultimaActualizacion = '';
+            
+            // Calcular progreso basado en registros de Firebase
+            datosSheets.depositos.forEach(deposito => {
+                const registrosDeposito = registrosReposicion.filter(reg => 
+                    reg.deposito === deposito.deposito
+                );
+                
+                if (registrosDeposito.length > 0) {
+                    completado += deposito.cantidad; // Asumimos que si hay registro, está completo
+                    
+                    // Obtener info del último recolector
+                    const ultimoRegistro = registrosDeposito[registrosDeposito.length - 1];
+                    if (ultimoRegistro.usuario && !recolector) {
+                        recolector = ultimoRegistro.usuario;
+                    }
+                    if (ultimoRegistro.timestamp && !ultimaActualizacion) {
+                        ultimaActualizacion = new Date(ultimoRegistro.timestamp).toLocaleString();
+                    }
+                }
+            });
+            
+            const porcentaje = total > 0 ? Math.round((completado / total) * 100) : 0;
+            
+            return {
+                completado,
+                total,
+                porcentaje,
+                recolector,
+                ultimaActualizacion
+            };
+        }
+
+        // ================= VERIFICACIÓN DE CONSISTENCIA =================
+        async function verificarConsistencia() {
+            try {
+                mostrarMensaje('Verificando consistencia entre Sheets y Firebase...', true);
+                
+                await cargarDatosSheetsRecoleccion();
+                await cargarDatosSheetsReposicion();
+                await cargarDatosFirebase();
+                
+                const inconsistencias = encontrarInconsistencias();
+                mostrarResultadosConsistencia(inconsistencias);
+                
+            } catch (error) {
+                console.error('Error en verificación de consistencia:', error);
+                mostrarMensaje('Error en verificación de consistencia: ' + error.message, false);
+            }
+        }
+
+        function encontrarInconsistencias() {
+            const inconsistencias = [];
+            
+            // Verificar recolección
+            Object.keys(rutasRecoleccionDesdeSheets).forEach(ruta => {
+                Object.keys(rutasRecoleccionDesdeSheets[ruta]).forEach(cola => {
+                    const datosSheets = rutasRecoleccionDesdeSheets[ruta][cola];
+                    const progreso = calcularProgresoRecoleccion(ruta, cola);
+                    
+                    if (progreso.completado > datosSheets.totalUnidades) {
+                        inconsistencias.push({
+                            modulo: 'Recolección',
+                            ruta,
+                            cola,
+                            tipo: 'SOBREPROGRESO',
+                            descripcion: `Progreso en Firebase (${progreso.completado}) excede el total en Sheets (${datosSheets.totalUnidades})`
+                        });
+                    }
+                });
+            });
+            
+            // Verificar reposición
+            Object.keys(rutasReposicionDesdeSheets).forEach(ruta => {
+                Object.keys(rutasReposicionDesdeSheets[ruta]).forEach(cola => {
+                    const datosSheets = rutasReposicionDesdeSheets[ruta][cola];
+                    const progreso = calcularProgresoReposicion(ruta, cola);
+                    
+                    if (progreso.completado > datosSheets.totalUnidades) {
+                        inconsistencias.push({
+                            modulo: 'Reposición',
+                            ruta,
+                            cola,
+                            tipo: 'SOBREPROGRESO',
+                            descripcion: `Progreso en Firebase (${progreso.completado}) excede el total en Sheets (${datosSheets.totalUnidades})`
+                        });
+                    }
+                });
+            });
+            
+            return inconsistencias;
+        }
+
+        function mostrarResultadosConsistencia(inconsistencias) {
+            const container = document.getElementById('consistencyContent');
+            const resultsDiv = document.getElementById('consistencyResults');
+            
+            if (inconsistencias.length === 0) {
+                container.innerHTML = '<p style="color: green;">✅ No se encontraron inconsistencias. Los datos están sincronizados.</p>';
+            } else {
+                let html = `<p><strong>Se encontraron ${inconsistencias.length} inconsistencias:</strong></p>`;
+                html += '<ul style="text-align: left; margin: 15px 0;">';
+                
+                inconsistencias.forEach(inc => {
+                    html += `<li style="margin-bottom: 8px; color: orange;">
+                        <strong>${inc.modulo} - ${inc.ruta} - ${inc.cola}</strong> (${inc.tipo}): ${inc.descripcion}
+                    </li>`;
+                });
+                
+                html += '</ul>';
+                container.innerHTML = html;
+            }
+            
+            resultsDiv.classList.remove('hidden');
+            mostrarMensaje(`Verificación completada: ${inconsistencias.length} inconsistencias encontradas`, inconsistencias.length === 0);
+        }
+
+        // ================= GESTIÓN DEL SISTEMA =================
+        async function actualizarDesdeSheets() {
+            try {
+                mostrarMensaje('Actualizando desde Google Sheets...', true);
+                
+                await cargarDatosSheetsRecoleccion();
+                await cargarDatosSheetsReposicion();
+                await verificarConexionSheets();
+                
+                // Actualizar la vista
+                actualizarEstadisticas();
+                actualizarTablaEstadoRutas();
+                
+                mostrarMensaje('✅ Datos actualizados desde Google Sheets correctamente', true);
+                
+            } catch (error) {
+                console.error('Error actualizando desde Sheets:', error);
+                mostrarMensaje('❌ Error al actualizar desde Sheets: ' + error.message, false);
+            }
+        }
+
+        // ================= GENERACIÓN DE REPORTES =================
+        async function descargarReporteRecoleccion() {
+            try {
+                const fechaInicio = document.getElementById('fechaInicioRecoleccion').value;
+                const fechaFin = document.getElementById('fechaFinRecoleccion').value;
+                
+                if (!fechaInicio || !fechaFin) {
+                    mostrarMensaje('Por favor, selecciona ambas fechas', false);
+                    return;
+                }
+                
+                mostrarMensaje('Generando reporte de recolección...', true);
+                
+                const inicio = new Date(fechaInicio);
+                const fin = new Date(fechaFin);
+                fin.setHours(23, 59, 59, 999);
+                
+                const registrosFiltrados = registrosRecoleccion.filter(reg => {
+                    const fechaReg = new Date(reg.timestamp);
+                    return fechaReg >= inicio && fechaReg <= fin;
+                });
+                
+                if (registrosFiltrados.length === 0) {
+                    mostrarMensaje('No hay registros en el rango de fechas seleccionado', false);
+                    return;
+                }
+                
+                generarCSVRecoleccion(registrosFiltrados, fechaInicio, fechaFin);
+                
+            } catch (error) {
+                console.error('Error generando reporte:', error);
+                mostrarMensaje('Error al generar reporte: ' + error.message, false);
+            }
+        }
+
+        function generarCSVRecoleccion(registros, fechaInicio, fechaFin) {
+            let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,UPC,DESCRIPCION,CANTIDAD_PLANIFICADA,CANTIDAD_RECOLECTADA,ACCION,FECHA,HORA,TIMESTAMP\n";
+            
+            registros.forEach(reg => {
+                const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
+                const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
+                
+                csvContent += `"${reg.usuario || ''}","${reg.ruta || ''}","${reg.cola || ''}","${reg.deposito || ''}","${reg.upc || ''}","${reg.descripcion || ''}",${reg.cantidad || 0},${reg.recolectado || 0},"${reg.accion || ''}","${fecha}","${hora}",${reg.timestamp || ''}\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `reporte_recoleccion_${fechaInicio}_${fechaFin}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            mostrarMensaje(`✅ Reporte de recolección descargado (${registros.length} registros)`, true);
+        }
+
+        async function descargarReporteReposicion() {
+            try {
+                const fechaInicio = document.getElementById('fechaInicioReposicion').value;
+                const fechaFin = document.getElementById('fechaFinReposicion').value;
+                
+                if (!fechaInicio || !fechaFin) {
+                    mostrarMensaje('Por favor, selecciona ambas fechas', false);
+                    return;
+                }
+                
+                mostrarMensaje('Generando reporte de reposición...', true);
+                
+                const inicio = new Date(fechaInicio);
+                const fin = new Date(fechaFin);
+                fin.setHours(23, 59, 59, 999);
+                
+                const registrosFiltrados = registrosReposicion.filter(reg => {
+                    const fechaReg = new Date(reg.timestamp || Date.now());
+                    return fechaReg >= inicio && fechaReg <= fin;
+                });
+                
+                if (registrosFiltrados.length === 0) {
+                    mostrarMensaje('No hay registros de reposición en el rango de fechas seleccionado', false);
+                    return;
+                }
+                
+                generarCSVReposicion(registrosFiltrados, fechaInicio, fechaFin);
+                
+            } catch (error) {
+                console.error('Error generando reporte de reposición:', error);
+                mostrarMensaje('Error al generar reporte de reposición: ' + error.message, false);
+            }
+        }
+
+        function generarCSVReposicion(registros, fechaInicio, fechaFin) {
+            let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,UPC,DESCRIPCION,CANTIDAD,FECHA,HORA,TIMESTAMP\n";
+            
+            registros.forEach(reg => {
+                const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
+                const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
+                
+                csvContent += `"${reg.usuario || ''}","${reg.ruta || ''}","${reg.cola || ''}","${reg.deposito || ''}","${reg.upc || ''}","${reg.descripcion || ''}",${reg.cantidad || 0},"${fecha}","${hora}",${reg.timestamp || ''}\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `reporte_reposicion_${fechaInicio}_${fechaFin}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            mostrarMensaje(`✅ Reporte de reposición descargado (${registros.length} registros)`, true);
+        }
+
+        // ================= NAVEGACIÓN =================
+        function volverInterfazPrincipal() {
+            window.location.href = 'index.html';
+        }
+
+        // ================= UTILIDADES =================
+        function mostrarMensaje(mensaje, esExito) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Actualizar automáticamente cada 2 minutos
+        setInterval(() => {
+            cargarDashboard();
+        }, 120000);
+    </script>
+</body>
+</html>

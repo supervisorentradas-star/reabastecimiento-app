@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recolección - REABASTECIMIENTO SOKSO</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: white;
+            padding: 10px;
+            color: black;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        h1 {
+            color: #6600a1;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+        .connection-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .connection-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .user-info {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #6600a1;
+        }
+        .admin-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px 0;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        .admin-button:hover {
+            background: #55008a;
+        }
+        .admin-button.warning {
+            background: #f39c12;
+        }
+        .admin-button.danger {
+            background: #e74c3c;
+        }
+        .picking-info {
+            background: #e8f4fc;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .info-item {
+            text-align: center;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+        }
+        .info-label {
+            font-weight: bold;
+            font-size: 11px;
+            color: #666;
+        }
+        .info-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: #6600a1;
+        }
+        .deposito-info {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 2px solid #6600a1;
+            transition: all 0.5s;
+        }
+        .deposito-completado {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        .deposito-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+            font-size: 16px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .scan-area {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+            text-align: center;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            gap: 8px;
+        }
+        .stat-box {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: #e8f4fc;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .route-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .route-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 12px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .route-button.completed {
+            background: #28a745;
+        }
+        .route-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            font-size: 14px;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .item-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin: 12px 0;
+        }
+        .item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .item-completed {
+            background-color: #d4edda;
+        }
+        .item-current {
+            background-color: #cce7ff;
+            font-weight: bold;
+            border-left: 4px solid #6600a1;
+        }
+        .item-pendiente {
+            background-color: #fff3cd;
+        }
+        .check-animation {
+            animation: checkmark 2s ease-in-out;
+        }
+        @keyframes checkmark {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .hidden {
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            padding: 15px;
+            color: #666;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .back-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .section {
+            margin-bottom: 15px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        @media (max-width: 480px) {
+            .info-grid, .controls-grid, .route-selector {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- CABECERA MEJORADA -->
+        <div class="header">
+            <h1>RECOLECCIÓN SOKSO</h1>
+            <div class="connection-status">
+                <div class="connection-item">
+                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                    <span>FIRE</span>
+                </div>
+                <div class="connection-item">
+                    <div id="sheetsIndicator" class="connection-indicator checking"></div>
+                    <span>GS</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- INFORMACIÓN DE USUARIO -->
+        <div class="user-info" id="userInfo">
+            Usuario: No identificado
+        </div>
+
+        <!-- MENSAJES DE ESTADO -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- SECCIÓN PRINCIPAL DE USUARIO -->
+        <div class="section user-panel" id="userSection">
+            <h2>Modo Recolección</h2>
+            <button onclick="cargarRutasDesdeSheets()" class="admin-button">🔄 Cargar Rutas</button>
+            <button onclick="solicitarAccesoAdmin()" class="admin-button warning">👨‍💼 Modo Admin</button>
+            
+            <div class="picking-info" id="fileInfo">
+                Presiona "Cargar Rutas" para comenzar...
+            </div>
+            <div id="rutasContainer" class="hidden">
+                <h3>Selecciona tu Ruta:</h3>
+                <div class="route-selector" id="routeSelector"></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN SELECCIÓN DE COLA -->
+        <div class="section hidden" id="colaSection">
+            <h2>Selección de Cola</h2>
+            <div class="picking-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">RECOLECTOR</div>
+                        <div class="info-value" id="recolectorNombre">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RUTA</div>
+                        <div class="info-value" id="rutaActual">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">TOTAL UNIDADES</div>
+                        <div class="info-value" id="totalUnidadesCola">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>Selecciona una cola:</h3>
+            <div class="route-selector" id="colaSelector"></div>
+            
+            <button onclick="volverSeleccionRuta()" class="admin-button warning">↩️ Volver</button>
+        </div>
+
+        <!-- SECCIÓN PICKING MEJORADA -->
+        <div class="section hidden" id="pickingSection">
+            <div class="picking-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">RECOLECTOR</div>
+                        <div class="info-value" id="pickingRecolector">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RUTA</div>
+                        <div class="info-value" id="pickingRuta">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">COLA</div>
+                        <div class="info-value" id="pickingCola">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ÁREA DE DEPÓSITO ACTUAL CON ANIMACIÓN -->
+            <div class="deposito-info" id="depositoActualArea">
+                <div class="deposito-row">
+                    <span id="pickingDeposito">-</span>
+                </div>
+                <div class="deposito-row">
+                    <span id="pickingDescripcion">-</span>
+                </div>
+                <div class="info-grid" style="margin-top: 8px;">
+                    <div class="info-item">
+                        <div class="info-label">CANTIDAD</div>
+                        <div class="info-value" id="pickingCantidad">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RECOLECTADO</div>
+                        <div class="info-value" id="pickingRecolectado">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">PENDIENTE</div>
+                        <div class="info-value" id="pickingPendiente">0</div>
+                    </div>
+                </div>
+                <!-- CHECK ANIMADO -->
+                <div id="checkAnimation" style="text-align: center; margin-top: 10px; display: none;">
+                    <span style="font-size: 24px; color: #28a745;">✅</span>
+                </div>
+            </div>
+            
+            <!-- ÁREA DE ESCANEO MEJORADA -->
+            <div class="scan-area">
+                <h3>ESCANEAR CÓDIGO UPC</h3>
+                <input type="text" id="upcInput" placeholder="Escanear código UPC" autocomplete="off">
+                <div class="controls-grid">
+                    <button onclick="marcarComoNoEncontrado()" class="admin-button danger">❌ No Encontrado</button>
+                    <button onclick="anteriorDeposito()" class="admin-button warning">⏮️ Atrás</button>
+                    <button onclick="finalizarRecoleccion()" class="admin-button">🏁 Finalizar</button>
+                </div>
+            </div>
+            
+            <!-- ESTADÍSTICAS MEJORADAS -->
+            <div class="stats">
+                <div class="stat-box">
+                    <h4>TOTAL</h4>
+                    <span id="totalUnidadesPicking">0</span>
+                </div>
+                <div class="stat-box">
+                    <h4>COMPLETADO</h4>
+                    <span id="completedUnidadesPicking">0</span>
+                </div>
+                <div class="stat-box">
+                    <h4>PENDIENTE</h4>
+                    <span id="pendingUnidadesPicking">0</span>
+                </div>
+            </div>
+            
+            <!-- LISTA DE DEPÓSITOS MEJORADA -->
+            <h4>Lista de Depósitos (pulsa para seleccionar):</h4>
+            <div class="item-list" id="itemList"></div>
+        </div>
+
+        <div class="footer">
+            <button onclick="volverAInterfazPrincipal()" class="back-button">🏠 Volver a Interfaz</button>
+        </div>
+    </div>
+
+    <!-- MODAL PARA ADMIN -->
+    <div id="adminModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Acceso Administrador</h3>
+            <p>Ingresa la contraseña:</p>
+            <input type="password" id="adminPassword" placeholder="Contraseña">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px;">
+                <button onclick="verificarContrasena()" class="admin-button">Aceptar</button>
+                <button onclick="cerrarAdminModal()" class="admin-button warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURACIÓN FIREBASE =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // ================= CONFIGURACIÓN GOOGLE SHEETS CORREGIDA =================
+        // URL CORREGIDA - Usando la URL pública que proporcionaste
+        const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
+        const ADMIN_PASSWORD = "E123456";
+
+        // ================= INICIALIZAR FIREBASE =================
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ================= VARIABLES GLOBALES MEJORADAS =================
+        let rutasMaestras = {};
+        let rutaActual = null;
+        let usuarioActual = null;
+        let colaActual = null;
+        let itemsCompletados = [];
+        let itemsNoEncontrados = [];
+        let itemsPorCola = {};
+        let depositoActualIndex = 0;
+        let colasDisponibles = [];
+        let estadoGlobal = {};
+        let totalUnidadesGlobal = 0;
+        let tieneEscaneosPendientes = false;
+        let sesionActiva = null;
+
+        // ================= INICIALIZACIÓN MEJORADA =================
+        window.addEventListener('load', async function() {
+            // Inicializar Firebase y verificar conexiones
+            inicializarFirebase();
+            await verificarConexionSheets();
+            
+            // Cargar estado global desde Firebase
+            await cargarEstadoGlobalDesdeFirebase();
+            
+            // Verificar y recuperar sesión activa
+            await verificarSesionActiva();
+            
+            // Mostrar panel de usuario por defecto
+            mostrarPanelUsuario();
+            
+            // Configurar event listeners mejorados
+            configurarEventListeners();
+        });
+
+        // ================= CONEXIONES MEJORADAS =================
+        function inicializarFirebase() {
+            try {
+                verificarConexionFirebase();
+            } catch (error) {
+                console.error('Error inicializando Firebase:', error);
+                document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+            }
+        }
+
+        function verificarConexionFirebase() {
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", function(snap) {
+                if (snap.val() === true) {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
+                    // Reconexión automática - recargar datos
+                    if (rutaActual && usuarioActual) {
+                        cargarDashboardRecoleccion();
+                    }
+                } else {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+                }
+            });
+        }
+
+        async function verificarConexionSheets() {
+            try {
+                console.log('Verificando conexión con Google Sheets...');
+                const response = await fetch(GOOGLE_SHEETS_URL);
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text && text.length > 10 && !text.includes('error')) {
+                        document.getElementById('sheetsIndicator').className = 'connection-indicator connected';
+                        console.log('✅ Conexión Google Sheets: OK');
+                        return true;
+                    } else {
+                        throw new Error('Respuesta vacía o con error');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Error conexión Google Sheets:', error);
+                document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
+                return false;
+            }
+        }
+
+        // ================= GESTIÓN DE SESIÓN MEJORADA =================
+        async function verificarSesionActiva() {
+            const sesionGuardada = localStorage.getItem('sesionRecoleccionActiva');
+            if (sesionGuardada) {
+                try {
+                    sesionActiva = JSON.parse(sesionGuardada);
+                    usuarioActual = sesionActiva.usuario;
+                    rutaActual = sesionActiva.ruta;
+                    colaActual = sesionActiva.cola;
+                    depositoActualIndex = sesionActiva.depositoActualIndex || 0;
+                    
+                    // Actualizar información de usuario
+                    document.getElementById('userInfo').textContent = `Usuario: ${usuarioActual}`;
+                    
+                    // Cargar datos y continuar sesión
+                    await cargarDashboardRecoleccion();
+                    
+                    mostrarMensaje('🔄 Sesión recuperada. Continuando desde donde te quedaste.', true);
+                } catch (error) {
+                    console.error('Error recuperando sesión:', error);
+                    limpiarSesionActiva();
+                }
+            }
+        }
+
+        function guardarSesionActiva() {
+            if (rutaActual && usuarioActual && colaActual) {
+                sesionActiva = {
+                    usuario: usuarioActual,
+                    ruta: rutaActual,
+                    cola: colaActual,
+                    depositoActualIndex: depositoActualIndex,
+                    timestamp: new Date().getTime()
+                };
+                localStorage.setItem('sesionRecoleccionActiva', JSON.stringify(sesionActiva));
+            }
+        }
+
+        function limpiarSesionActiva() {
+            localStorage.removeItem('sesionRecoleccionActiva');
+            sesionActiva = null;
+        }
+
+        // ================= CARGA DE DATOS MEJORADA =================
+        async function cargarDashboardRecoleccion() {
+            try {
+                if (!rutaActual || !usuarioActual) return;
+                
+                mostrarMensaje('🔄 Actualizando datos...', true);
+                
+                // Cargar datos de Sheets
+                await cargarRutasDesdeSheets(true);
+                
+                // Si hay cola actual, cargar picking
+                if (colaActual && itemsPorCola[colaActual]) {
+                    document.getElementById('userSection').classList.add('hidden');
+                    document.getElementById('colaSection').classList.add('hidden');
+                    document.getElementById('pickingSection').classList.remove('hidden');
+                    
+                    // Actualizar interfaz
+                    document.getElementById('pickingRecolector').textContent = usuarioActual;
+                    document.getElementById('pickingRuta').textContent = rutaActual;
+                    document.getElementById('pickingCola').textContent = colaActual;
+                    
+                    mostrarDepositoActual();
+                    actualizarEstadisticasPicking();
+                    actualizarListaItems();
+                    
+                    document.getElementById('upcInput').focus();
+                }
+                
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+                mostrarMensaje('Error al cargar datos: ' + error.message, false);
+            }
+        }
+
+        async function cargarRutasDesdeSheets(silencioso = false) {
+            try {
+                if (!silencioso) {
+                    mostrarMensaje('📥 Cargando desde Google Sheets...', true);
+                }
+                
+                let csvText = '';
+                let fuente = '';
+                
+                // Intentar desde Google Sheets primero
+                try {
+                    console.log('📡 Conectando a Google Sheets...');
+                    const response = await fetch(GOOGLE_SHEETS_URL);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP ${response.status}`);
+                    }
+                    
+                    csvText = await response.text();
+                    
+                    if (!csvText || csvText.includes('error') || csvText.length < 10) {
+                        throw new Error('Google Sheets no accesible o vacío');
+                    }
+                    
+                    fuente = 'Google Sheets';
+                    await verificarConexionSheets(); // Actualizar indicador
+                    console.log('✅ Datos cargados correctamente desde Google Sheets');
+                    
+                } catch (error) {
+                    console.error('❌ Error cargando desde Google Sheets:', error);
+                    
+                    // Fallback a localStorage
+                    csvText = localStorage.getItem('rutasCSV');
+                    fuente = localStorage.getItem('fuente') || 'Respaldo Local';
+                    
+                    if (!csvText) {
+                        throw new Error('No hay datos disponibles. El administrador debe subir un archivo CSV primero.');
+                    }
+                    console.log('📂 Usando datos de respaldo local');
+                }
+                
+                procesarCSV(csvText, fuente);
+                
+                if (!silencioso) {
+                    mostrarMensaje(`✅ Rutas cargadas desde ${fuente}`, true);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                if (!silencioso) {
+                    mostrarMensaje(`❌ ${error.message}`, false);
+                }
+                throw error;
+            }
+        }
+
+        // ================= PROCESAMIENTO CSV (MANTENIDO) =================
+        function procesarCSV(csvText, fuente) {
+            try {
+                rutasMaestras = {};
+                totalUnidadesGlobal = 0;
+                const lineas = csvText.split('\n').filter(linea => linea.trim());
+                
+                console.log('Procesando', lineas.length, 'líneas desde:', fuente);
+                
+                if (lineas.length < 2) {
+                    throw new Error('El archivo CSV está vacío o no tiene datos');
+                }
+                
+                // Detectar separador
+                const primeraLinea = lineas[0];
+                const separador = primeraLinea.includes('\t') ? '\t' : ',';
+                
+                for (let i = 1; i < lineas.length; i++) {
+                    const linea = lineas[i].trim();
+                    if (!linea) continue;
+                    
+                    const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                    
+                    if (partes.length >= 4) {
+                        const deposito = partes[0];
+                        const upc = partes[1].replace(',', '.');
+                        const descripcion = partes[2];
+                        const cantidad = parseInt(partes[3]) || 0;
+                        
+                        if (deposito && upc) {
+                            // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
+                            const rutaMatch = deposito.match(/^[A-Z](\d+)/);
+                            let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
+                            ruta = 'Ruta ' + ruta;
+                            
+                            if (!rutasMaestras[ruta]) {
+                                rutasMaestras[ruta] = [];
+                            }
+                            
+                            rutasMaestras[ruta].push({
+                                deposito,
+                                upc,
+                                descripcion,
+                                cantidad,
+                                recolectado: 0,
+                                no_encontrado: 0,
+                                completado: false
+                            });
+                            
+                            totalUnidadesGlobal += cantidad;
+                        }
+                    }
+                }
+                
+                if (Object.keys(rutasMaestras).length === 0) {
+                    throw new Error('No se encontraron datos válidos en el archivo');
+                }
+                
+                mostrarInfoRutas(fuente);
+                mostrarOpcionesRutas();
+                
+            } catch (error) {
+                throw new Error('Error procesando CSV: ' + error.message);
+            }
+        }
+
+        function mostrarInfoRutas(fuente) {
+            const totalRutas = Object.keys(rutasMaestras).length;
+            
+            document.getElementById('fileInfo').innerHTML = 
+                `<strong>✅ Fuente: ${fuente}</strong><br>
+                 <strong>📊 Rutas disponibles: ${totalRutas}</strong><br>
+                 <strong>📦 Total Unidades: ${totalUnidadesGlobal}</strong>`;
+        }
+
+        function mostrarOpcionesRutas() {
+            const container = document.getElementById('rutasContainer');
+            const selector = document.getElementById('routeSelector');
+            
+            selector.innerHTML = '';
+            
+            Object.keys(rutasMaestras).forEach(ruta => {
+                const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
+                const button = document.createElement('button');
+                
+                // Verificar si la ruta está completada
+                const rutaCompletada = verificarRutaCompletada(ruta);
+                
+                button.className = rutaCompletada ? 'route-button completed' : 'route-button';
+                button.textContent = `📍 ${ruta} (${totalUnidadesRuta})`;
+                button.onclick = () => seleccionarRuta(ruta);
+                
+                if (rutaCompletada) {
+                    button.disabled = true;
+                }
+                
+                selector.appendChild(button);
+            });
+            
+            container.classList.remove('hidden');
+        }
+
+        async function verificarRutaCompletada(ruta) {
+            try {
+                // Obtener registros de Firebase para esta ruta
+                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
+                const registros = snapshot.val();
+                
+                if (!registros) return false;
+                
+                // Agrupar por cola y verificar progreso
+                const colas = {};
+                Object.values(registros).forEach(registro => {
+                    if (!colas[registro.cola]) {
+                        colas[registro.cola] = { recolectado: 0, no_encontrado: 0 };
+                    }
+                    if (registro.accion === 'escaneado') {
+                        colas[registro.cola].recolectado += registro.recolectado;
+                    } else if (registro.accion === 'no_encontrado') {
+                        colas[registro.cola].no_encontrado += registro.no_encontrado;
+                    }
+                });
+                
+                // Verificar cada depósito en la ruta
+                for (const item of rutasMaestras[ruta]) {
+                    let totalEjecutado = 0;
+                    
+                    // Buscar registros para este depósito
+                    Object.values(registros).forEach(registro => {
+                        if (registro.deposito === item.deposito) {
+                            if (registro.accion === 'escaneado') {
+                                totalEjecutado += registro.recolectado;
+                            } else if (registro.accion === 'no_encontrado') {
+                                totalEjecutado += registro.no_encontrado;
+                            }
+                        }
+                    });
+                    
+                    if (totalEjecutado < item.cantidad) {
+                        return false; // Hay depósitos pendientes
+                    }
+                }
+                
+                return true; // Todos los depósitos completados
+                
+            } catch (error) {
+                console.error('Error verificando ruta completada:', error);
+                return false;
+            }
+        }
+
+        // ================= SELECCIÓN DE RUTA Y COLA MEJORADA =================
+        async function seleccionarRuta(ruta) {
+            if (!usuarioActual) {
+                usuarioActual = prompt("👤 Ingresa tu nombre de usuario:", "Operador");
+                if (!usuarioActual) return;
+                
+                // Actualizar información de usuario
+                document.getElementById('userInfo').textContent = `Usuario: ${usuarioActual}`;
+            }
+            
+            rutaActual = ruta;
+            
+            // Verificar si la ruta está completada
+            const rutaCompletada = await verificarRutaCompletada(ruta);
+            if (rutaCompletada) {
+                mostrarMensaje('✅ Esta ruta ya ha sido completada', true);
+                return;
+            }
+            
+            // Agrupar por colas (A, B, CDE, F)
+            agruparPorColas(ruta);
+            
+            document.getElementById('userSection').classList.add('hidden');
+            document.getElementById('colaSection').classList.remove('hidden');
+            
+            document.getElementById('recolectorNombre').textContent = usuarioActual;
+            document.getElementById('rutaActual').textContent = ruta;
+            
+            const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
+            document.getElementById('totalUnidadesCola').textContent = totalUnidadesRuta;
+            
+            await mostrarOpcionesColas();
+        }
+
+        function agruparPorColas(ruta) {
+            itemsPorCola = {};
+            colasDisponibles = [];
+            
+            // Inicializar las colas
+            itemsPorCola['B'] = [];
+            itemsPorCola['CDE'] = [];
+            itemsPorCola['F'] = [];
+            
+            rutasMaestras[ruta].forEach(item => {
+                const partes = item.deposito.split('-');
+                if (partes.length >= 3) {
+                    const nivel = partes[2].charAt(0);
+                    
+                    if (nivel === 'B') {
+                        itemsPorCola['B'].push(item);
+                    } else if (['C', 'D', 'E'].includes(nivel)) {
+                        itemsPorCola['CDE'].push(item);
+                    } else if (nivel === 'F') {
+                        itemsPorCola['F'].push(item);
+                    }
+                }
+            });
+            
+            // Ordenar cada cola según la nomenclatura
+            Object.keys(itemsPorCola).forEach(cola => {
+                itemsPorCola[cola].sort((a, b) => {
+                    return a.deposito.localeCompare(b.deposito);
+                });
+            });
+            
+            // Definir colas disponibles (solo las que tienen elementos)
+            colasDisponibles = Object.keys(itemsPorCola).filter(cola => itemsPorCola[cola].length > 0);
+        }
+
+        async function mostrarOpcionesColas() {
+            const selector = document.getElementById('colaSelector');
+            selector.innerHTML = '';
+            
+            if (colasDisponibles.length === 0) {
+                selector.innerHTML = '<p>No hay colas disponibles para esta ruta</p>';
+                return;
+            }
+            
+            for (const cola of colasDisponibles) {
+                const button = document.createElement('button');
+                
+                // Verificar el estado REAL de la cola desde Firebase
+                const estadoReal = await verificarEstadoRealCola(rutaActual, cola);
+                const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
+                
+                if (estadoReal.completada) {
+                    button.className = 'route-button completed';
+                    button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
+                    button.disabled = true;
+                } else if (estadoReal.enProgreso) {
+                    button.className = 'route-button';
+                    button.textContent = `🔄 COLA: ${cola} (EN PROGRESO)`;
+                    button.onclick = () => comenzarPicking(cola);
+                } else {
+                    button.className = 'route-button';
+                    button.textContent = `COLA: ${cola} (${totalUnidadesCola})`;
+                    button.onclick = () => comenzarPicking(cola);
+                }
+                
+                selector.appendChild(button);
+            }
+        }
+
+        // ================= VALIDACIÓN CRUZADA SHEETS-FIREBASE =================
+        async function verificarEstadoRealCola(ruta, cola) {
+            try {
+                // Obtener todos los registros de Firebase para esta ruta
+                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
+                const registros = snapshot.val();
+                
+                if (!registros) {
+                    return { completada: false, enProgreso: false };
+                }
+                
+                let totalRecolectado = 0;
+                let totalNoEncontrado = 0;
+                
+                Object.values(registros).forEach(registro => {
+                    if (registro.cola === cola) {
+                        if (registro.accion === 'escaneado') {
+                            totalRecolectado += registro.recolectado;
+                        } else if (registro.accion === 'no_encontrado') {
+                            totalNoEncontrado += registro.no_encontrado;
+                        }
+                    }
+                });
+                
+                // Calcular total planificado desde Sheets
+                const itemsCola = itemsPorCola[cola];
+                const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
+                
+                // Verificar si está completada
+                const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
+                const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
+                
+                return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
+                
+            } catch (error) {
+                console.error('Error verificando estado real de cola:', error);
+                return { completada: false, enProgreso: false };
+            }
+        }
+
+        // ================= PICKING MEJORADO =================
+        async function comenzarPicking(cola) {
+            colaActual = cola;
+            itemsCompletados = [];
+            itemsNoEncontrados = [];
+            tieneEscaneosPendientes = false;
+            
+            // Cargar progreso actual desde Firebase
+            await cargarProgresoActual();
+            
+            // Encontrar el primer depósito no completado
+            depositoActualIndex = await encontrarPrimerDepositoPendiente();
+            
+            // Verificar si la cola ya está completada
+            const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
+            
+            if (depositoActualIndex === -1 || estadoReal.completada) {
+                mostrarMensajeModal('Cola Completada', 'Esta cola ya ha sido completada anteriormente.');
+                if (colasDisponibles.length === 1) {
+                    volverSeleccionRuta();
+                } else {
+                    mostrarOpcionesColas();
+                }
+                return;
+            }
+            
+            // Guardar sesión activa
+            guardarSesionActiva();
+            
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.remove('hidden');
+            
+            document.getElementById('pickingRecolector').textContent = usuarioActual;
+            document.getElementById('pickingRuta').textContent = rutaActual;
+            document.getElementById('pickingCola').textContent = colaActual;
+            
+            mostrarDepositoActual();
+            actualizarEstadisticasPicking();
+            actualizarListaItems();
+            
+            document.getElementById('upcInput').focus();
+        }
+
+        async function cargarProgresoActual() {
+            try {
+                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(rutaActual).once('value');
+                const registros = snapshot.val();
+                
+                if (!registros) return;
+                
+                // Actualizar itemsPorCola con los registros de Firebase
+                Object.values(registros).forEach(registro => {
+                    if (registro.cola === colaActual) {
+                        const itemIndex = itemsPorCola[colaActual].findIndex(item => item.deposito === registro.deposito);
+                        if (itemIndex !== -1) {
+                            if (registro.accion === 'escaneado') {
+                                itemsPorCola[colaActual][itemIndex].recolectado = registro.recolectado;
+                            } else if (registro.accion === 'no_encontrado') {
+                                itemsPorCola[colaActual][itemIndex].no_encontrado = registro.no_encontrado;
+                            }
+                            
+                            // Verificar si está completado
+                            const item = itemsPorCola[colaActual][itemIndex];
+                            const totalEjecutado = item.recolectado + item.no_encontrado;
+                            item.completado = totalEjecutado >= item.cantidad;
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error cargando progreso actual:', error);
+            }
+        }
+
+        async function encontrarPrimerDepositoPendiente() {
+            for (let i = 0; i < itemsPorCola[colaActual].length; i++) {
+                const item = itemsPorCola[colaActual][i];
+                const totalEjecutado = item.recolectado + item.no_encontrado;
+                
+                if (totalEjecutado < item.cantidad) {
+                    return i;
+                }
+            }
+            return -1; // Todos completados
+        }
+
+        function mostrarDepositoActual() {
+            if (depositoActualIndex < itemsPorCola[colaActual].length) {
+                const item = itemsPorCola[colaActual][depositoActualIndex];
+                const totalEjecutado = item.recolectado + item.no_encontrado;
+                const pendiente = item.cantidad - totalEjecutado;
+                
+                document.getElementById('pickingDeposito').textContent = item.deposito;
+                document.getElementById('pickingDescripcion').textContent = item.descripcion;
+                document.getElementById('pickingCantidad').textContent = item.cantidad;
+                document.getElementById('pickingRecolectado').textContent = totalEjecutado;
+                document.getElementById('pickingPendiente').textContent = pendiente;
+                
+                // Remover clase de completado si existe
+                document.getElementById('depositoActualArea').classList.remove('deposito-completado');
+                
+            } else {
+                // Fin de la cola
+                finalizarRecoleccion();
+            }
+            
+            actualizarListaItems();
+        }
+
+        function actualizarListaItems() {
+            const container = document.getElementById('itemList');
+            container.innerHTML = '';
+            
+            if (!itemsPorCola[colaActual]) return;
+            
+            itemsPorCola[colaActual].forEach((item, index) => {
+                const div = document.createElement('div');
+                const totalEjecutado = item.recolectado + item.no_encontrado;
+                const pendiente = item.cantidad - totalEjecutado;
+                
+                let itemClass = 'item';
+                if (item.completado) {
+                    itemClass += ' item-completed';
+                } else if (index === depositoActualIndex) {
+                    itemClass += ' item-current';
+                } else if (pendiente > 0) {
+                    itemClass += ' item-pendiente';
+                }
+                
+                div.className = itemClass;
+                div.innerHTML = `
+                    <div>
+                        <strong>${index + 1}. ${item.deposito}</strong><br>
+                        ${item.descripcion}<br>
+                        <small>Progreso: ${totalEjecutado}/${item.cantidad}</small>
+                    </div>
+                    <div style="font-size: 16px;">
+                        ${item.completado ? '✅' : (index === depositoActualIndex ? '👉' : '⏳')}
+                    </div>
+                `;
+                div.onclick = () => {
+                    if (index !== depositoActualIndex) {
+                        depositoActualIndex = index;
+                        mostrarDepositoActual();
+                        document.getElementById('upcInput').focus();
+                    }
+                };
+                container.appendChild(div);
+            });
+        }
+
+        // ================= VALIDACIÓN DE ESCANEO MEJORADA =================
+        function configurarEventListeners() {
+            document.getElementById('upcInput').addEventListener('input', function(e) {
+                const upc = e.target.value.trim();
+                
+                if (upc.length > 0) {
+                    validarUPC(upc);
+                }
+            });
+            
+            // Enter key para escanear
+            document.getElementById('upcInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const upc = e.target.value.trim();
+                    if (upc.length > 0) {
+                        validarUPC(upc);
+                    }
+                }
+            });
+        }
+
+        async function validarUPC(upc) {
+            const item = itemsPorCola[colaActual][depositoActualIndex];
+            
+            if (item.upc !== upc) {
+                mostrarMensajeModal('Código Incorrecto', 'El código UPC escaneado no coincide con el producto actual.');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            const totalEjecutado = item.recolectado + item.no_encontrado;
+            if (totalEjecutado >= item.cantidad) {
+                mostrarMensajeModal('Cantidad Completa', 'Ya se ha recolectado la cantidad requerida para este producto.');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // UPC correcto, incrementar contador
+            item.recolectado++;
+            tieneEscaneosPendientes = true;
+            
+            // Guardar sesión activa
+            guardarSesionActiva();
+            
+            // Actualizar interfaz
+            const nuevoTotal = item.recolectado + item.no_encontrado;
+            const nuevoPendiente = item.cantidad - nuevoTotal;
+            
+            document.getElementById('pickingRecolectado').textContent = nuevoTotal;
+            document.getElementById('pickingPendiente').textContent = nuevoPendiente;
+            
+            // Guardar registro en Firebase
+            const fechaHora = new Date();
+            const registro = {
+                usuario: usuarioActual,
+                ruta: rutaActual,
+                cola: colaActual,
+                deposito: item.deposito,
+                upc: item.upc,
+                descripcion: item.descripcion,
+                cantidad_planificada: item.cantidad,
+                recolectado: item.recolectado,
+                no_encontrado: item.no_encontrado,
+                accion: 'escaneado',
+                fecha: fechaHora.toLocaleDateString(),
+                hora: fechaHora.toLocaleTimeString(),
+                timestamp: fechaHora.getTime()
+            };
+            
+            await guardarRegistroEnFirebase(registro);
+            
+            // Verificar si se completó la cantidad
+            if (nuevoTotal >= item.cantidad) {
+                item.completado = true;
+                itemsCompletados.push(item);
+                
+                // Mostrar check animado
+                mostrarCheckAnimado();
+                
+                setTimeout(() => {
+                    // Buscar siguiente depósito pendiente
+                    encontrarSiguienteDeposito();
+                }, 2000);
+            }
+            
+            document.getElementById('upcInput').value = '';
+            actualizarEstadisticasPicking();
+            actualizarListaItems();
+        }
+
+        function mostrarCheckAnimado() {
+            const checkElement = document.getElementById('checkAnimation');
+            const depositoArea = document.getElementById('depositoActualArea');
+            
+            // Mostrar check
+            checkElement.style.display = 'block';
+            depositoArea.classList.add('deposito-completado');
+            
+            // Ocultar después de 2 segundos
+            setTimeout(() => {
+                checkElement.style.display = 'none';
+            }, 2000);
+        }
+
+        async function encontrarSiguienteDeposito() {
+            // Buscar desde la posición actual +1
+            for (let i = depositoActualIndex + 1; i < itemsPorCola[colaActual].length; i++) {
+                const item = itemsPorCola[colaActual][i];
+                const totalEjecutado = item.recolectado + item.no_encontrado;
+                
+                if (totalEjecutado < item.cantidad) {
+                    depositoActualIndex = i;
+                    mostrarDepositoActual();
+                    document.getElementById('upcInput').focus();
+                    return;
+                }
+            }
+            
+            // Si no hay más depósitos pendientes, finalizar
+            finalizarRecoleccion();
+        }
+
+        async function marcarComoNoEncontrado() {
+            const item = itemsPorCola[colaActual][depositoActualIndex];
+            const totalEjecutado = item.recolectado + item.no_encontrado;
+            const pendiente = item.cantidad - totalEjecutado;
+            
+            if (pendiente <= 0) {
+                mostrarMensaje('Este depósito ya está completado', false);
+                return;
+            }
+            
+            const cantidadNoEncontrada = pendiente; // Marcar todo lo pendiente como no encontrado
+            
+            item.no_encontrado += cantidadNoEncontrada;
+            tieneEscaneosPendientes = true;
+            
+            // Guardar sesión activa
+            guardarSesionActiva();
+            
+            // Guardar registro en Firebase
+            const fechaHora = new Date();
+            const registro = {
+                usuario: usuarioActual,
+                ruta: rutaActual,
+                cola: colaActual,
+                deposito: item.deposito,
+                upc: item.upc,
+                descripcion: item.descripcion,
+                cantidad_planificada: item.cantidad,
+                recolectado: item.recolectado,
+                no_encontrado: item.no_encontrado,
+                accion: 'no_encontrado',
+                fecha: fechaHora.toLocaleDateString(),
+                hora: fechaHora.toLocaleTimeString(),
+                timestamp: fechaHora.getTime()
+            };
+            
+            await guardarRegistroEnFirebase(registro);
+            
+            // Marcar como completado
+            item.completado = true;
+            itemsNoEncontrados.push({...item, cantidadNoEncontrada});
+            
+            mostrarMensaje(`⚠️ ${cantidadNoEncontrada} unidad(es) marcada(s) como no encontrada(s) en ${item.deposito}`, true);
+            
+            // Pasar al siguiente depósito
+            setTimeout(() => {
+                encontrarSiguienteDeposito();
+            }, 1000);
+        }
+
+        function anteriorDeposito() {
+            if (depositoActualIndex > 0) {
+                depositoActualIndex--;
+                mostrarDepositoActual();
+                document.getElementById('upcInput').value = '';
+                document.getElementById('upcInput').focus();
+            }
+        }
+
+        function actualizarEstadisticasPicking() {
+            const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
+            const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + (item.recolectado + item.no_encontrado), 0);
+            const pendientesUnidades = totalUnidades - completadasUnidades;
+            
+            document.getElementById('totalUnidadesPicking').textContent = totalUnidades;
+            document.getElementById('completedUnidadesPicking').textContent = completadasUnidades;
+            document.getElementById('pendingUnidadesPicking').textContent = pendientesUnidades;
+        }
+
+        // ================= GUARDAR REGISTROS MEJORADO =================
+        async function guardarRegistroEnFirebase(registro) {
+            try {
+                console.log('Enviando registro a Firebase:', registro);
+                
+                // Generar una clave única para el registro
+                const registroKey = database.ref().child('recolecciones').push().key;
+                
+                await database.ref(`recolecciones/${registroKey}`).set(registro);
+                console.log('Registro guardado en Firebase:', registro);
+                
+            } catch (error) {
+                console.error('Error guardando registro en Firebase:', error);
+                // Guardar en localStorage para sincronizar después
+                guardarRegistroLocal(registro);
+                throw error;
+            }
+        }
+
+        function guardarRegistroLocal(registro) {
+            try {
+                const registrosPendientes = JSON.parse(localStorage.getItem('registrosPendientes') || '[]');
+                registrosPendientes.push(registro);
+                localStorage.setItem('registrosPendientes', JSON.stringify(registrosPendientes));
+            } catch (error) {
+                console.error('Error guardando registro local:', error);
+            }
+        }
+
+        async function sincronizarRegistrosPendientes() {
+            try {
+                const registrosPendientes = JSON.parse(localStorage.getItem('registrosPendientes') || '[]');
+                
+                if (registrosPendientes.length === 0) return;
+                
+                console.log(`Sincronizando ${registrosPendientes.length} registros pendientes...`);
+                
+                for (const registro of registrosPendientes) {
+                    await guardarRegistroEnFirebase(registro);
+                }
+                
+                // Limpiar registros sincronizados
+                localStorage.removeItem('registrosPendientes');
+                console.log('Registros pendientes sincronizados correctamente');
+                
+            } catch (error) {
+                console.error('Error sincronizando registros pendientes:', error);
+            }
+        }
+
+        // ================= FINALIZACIÓN MEJORADA =================
+        async function finalizarRecoleccion() {
+            const completadasUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + (item.recolectado + item.no_encontrado), 0);
+            const totalUnidades = itemsPorCola[colaActual].reduce((sum, item) => sum + item.cantidad, 0);
+            const pendientesUnidades = totalUnidades - completadasUnidades;
+            
+            let mensaje = `¿Finalizar recolección de la cola ${colaActual}?\n\n` +
+                         `✅ Unidades procesadas: ${completadasUnidades}/${totalUnidades}`;
+            
+            if (pendientesUnidades > 0) {
+                mensaje += `\n⏳ Pendientes: ${pendientesUnidades}`;
+            }
+            if (itemsNoEncontrados.length > 0) {
+                mensaje += `\n❌ No encontrados: ${itemsNoEncontrados.length} depósitos`;
+            }
+            
+            if (confirm(mensaje)) {
+                // Sincronizar cualquier registro pendiente
+                await sincronizarRegistrosPendientes();
+                
+                // Limpiar sesión activa
+                limpiarSesionActiva();
+                tieneEscaneosPendientes = false;
+                
+                mostrarMensaje(`📊 Recolección finalizada: ${completadasUnidades}/${totalUnidades} unidades`, true);
+                
+                // Redirigir automáticamente
+                setTimeout(() => {
+                    document.getElementById('pickingSection').classList.add('hidden');
+                    
+                    if (colasDisponibles.length === 1) {
+                        document.getElementById('userSection').classList.remove('hidden');
+                    } else {
+                        document.getElementById('colaSection').classList.remove('hidden');
+                        mostrarOpcionesColas();
+                    }
+                }, 1500);
+            }
+        }
+
+        // ================= NAVEGACIÓN MEJORADA =================
+        function volverAInterfazPrincipal() {
+            // Verificar si hay escaneos pendientes sin guardar
+            if (tieneEscaneosPendientes) {
+                if (confirm('Tienes escaneos pendientes de guardar. ¿Deseas finalizar la recolección antes de salir?')) {
+                    finalizarRecoleccion();
+                }
+                return;
+            }
+            
+            // Limpiar sesión si no hay trabajo en progreso
+            if (!rutaActual || !colaActual) {
+                limpiarSesionActiva();
+            }
+            
+            window.location.href = 'index.html';
+        }
+
+        function volverSeleccionRuta() {
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+        }
+
+        function mostrarPanelUsuario() {
+            document.getElementById('colaSection').classList.add('hidden');
+            document.getElementById('pickingSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+        }
+
+        // ================= ADMIN Y UTILIDADES =================
+        function solicitarAccesoAdmin() {
+            document.getElementById('adminModal').classList.remove('hidden');
+            document.getElementById('adminPassword').focus();
+        }
+
+        function verificarContrasena() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === ADMIN_PASSWORD) {
+                window.location.href = 'admin.html';
+            } else {
+                mostrarMensaje('❌ Contraseña incorrecta', false);
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+
+        function cerrarAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function mostrarMensajeModal(titulo, mensaje) {
+            alert(`${titulo}\n\n${mensaje}`);
+        }
+
+        function mostrarMensaje(mensaje, esExito) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // ================= GESTIÓN DE ESTADO GLOBAL =================
+        async function cargarEstadoGlobalDesdeFirebase() {
+            try {
+                const estadoRef = database.ref('estado');
+                estadoRef.on('value', (snapshot) => {
+                    const estadoDesdeFirebase = snapshot.val();
+                    if (estadoDesdeFirebase) {
+                        estadoGlobal = estadoDesdeFirebase;
+                    }
+                });
+            } catch (error) {
+                console.error('Error cargando estado desde Firebase:', error);
+            }
+        }
+
+        // Sincronización automática cada 30 segundos
+        setInterval(() => {
+            if (rutaActual && usuarioActual) {
+                cargarDashboardRecoleccion();
+            }
+        }, 30000);
+
+        // Sincronizar registros pendientes al cargar
+        window.addEventListener('online', () => {
+            sincronizarRegistrosPendientes();
+            if (rutaActual && usuarioActual) {
+                cargarDashboardRecoleccion();
+            }
+        });
+    </script>
+</body>
+</html>

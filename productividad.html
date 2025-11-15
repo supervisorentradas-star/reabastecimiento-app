@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productividad - REABASTECIMIENTO SOKSO</title>
+    <style>
+        *{box-sizing:border-box;font-family:Arial,sans-serif;margin:0;padding:0}
+        body{background-color:white;padding:10px;color:black}
+        .container{max-width:100%;margin:0 auto;background:white;border-radius:8px;padding:15px}
+        .header{text-align:center;margin-bottom:15px;padding-bottom:10px;border-bottom:1px solid #f0f0f0}
+        h1{color:#6600a1;font-size:22px;margin-bottom:8px}
+        .connection-status{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:10px}
+        .connection-indicator{width:10px;height:10px;border-radius:50%}
+        .connected{background-color:#27ae60}
+        .disconnected{background-color:#e74c3c}
+        .checking{background-color:#f39c12}
+        .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px}
+        .stat-card{background:#f8f8f8;padding:12px;border-radius:6px;text-align:center;border:1px solid #e0e0e0}
+        .stat-value{font-size:18px;font-weight:bold;color:#6600a1}
+        .stat-label{font-size:12px;color:#666;margin-top:5px}
+        .section{margin-bottom:20px;padding:12px;border:1px solid #e0e0e0;border-radius:6px;background:#fafafa}
+        .section h2{color:#6600a1;font-size:16px;margin-bottom:10px;text-align:center}
+        .productivity-table{width:100%;border-collapse:collapse;font-size:12px}
+        .productivity-table th,.productivity-table td{border:1px solid #ddd;padding:6px;text-align:center}
+        .productivity-table th{background:#6600a1;color:white;font-weight:bold}
+        .productivity-table tr:nth-child(even){background:#f0f0f0}
+        .footer{text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #f0f0f0}
+        .back-button{background:#6600a1;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px}
+        .status-message{padding:8px;border-radius:4px;margin:10px 0;text-align:center;font-weight:bold;display:none;font-size:12px}
+        .success-message{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+        .error-message{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+        .loading{text-align:center;padding:15px;color:#666}
+        .refresh-btn{background:#6600a1;color:white;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:10px}
+        @media (max-width:480px){.stats-grid{grid-template-columns:1fr;gap:8px}.productivity-table{font-size:11px}.productivity-table th,.productivity-table td{padding:4px}}
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Productividad</h1>
+            <div class="connection-status">
+                <div id="connectionIndicator" class="connection-indicator checking"></div>
+                <span id="estadoConexion" style="font-size:14px">Conectando...</span>
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="cargarDatosProductividad()">🔄 Actualizar Datos</button>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- ESTADÍSTICAS RÁPIDAS -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalOperarios">0</div>
+                <div class="stat-label">Operarios Activos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalUnidades">0</div>
+                <div class="stat-label">Unidades Recolectadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="promedioGeneral">0</div>
+                <div class="stat-label">Promedio General</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="diasTrabajados">0</div>
+                <div class="stat-label">Días Analizados</div>
+            </div>
+        </div>
+
+        <!-- RECOLECCIÓN MENSUAL -->
+        <div class="section">
+            <h2>Recolección Mensual</h2>
+            <div id="recoleccionLoading" class="loading">Cargando datos de recolección...</div>
+            <table class="productivity-table" id="tablaRecoleccion" style="display:none">
+                <thead>
+                    <tr>
+                        <th>COLA</th>
+                        <th>CDE</th>
+                        <th>Recolector</th>
+                        <th>Promedio</th>
+                        <th>Total Unidades</th>
+                        <th>Días Trabajados</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaRecoleccion">
+                    <!-- Los datos se llenarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- REPOSICIÓN MENSUAL -->
+        <div class="section">
+            <h2>Reposición Mensual</h2>
+            <div id="reposicionLoading" class="loading">Cargando datos de reposición...</div>
+            <table class="productivity-table" id="tablaReposicion" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Recolector</th>
+                        <th>Promedio</th>
+                        <th>Total Unidades</th>
+                        <th>Días Trabajados</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaReposicion">
+                    <!-- Los datos se llenarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <button class="back-button" onclick="volverInterfazPrincipal()">↩️ Regresar</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURACIÓN FIREBASE =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // ================= INICIALIZAR FIREBASE =================
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ================= VARIABLES GLOBALES =================
+        let datosRecoleccion = [];
+        let datosReposicion = [];
+
+        // ================= INICIALIZACIÓN =================
+        window.addEventListener('load', function() {
+            inicializarFirebase();
+            cargarDatosProductividad();
+        });
+
+        // ================= FIREBASE INTEGRATION =================
+        function inicializarFirebase() {
+            try {
+                verificarConexionFirebase();
+            } catch (error) {
+                document.getElementById('estadoConexion').innerHTML = 'Error Firebase';
+                document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
+            }
+        }
+
+        function verificarConexionFirebase() {
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", function(snap) {
+                if (snap.val() === true) {
+                    document.getElementById('estadoConexion').innerHTML = 'Conectado';
+                    document.getElementById('connectionIndicator').className = 'connection-indicator connected';
+                } else {
+                    document.getElementById('estadoConexion').innerHTML = 'Desconectado';
+                    document.getElementById('connectionIndicator').className = 'connection-indicator disconnected';
+                }
+            });
+        }
+
+        // ================= CARGAR DATOS DE PRODUCTIVIDAD =================
+        async function cargarDatosProductividad() {
+            try {
+                mostrarMensaje('📊 Cargando datos de productividad...', true);
+                
+                // Cargar datos de recolección
+                await cargarDatosRecoleccion();
+                
+                // Cargar datos de reposición
+                await cargarDatosReposicion();
+                
+                // Procesar y mostrar datos
+                procesarDatosProductividad();
+                
+                mostrarMensaje('✅ Datos de productividad actualizados', true);
+                
+            } catch (error) {
+                console.error('Error cargando datos de productividad:', error);
+                mostrarMensaje('❌ Error al cargar datos de productividad', false);
+            }
+        }
+
+        async function cargarDatosRecoleccion() {
+            return new Promise((resolve, reject) => {
+                database.ref('recolecciones').once('value')
+                    .then(snapshot => {
+                        const datos = snapshot.val();
+                        datosRecoleccion = datos ? Object.values(datos) : [];
+                        console.log('Datos de recolección cargados:', datosRecoleccion.length);
+                        resolve(datosRecoleccion);
+                    })
+                    .catch(error => {
+                        console.error('Error cargando datos de recolección:', error);
+                        datosRecoleccion = [];
+                        reject(error);
+                    });
+            });
+        }
+
+        async function cargarDatosReposicion() {
+            return new Promise((resolve, reject) => {
+                // Intentar cargar datos de reposición si existen
+                database.ref('reposiciones').once('value')
+                    .then(snapshot => {
+                        const datos = snapshot.val();
+                        datosReposicion = datos ? Object.values(datos) : [];
+                        console.log('Datos de reposición cargados:', datosReposicion.length);
+                        resolve(datosReposicion);
+                    })
+                    .catch(error => {
+                        console.log('No se encontraron datos de reposición:', error);
+                        datosReposicion = [];
+                        resolve([]); // Resolvemos con array vacío en lugar de rechazar
+                    });
+            });
+        }
+
+        // ================= PROCESAR DATOS DE PRODUCTIVIDAD =================
+        function procesarDatosProductividad() {
+            // Procesar datos de recolección
+            const estadisticasRecoleccion = calcularEstadisticasRecoleccion();
+            mostrarEstadisticasRecoleccion(estadisticasRecoleccion);
+            
+            // Procesar datos de reposición
+            const estadisticasReposicion = calcularEstadisticasReposicion();
+            mostrarEstadisticasReposicion(estadisticasReposicion);
+            
+            // Actualizar estadísticas generales
+            actualizarEstadisticasGenerales(estadisticasRecoleccion, estadisticasReposicion);
+        }
+
+        function calcularEstadisticasRecoleccion() {
+            const operarios = {};
+            
+            datosRecoleccion.forEach(registro => {
+                if (registro.accion === 'escaneado' && registro.usuario && registro.recolectado > 0) {
+                    const usuario = registro.usuario;
+                    const fecha = new Date(registro.timestamp).toLocaleDateString();
+                    const unidades = registro.recolectado || 0;
+                    const cola = registro.cola || 'N/A';
+                    
+                    if (!operarios[usuario]) {
+                        operarios[usuario] = {
+                            usuario: usuario,
+                            totalUnidades: 0,
+                            diasTrabajados: new Set(),
+                            colas: new Set(),
+                            registros: []
+                        };
+                    }
+                    
+                    operarios[usuario].totalUnidades += unidades;
+                    operarios[usuario].diasTrabajados.add(fecha);
+                    operarios[usuario].colas.add(cola);
+                    operarios[usuario].registros.push(registro);
+                }
+            });
+            
+            // Convertir a array y calcular promedios
+            return Object.values(operarios).map(op => {
+                const dias = op.diasTrabajados.size;
+                const promedio = dias > 0 ? Math.round(op.totalUnidades / dias) : 0;
+                const colas = Array.from(op.colas).join(', ');
+                
+                return {
+                    ...op,
+                    diasTrabajados: dias,
+                    promedio: promedio,
+                    colas: colas
+                };
+            }).sort((a, b) => b.promedio - a.promedio);
+        }
+
+        function calcularEstadisticasReposicion() {
+            const operarios = {};
+            
+            datosReposicion.forEach(registro => {
+                if (registro.usuario && registro.unidades) {
+                    const usuario = registro.usuario;
+                    const fecha = new Date(registro.timestamp || Date.now()).toLocaleDateString();
+                    const unidades = parseInt(registro.unidades) || 0;
+                    
+                    if (!operarios[usuario]) {
+                        operarios[usuario] = {
+                            usuario: usuario,
+                            totalUnidades: 0,
+                            diasTrabajados: new Set(),
+                            registros: []
+                        };
+                    }
+                    
+                    operarios[usuario].totalUnidades += unidades;
+                    operarios[usuario].diasTrabajados.add(fecha);
+                    operarios[usuario].registros.push(registro);
+                }
+            });
+            
+            // Convertir a array y calcular promedios
+            return Object.values(operarios).map(op => {
+                const dias = op.diasTrabajados.size;
+                const promedio = dias > 0 ? Math.round(op.totalUnidades / dias) : 0;
+                
+                return {
+                    ...op,
+                    diasTrabajados: dias,
+                    promedio: promedio
+                };
+            }).sort((a, b) => b.promedio - a.promedio);
+        }
+
+        // ================= MOSTRAR DATOS EN TABLAS =================
+        function mostrarEstadisticasRecoleccion(estadisticas) {
+            const tbody = document.getElementById('cuerpoTablaRecoleccion');
+            tbody.innerHTML = '';
+            
+            if (estadisticas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:15px;">No hay datos de recolección disponibles</td></tr>';
+            } else {
+                estadisticas.forEach((op, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index === 0 ? 'COLA' : ''}</td>
+                        <td>${op.colas || 'N/A'}</td>
+                        <td>${op.usuario}</td>
+                        <td><strong>${op.promedio}</strong></td>
+                        <td>${op.totalUnidades}</td>
+                        <td>${op.diasTrabajados}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            document.getElementById('recoleccionLoading').style.display = 'none';
+            document.getElementById('tablaRecoleccion').style.display = 'table';
+        }
+
+        function mostrarEstadisticasReposicion(estadisticas) {
+            const tbody = document.getElementById('cuerpoTablaReposicion');
+            tbody.innerHTML = '';
+            
+            if (estadisticas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:15px;">No hay datos de reposición disponibles</td></tr>';
+            } else {
+                estadisticas.forEach(op => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${op.usuario}</td>
+                        <td><strong>${op.promedio}</strong></td>
+                        <td>${op.totalUnidades}</td>
+                        <td>${op.diasTrabajados}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            document.getElementById('reposicionLoading').style.display = 'none';
+            document.getElementById('tablaReposicion').style.display = 'table';
+        }
+
+        function actualizarEstadisticasGenerales(estadisticasRecoleccion, estadisticasReposicion) {
+            // Calcular operarios activos (últimos 30 días)
+            const operariosUnicos = new Set();
+            const treintaDiasAtras = Date.now() - (30 * 24 * 60 * 60 * 1000);
+            
+            [...datosRecoleccion, ...datosReposicion].forEach(registro => {
+                if (registro.timestamp && registro.timestamp > treintaDiasAtras && registro.usuario) {
+                    operariosUnicos.add(registro.usuario);
+                }
+            });
+            
+            // Calcular total de unidades
+            const totalUnidadesRecoleccion = estadisticasRecoleccion.reduce((sum, op) => sum + op.totalUnidades, 0);
+            const totalUnidadesReposicion = estadisticasReposicion.reduce((sum, op) => sum + op.totalUnidades, 0);
+            const totalUnidades = totalUnidadesRecoleccion + totalUnidadesReposicion;
+            
+            // Calcular promedio general
+            const totalDiasRecoleccion = estadisticasRecoleccion.reduce((sum, op) => sum + op.diasTrabajados, 0);
+            const totalDiasReposicion = estadisticasReposicion.reduce((sum, op) => sum + op.diasTrabajados, 0);
+            const totalDias = totalDiasRecoleccion + totalDiasReposicion;
+            const promedioGeneral = totalDias > 0 ? Math.round(totalUnidades / totalDias) : 0;
+            
+            // Actualizar UI
+            document.getElementById('totalOperarios').textContent = operariosUnicos.size;
+            document.getElementById('totalUnidades').textContent = totalUnidades;
+            document.getElementById('promedioGeneral').textContent = promedioGeneral;
+            document.getElementById('diasTrabajados').textContent = totalDias;
+        }
+
+        // ================= NAVEGACIÓN =================
+        function volverInterfazPrincipal() {
+            window.location.href = 'index.html';
+        }
+
+        // ================= UTILIDADES =================
+        function mostrarMensaje(mensaje, esExito) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // Actualizar datos automáticamente cada 2 minutos
+        setInterval(() => {
+            cargarDatosProductividad();
+        }, 120000);
+    </script>
+</body>
+</html>
