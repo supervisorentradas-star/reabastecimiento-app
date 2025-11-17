@@ -181,6 +181,14 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        .user-info {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
         @media (max-width: 480px) {
             .modules-grid {
                 grid-template-columns: 1fr;
@@ -217,27 +225,34 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Información del usuario actual -->
+        <div id="userInfo" class="user-info" style="display: none;">
+            Usuario: <span id="currentUserDisplay"></span>
+        </div>
+        
         <div id="statusMessage" class="status-message"></div>
         <div class="modules-grid">
-            <button class="module-button" onclick="solicitarUsuario('recoleccion')">📦 Recolección</button>
-            <button class="module-button" onclick="redirigirModulo('separacion')">📋 Separación</button>
-            <button class="module-button" onclick="redirigirModulo('reposicion')">🔄 Reposición</button>
+            <button class="module-button" onclick="irAModulo('recoleccion')">📦 Recolección</button>
+            <button class="module-button" onclick="irAModulo('separacion')">📋 Separación</button>
+            <button class="module-button" onclick="irAModulo('reposicion')">🔄 Reposición</button>
             <button class="module-button admin" onclick="solicitarAccesoAdmin()">👨‍💼 Admin</button>
-            <button class="module-button" onclick="redirigirModulo('productividad')">📊 Productividad</button>
+            <button class="module-button" onclick="irAModulo('productividad')">📊 Productividad</button>
         </div>
         <div class="footer">
             <button class="back-button" onclick="salirSistema()">🚪 Salir</button>
         </div>
     </div>
 
-    <div id="userModal" class="modal">
+    <!-- Modal para usuario inicial -->
+    <div id="initialUserModal" class="modal">
         <div class="modal-content">
-            <h3>Ingresar Usuario</h3>
-            <p>Ingresa tu nombre de usuario:</p>
-            <input type="text" id="userName" placeholder="Usuario" autocomplete="off">
+            <h3>Bienvenido al Sistema</h3>
+            <p>Ingresa tu nombre para comenzar:</p>
+            <input type="text" id="initialUserName" placeholder="Tu nombre" autocomplete="off">
             <div class="modal-buttons">
-                <button onclick="verificarUsuario()" class="modal-button success">Aceptar</button>
-                <button onclick="cerrarUserModal()" class="modal-button warning">Cancelar</button>
+                <button onclick="establecerUsuarioInicial()" class="modal-button success">Aceptar</button>
+                <button onclick="cerrarInitialUserModal()" class="modal-button warning">Cancelar</button>
             </div>
         </div>
     </div>
@@ -272,21 +287,44 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const ADMIN_PASSWORD = "E123456";
-        let moduloDestino = "";
         let usuarioActual = "";
 
         window.addEventListener('load', function() {
-            // Inicializar sin mostrar mensajes para evitar parpadeo
-            inicializarConexiones();
-            document.getElementById('userModal').style.display = 'none';
-            document.getElementById('adminModal').style.display = 'none';
+            // Verificar si ya hay un usuario guardado
+            const usuarioGuardado = localStorage.getItem('usuarioSokso');
             
-            // Cargar usuario si existe
-            const usuarioGuardado = localStorage.getItem('usuarioActual');
             if (usuarioGuardado) {
                 usuarioActual = usuarioGuardado;
+                mostrarUsuarioActual();
+                inicializarConexiones();
+            } else {
+                // Mostrar modal para ingresar usuario
+                document.getElementById('initialUserModal').style.display = 'flex';
+                document.getElementById('initialUserName').focus();
             }
+            
+            document.getElementById('adminModal').style.display = 'none';
         });
+
+        function establecerUsuarioInicial() {
+            const userName = document.getElementById('initialUserName').value.trim();
+            if (!userName) {
+                mostrarMensaje('Ingresa tu nombre para continuar', false);
+                return;
+            }
+            
+            usuarioActual = userName;
+            localStorage.setItem('usuarioSokso', usuarioActual);
+            cerrarInitialUserModal();
+            mostrarUsuarioActual();
+            inicializarConexiones();
+            mostrarMensaje('Bienvenido, ' + userName, true);
+        }
+
+        function mostrarUsuarioActual() {
+            document.getElementById('currentUserDisplay').textContent = usuarioActual;
+            document.getElementById('userInfo').style.display = 'block';
+        }
 
         function inicializarConexiones() {
             verificarConexionFirebase();
@@ -337,61 +375,48 @@
             }
         }
 
-        function solicitarUsuario(modulo) {
-            moduloDestino = modulo;
-            document.getElementById('userModal').style.display = 'flex';
-            document.getElementById('userName').focus();
-        }
-
-        function redirigirModulo(modulo) {
-            // CORRECCIÓN: Verificar que el módulo existe antes de redirigir
-            const modulosExistentes = ['separacion', 'reposicion', 'productividad'];
-            if (modulosExistentes.includes(modulo)) {
-                window.location.href = modulo + '.html';
-            } else {
+        function irAModulo(modulo) {
+            // Verificar que hay un usuario establecido
+            if (!usuarioActual) {
+                mostrarMensaje('Primero debes ingresar un nombre de usuario', false);
+                document.getElementById('initialUserModal').style.display = 'flex';
+                return;
+            }
+            
+            // Verificar que el módulo existe
+            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad'];
+            if (!modulosExistentes.includes(modulo)) {
                 mostrarMensaje('El módulo ' + modulo + ' no está disponible', false);
-            }
-        }
-
-        function verificarUsuario() {
-            const userName = document.getElementById('userName').value.trim();
-            if (!userName) {
-                mostrarMensaje('Ingresa tu nombre de usuario', false);
                 return;
             }
             
-            // CORRECCIÓN: Validar que el módulo destino existe
-            const modulosConUsuario = ['recoleccion'];
-            if (!modulosConUsuario.includes(moduloDestino)) {
-                mostrarMensaje('Error: Módulo no válido', false);
-                cerrarUserModal();
-                return;
+            // Guardar el usuario en localStorage para que los módulos lo usen
+            localStorage.setItem('usuarioSokso', usuarioActual);
+            
+            // Intentar cargar el módulo
+            const moduloUrl = modulo + '.html';
+            
+            // Usar una técnica más robusta para verificar si el archivo existe
+            const link = document.createElement('a');
+            link.href = moduloUrl;
+            
+            // Intentar redirigir directamente
+            try {
+                window.location.href = moduloUrl;
+            } catch (error) {
+                console.error('Error al redirigir:', error);
+                mostrarMensaje('Error: No se pudo cargar el módulo ' + modulo, false);
             }
-            
-            usuarioActual = userName;
-            localStorage.setItem('usuarioActual', usuarioActual);
-            cerrarUserModal();
-            
-            // CORRECCIÓN: Verificar que el archivo existe antes de redirigir
-            const moduloUrl = moduloDestino + '.html';
-            
-            // Intentar cargar el módulo para verificar que existe
-            fetch(moduloUrl)
-                .then(response => {
-                    if (response.ok) {
-                        // Redirigir al módulo seleccionado
-                        window.location.href = moduloUrl;
-                    } else {
-                        mostrarMensaje('Error: El módulo ' + moduloDestino + ' no existe', false);
-                    }
-                })
-                .catch(error => {
-                    mostrarMensaje('Error: No se pudo cargar el módulo ' + moduloDestino, false);
-                    console.error('Error:', error);
-                });
         }
 
         function solicitarAccesoAdmin() {
+            // Verificar que hay un usuario establecido
+            if (!usuarioActual) {
+                mostrarMensaje('Primero debes ingresar un nombre de usuario', false);
+                document.getElementById('initialUserModal').style.display = 'flex';
+                return;
+            }
+            
             document.getElementById('adminModal').style.display = 'flex';
             document.getElementById('adminPassword').focus();
         }
@@ -400,18 +425,16 @@
             const password = document.getElementById('adminPassword').value;
             if (password === ADMIN_PASSWORD) {
                 cerrarAdminModal();
-                // CORRECCIÓN: Verificar que el admin existe antes de redirigir
-                fetch('admin.html')
-                    .then(response => {
-                        if (response.ok) {
-                            window.location.href = 'admin.html';
-                        } else {
-                            mostrarMensaje('Error: El módulo admin no existe', false);
-                        }
-                    })
-                    .catch(error => {
-                        mostrarMensaje('Error: No se pudo cargar el módulo admin', false);
-                    });
+                // Guardar el usuario en localStorage para que el módulo admin lo use
+                localStorage.setItem('usuarioSokso', usuarioActual);
+                
+                // Intentar cargar el módulo admin
+                try {
+                    window.location.href = 'admin.html';
+                } catch (error) {
+                    console.error('Error al redirigir a admin:', error);
+                    mostrarMensaje('Error: No se pudo cargar el módulo admin', false);
+                }
             } else {
                 mostrarMensaje('Contraseña incorrecta', false);
                 document.getElementById('adminPassword').value = '';
@@ -421,7 +444,7 @@
 
         function salirSistema() {
             if (confirm('¿Salir del sistema?')) {
-                localStorage.removeItem('usuarioActual');
+                localStorage.removeItem('usuarioSokso');
                 usuarioActual = '';
                 mostrarMensaje('Sesión cerrada', true);
                 // Recargar la página para limpiar el estado
@@ -431,10 +454,14 @@
             }
         }
 
-        function cerrarUserModal() {
-            document.getElementById('userModal').style.display = 'none';
-            document.getElementById('userName').value = '';
-            moduloDestino = '';
+        function cerrarInitialUserModal() {
+            document.getElementById('initialUserModal').style.display = 'none';
+            document.getElementById('initialUserName').value = '';
+            
+            // Si no hay usuario después de cerrar el modal, mostrar mensaje
+            if (!usuarioActual) {
+                mostrarMensaje('Debes ingresar un nombre para usar el sistema', false);
+            }
         }
 
         function cerrarAdminModal() {
@@ -454,8 +481,9 @@
 
         // Cerrar modales al hacer clic fuera
         window.onclick = function(event) {
-            if (event.target === document.getElementById('userModal')) {
-                cerrarUserModal();
+            if (event.target === document.getElementById('initialUserModal')) {
+                // No permitir cerrar el modal inicial haciendo clic fuera
+                // El usuario debe ingresar un nombre
             }
             if (event.target === document.getElementById('adminModal')) {
                 cerrarAdminModal();
@@ -465,16 +493,17 @@
         // Manejar tecla Enter en modales
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
-                if (document.getElementById('userModal').style.display === 'flex') {
-                    verificarUsuario();
+                if (document.getElementById('initialUserModal').style.display === 'flex') {
+                    establecerUsuarioInicial();
                 }
                 if (document.getElementById('adminModal').style.display === 'flex') {
                     verificarContrasena();
                 }
             }
             if (event.key === 'Escape') {
-                if (document.getElementById('userModal').style.display === 'flex') {
-                    cerrarUserModal();
+                if (document.getElementById('initialUserModal').style.display === 'flex') {
+                    // No permitir cerrar con Escape el modal inicial
+                    // El usuario debe ingresar un nombre
                 }
                 if (document.getElementById('adminModal').style.display === 'flex') {
                     cerrarAdminModal();

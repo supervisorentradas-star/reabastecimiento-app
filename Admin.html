@@ -83,10 +83,23 @@
             font-size: 16px;
             font-weight: bold;
             transition: all 0.3s;
+            /* FIX: Prevenir movimiento al cambiar estado */
+            border: 2px solid transparent;
+            position: relative;
+            top: 0;
         }
         .module-tab.active {
             background: #6600a1;
             color: white;
+            /* FIX: Mismo borde pero de color para evitar movimiento */
+            border: 2px solid #6600a1;
+        }
+        .module-tab:hover {
+            background: #e0e0e0;
+        }
+        .module-tab.active:hover {
+            background: #55008a;
+            border-color: #55008a;
         }
         .admin-controls {
             display: grid;
@@ -341,6 +354,9 @@
             font-size: 14px;
             text-align: left;
         }
+        .password-field {
+            margin: 15px 0;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -363,11 +379,11 @@
 
         <div id="statusMessage" class="status-message"></div>
 
-        <!-- SELECTOR DE MÓDULO -->
+        <!-- SELECTOR DE MÓDULO - MEJORADO SIN PARPADEO -->
         <div class="module-selector">
-            <button class="module-tab active" onclick="cambiarModulo('recoleccion')">📦 Recolección</button>
-            <button class="module-tab" onclick="cambiarModulo('reposicion')">🔄 Reposición</button>
-            <button class="module-tab" onclick="cambiarModulo('sloting')">📤 Gestión Sloting</button>
+            <button class="module-tab active" onclick="cambiarModulo('recoleccion', this)">📦 Recolección</button>
+            <button class="module-tab" onclick="cambiarModulo('reposicion', this)">🔄 Reposición</button>
+            <button class="module-tab" onclick="cambiarModulo('sloting', this)">📤 Gestión Sloting</button>
         </div>
 
         <!-- ESTADÍSTICAS RÁPIDAS -->
@@ -496,7 +512,7 @@
         </div>
     </div>
 
-    <!-- MODAL PARA SUBIR SLOTING -->
+    <!-- MODAL PARA SUBIR SLOTING - CON CONTRASEÑA -->
     <div id="slotingModal" class="modal">
         <div class="modal-content">
             <h3>Subir Nuevo Sloting</h3>
@@ -507,6 +523,11 @@
                 - Columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL<br>
                 - Separador: coma o tabulación<br>
                 - Codificación: UTF-8
+            </div>
+            
+            <!-- CAMPO DE CONTRASEÑA AGREGADO -->
+            <div class="password-field">
+                <input type="password" id="slotingPassword" placeholder="Ingresa la contraseña (E123456)" required>
             </div>
             
             <input type="file" id="slotingFile" accept=".csv">
@@ -539,6 +560,9 @@
         // URLs públicas de Google Sheets que funcionan
         const GOOGLE_SHEETS_RECOLECCION_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
         const GOOGLE_SHEETS_REPOSICION_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
+
+        // CONTRASEÑA PARA SUBIR SLOTING
+        const PASSWORD_SLOTING = 'E123456';
 
         // ================= INICIALIZAR FIREBASE =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -606,15 +630,15 @@
             }
         }
 
-        // ================= CAMBIO DE MÓDULO =================
-        function cambiarModulo(modulo) {
+        // ================= CAMBIO DE MÓDULO - MEJORADO SIN PARPADEO =================
+        function cambiarModulo(modulo, boton) {
             moduloActual = modulo;
             
-            // Actualizar pestañas activas
+            // Actualizar pestañas activas - MEJORADO
             document.querySelectorAll('.module-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            event.target.classList.add('active');
+            boton.classList.add('active');
             
             // Mostrar/ocultar paneles según el módulo
             if (modulo === 'sloting') {
@@ -639,12 +663,13 @@
             }
         }
 
-        // ================= GESTIÓN DE SLOTING =================
+        // ================= GESTIÓN DE SLOTING - CON CONTRASEÑA =================
         function solicitarSubirSloting() {
             document.getElementById('slotingModal').style.display = 'flex';
             document.getElementById('uploadProgressBar').style.display = 'none';
             document.getElementById('uploadStatus').textContent = '';
             document.getElementById('slotingFile').value = '';
+            document.getElementById('slotingPassword').value = '';
         }
 
         function cerrarSlotingModal() {
@@ -654,6 +679,13 @@
         async function procesarSloting() {
             const fileInput = document.getElementById('slotingFile');
             const file = fileInput.files[0];
+            const password = document.getElementById('slotingPassword').value;
+            
+            // VERIFICAR CONTRASEÑA
+            if (password !== PASSWORD_SLOTING) {
+                mostrarMensaje('❌ Contraseña incorrecta. No tienes permisos para subir sloting.', false);
+                return;
+            }
             
             if (!file) {
                 mostrarMensaje('Por favor, selecciona un archivo CSV', false);
@@ -678,29 +710,44 @@
                     document.getElementById('uploadProgressFill').style.width = '60%';
                     document.getElementById('uploadStatus').textContent = 'Subiendo a Firebase...';
                     
-                    // Subir a Firebase
-                    await database.ref('sloting').set(datosProcesados);
-                    
-                    document.getElementById('uploadProgressFill').style.width = '100%';
-                    document.getElementById('uploadStatus').textContent = '✅ Sloting subido correctamente';
-                    
-                    // Actualizar información del sloting
-                    setTimeout(() => {
-                        cerrarSlotingModal();
-                        cargarSlotingDesdeFirebase();
-                        mostrarMensaje(`✅ Sloting actualizado correctamente. ${Object.keys(datosProcesados).length} registros procesados.`, true);
-                    }, 1000);
+                    // Subir a Firebase - CON MANEJO DE ERRORES MEJORADO
+                    try {
+                        await database.ref('sloting').set(datosProcesados);
+                        
+                        document.getElementById('uploadProgressFill').style.width = '100%';
+                        document.getElementById('uploadStatus').textContent = '✅ Sloting subido correctamente';
+                        
+                        // Actualizar información del sloting
+                        setTimeout(() => {
+                            cerrarSlotingModal();
+                            cargarSlotingDesdeFirebase();
+                            mostrarMensaje(`✅ Sloting actualizado correctamente. ${Object.keys(datosProcesados).length} registros procesados.`, true);
+                        }, 1000);
+                        
+                    } catch (firebaseError) {
+                        console.error('Error de Firebase:', firebaseError);
+                        if (firebaseError.code === 'PERMISSION_DENIED') {
+                            document.getElementById('uploadStatus').textContent = '❌ Error: Permisos denegados en Firebase. Verifica las reglas de la base de datos.';
+                            mostrarMensaje('❌ Error: Permisos denegados. Contacta al administrador para actualizar las reglas de Firebase.', false);
+                        } else {
+                            document.getElementById('uploadStatus').textContent = `❌ Error de Firebase: ${firebaseError.message}`;
+                            mostrarMensaje(`❌ Error al subir sloting: ${firebaseError.message}`, false);
+                        }
+                        document.getElementById('uploadProgressFill').style.width = '0%';
+                    }
                     
                 } catch (error) {
                     console.error('Error procesando sloting:', error);
                     document.getElementById('uploadStatus').textContent = `❌ Error: ${error.message}`;
                     document.getElementById('uploadProgressFill').style.width = '0%';
+                    mostrarMensaje(`❌ Error procesando archivo: ${error.message}`, false);
                 }
             };
             
             reader.onerror = function() {
                 document.getElementById('uploadStatus').textContent = '❌ Error al leer el archivo';
                 document.getElementById('uploadProgressFill').style.width = '0%';
+                mostrarMensaje('❌ Error al leer el archivo seleccionado', false);
             };
             
             reader.readAsText(file, 'UTF-8');
@@ -846,6 +893,9 @@
         }
 
         // ================= FUNCIONES ORIGINALES DEL ADMINISTRADOR =================
+        // [Las funciones restantes se mantienen igual que en tu código original]
+        // Solo se modificaron las funciones relacionadas con sloting y cambio de módulo
+        
         async function cargarDashboard() {
             try {
                 mostrarMensaje('Cargando datos del sistema...', true);
