@@ -344,8 +344,13 @@
         }
 
         function redirigirModulo(modulo) {
-            // Redirigir directamente sin verificaciones adicionales
-            window.location.href = modulo + '.html';
+            // CORRECCIÓN: Verificar que el módulo existe antes de redirigir
+            const modulosExistentes = ['separacion', 'reposicion', 'productividad'];
+            if (modulosExistentes.includes(modulo)) {
+                window.location.href = modulo + '.html';
+            } else {
+                mostrarMensaje('El módulo ' + modulo + ' no está disponible', false);
+            }
         }
 
         function verificarUsuario() {
@@ -354,12 +359,36 @@
                 mostrarMensaje('Ingresa tu nombre de usuario', false);
                 return;
             }
+            
+            // CORRECCIÓN: Validar que el módulo destino existe
+            const modulosConUsuario = ['recoleccion'];
+            if (!modulosConUsuario.includes(moduloDestino)) {
+                mostrarMensaje('Error: Módulo no válido', false);
+                cerrarUserModal();
+                return;
+            }
+            
             usuarioActual = userName;
             localStorage.setItem('usuarioActual', usuarioActual);
             cerrarUserModal();
             
-            // Redirigir al módulo seleccionado
-            window.location.href = moduloDestino + '.html';
+            // CORRECCIÓN: Verificar que el archivo existe antes de redirigir
+            const moduloUrl = moduloDestino + '.html';
+            
+            // Intentar cargar el módulo para verificar que existe
+            fetch(moduloUrl)
+                .then(response => {
+                    if (response.ok) {
+                        // Redirigir al módulo seleccionado
+                        window.location.href = moduloUrl;
+                    } else {
+                        mostrarMensaje('Error: El módulo ' + moduloDestino + ' no existe', false);
+                    }
+                })
+                .catch(error => {
+                    mostrarMensaje('Error: No se pudo cargar el módulo ' + moduloDestino, false);
+                    console.error('Error:', error);
+                });
         }
 
         function solicitarAccesoAdmin() {
@@ -371,7 +400,18 @@
             const password = document.getElementById('adminPassword').value;
             if (password === ADMIN_PASSWORD) {
                 cerrarAdminModal();
-                window.location.href = 'admin.html';
+                // CORRECCIÓN: Verificar que el admin existe antes de redirigir
+                fetch('admin.html')
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = 'admin.html';
+                        } else {
+                            mostrarMensaje('Error: El módulo admin no existe', false);
+                        }
+                    })
+                    .catch(error => {
+                        mostrarMensaje('Error: No se pudo cargar el módulo admin', false);
+                    });
             } else {
                 mostrarMensaje('Contraseña incorrecta', false);
                 document.getElementById('adminPassword').value = '';

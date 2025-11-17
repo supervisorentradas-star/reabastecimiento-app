@@ -114,6 +114,12 @@
         .admin-button.warning:hover {
             background: #e67e22;
         }
+        .admin-button.success {
+            background: #27ae60;
+        }
+        .admin-button.success:hover {
+            background: #219653;
+        }
         .section {
             margin-bottom: 25px;
             padding: 20px;
@@ -251,6 +257,90 @@
         .hidden {
             display: none;
         }
+        /* Estilos para el modal de subida de sloting */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal h3 {
+            color: #6600a1;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .modal p {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 14px;
+        }
+        input[type="password"], input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .modal-button.success {
+            background: #6600a1;
+            color: white;
+        }
+        .modal-button.warning {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #27ae60;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+            text-align: left;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -277,6 +367,7 @@
         <div class="module-selector">
             <button class="module-tab active" onclick="cambiarModulo('recoleccion')">📦 Recolección</button>
             <button class="module-tab" onclick="cambiarModulo('reposicion')">🔄 Reposición</button>
+            <button class="module-tab" onclick="cambiarModulo('sloting')">📤 Gestión Sloting</button>
         </div>
 
         <!-- ESTADÍSTICAS RÁPIDAS -->
@@ -299,11 +390,18 @@
             </div>
         </div>
 
-        <!-- CONTROLES ADMIN -->
-        <div class="admin-controls">
+        <!-- CONTROLES ADMIN - PANEL PRINCIPAL -->
+        <div id="adminMainPanel" class="admin-controls">
             <button class="admin-button" onclick="actualizarDesdeSheets()">🔄 Actualizar desde Sheets</button>
             <button class="admin-button warning" onclick="verificarConsistencia()">🔍 Verificar Consistencia</button>
             <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
+        </div>
+
+        <!-- CONTROLES ADMIN - PANEL SLOTING -->
+        <div id="adminSlotingPanel" class="admin-controls hidden">
+            <button class="admin-button success" onclick="solicitarSubirSloting()">📤 Subir Sloting</button>
+            <button class="admin-button warning" onclick="verificarSlotingActual()">🔍 Ver Sloting Actual</button>
+            <button class="admin-button" onclick="descargarBackupSloting()">💾 Descargar Backup</button>
         </div>
 
         <!-- VERIFICACIÓN DE CONSISTENCIA -->
@@ -313,7 +411,7 @@
         </div>
 
         <!-- PANEL DE CONTROL - ESTADO DE RUTAS -->
-        <div class="section">
+        <div id="routesPanel" class="section">
             <h2 id="panelTitulo">Estado de Rutas - Recolección</h2>
             <div id="dashboardLoading" class="loading">Cargando estado de rutas...</div>
             <table class="dashboard-table" id="dashboardTable" style="display:none">
@@ -333,8 +431,33 @@
             </table>
         </div>
 
+        <!-- PANEL DE SLOTING -->
+        <div id="slotingPanel" class="section hidden">
+            <h2>Gestión de Sloting</h2>
+            <div id="slotingInfo" class="file-info">
+                <strong>Estado del Sloting:</strong> <span id="slotingStatus">No hay datos cargados</span><br>
+                <strong>Última actualización:</strong> <span id="slotingLastUpdate">-</span><br>
+                <strong>Total de registros:</strong> <span id="slotingTotalRecords">0</span>
+            </div>
+            
+            <div id="slotingPreview" style="margin-top: 15px; display: none;">
+                <h3>Vista Previa del Sloting (primeros 5 registros)</h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>CODIGO_UPC</th>
+                            <th>ARTICULO</th>
+                            <th>DEPOSITO FINAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slotingPreviewBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- REPORTES -->
-        <div class="section">
+        <div id="reportsPanel" class="section">
             <h2>Generar Reportes</h2>
             
             <div class="report-filters">
@@ -373,6 +496,34 @@
         </div>
     </div>
 
+    <!-- MODAL PARA SUBIR SLOTING -->
+    <div id="slotingModal" class="modal">
+        <div class="modal-content">
+            <h3>Subir Nuevo Sloting</h3>
+            <p>Selecciona el archivo CSV con los datos del sloting:</p>
+            
+            <div class="file-info">
+                <strong>Formato esperado:</strong><br>
+                - Columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL<br>
+                - Separador: coma o tabulación<br>
+                - Codificación: UTF-8
+            </div>
+            
+            <input type="file" id="slotingFile" accept=".csv">
+            
+            <div class="progress-bar" id="uploadProgressBar" style="display: none;">
+                <div class="progress-fill" id="uploadProgressFill"></div>
+            </div>
+            
+            <div id="uploadStatus" style="margin: 10px 0; font-size: 14px;"></div>
+            
+            <div class="modal-buttons">
+                <button onclick="procesarSloting()" class="modal-button success">Subir Sloting</button>
+                <button onclick="cerrarSlotingModal()" class="modal-button warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ================= CONFIGURACIÓN FIREBASE Y SHEETS =================
         const firebaseConfig = {
@@ -400,6 +551,7 @@
         let estadoDesdeFirebase = {};
         let registrosRecoleccion = [];
         let registrosReposicion = [];
+        let slotingData = {};
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
@@ -416,6 +568,7 @@
             document.getElementById('fechaFinReposicion').value = hoy.toISOString().split('T')[0];
             
             cargarDashboard();
+            cargarSlotingDesdeFirebase();
         });
 
         // ================= CONEXIONES FIREBASE Y SHEETS =================
@@ -463,15 +616,236 @@
             });
             event.target.classList.add('active');
             
-            // Actualizar título del panel
-            document.getElementById('panelTitulo').textContent = 
-                `Estado de Rutas - ${modulo === 'recoleccion' ? 'Recolección' : 'Reposición'}`;
-            
-            // Recargar datos del módulo seleccionado
-            cargarDashboard();
+            // Mostrar/ocultar paneles según el módulo
+            if (modulo === 'sloting') {
+                document.getElementById('adminMainPanel').classList.add('hidden');
+                document.getElementById('adminSlotingPanel').classList.remove('hidden');
+                document.getElementById('routesPanel').classList.add('hidden');
+                document.getElementById('reportsPanel').classList.add('hidden');
+                document.getElementById('slotingPanel').classList.remove('hidden');
+            } else {
+                document.getElementById('adminMainPanel').classList.remove('hidden');
+                document.getElementById('adminSlotingPanel').classList.add('hidden');
+                document.getElementById('routesPanel').classList.remove('hidden');
+                document.getElementById('reportsPanel').classList.remove('hidden');
+                document.getElementById('slotingPanel').classList.add('hidden');
+                
+                // Actualizar título del panel
+                document.getElementById('panelTitulo').textContent = 
+                    `Estado de Rutas - ${modulo === 'recoleccion' ? 'Recolección' : 'Reposición'}`;
+                
+                // Recargar datos del módulo seleccionado
+                cargarDashboard();
+            }
         }
 
-        // ================= CARGAR DASHBOARD =================
+        // ================= GESTIÓN DE SLOTING =================
+        function solicitarSubirSloting() {
+            document.getElementById('slotingModal').style.display = 'flex';
+            document.getElementById('uploadProgressBar').style.display = 'none';
+            document.getElementById('uploadStatus').textContent = '';
+            document.getElementById('slotingFile').value = '';
+        }
+
+        function cerrarSlotingModal() {
+            document.getElementById('slotingModal').style.display = 'none';
+        }
+
+        async function procesarSloting() {
+            const fileInput = document.getElementById('slotingFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                mostrarMensaje('Por favor, selecciona un archivo CSV', false);
+                return;
+            }
+            
+            // Mostrar progreso
+            document.getElementById('uploadProgressBar').style.display = 'block';
+            document.getElementById('uploadProgressFill').style.width = '10%';
+            document.getElementById('uploadStatus').textContent = 'Leyendo archivo...';
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const csvText = e.target.result;
+                    document.getElementById('uploadProgressFill').style.width = '30%';
+                    document.getElementById('uploadStatus').textContent = 'Procesando datos...';
+                    
+                    // Procesar CSV
+                    const datosProcesados = procesarCSVSloting(csvText);
+                    document.getElementById('uploadProgressFill').style.width = '60%';
+                    document.getElementById('uploadStatus').textContent = 'Subiendo a Firebase...';
+                    
+                    // Subir a Firebase
+                    await database.ref('sloting').set(datosProcesados);
+                    
+                    document.getElementById('uploadProgressFill').style.width = '100%';
+                    document.getElementById('uploadStatus').textContent = '✅ Sloting subido correctamente';
+                    
+                    // Actualizar información del sloting
+                    setTimeout(() => {
+                        cerrarSlotingModal();
+                        cargarSlotingDesdeFirebase();
+                        mostrarMensaje(`✅ Sloting actualizado correctamente. ${Object.keys(datosProcesados).length} registros procesados.`, true);
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Error procesando sloting:', error);
+                    document.getElementById('uploadStatus').textContent = `❌ Error: ${error.message}`;
+                    document.getElementById('uploadProgressFill').style.width = '0%';
+                }
+            };
+            
+            reader.onerror = function() {
+                document.getElementById('uploadStatus').textContent = '❌ Error al leer el archivo';
+                document.getElementById('uploadProgressFill').style.width = '0%';
+            };
+            
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function procesarCSVSloting(csvText) {
+            const datos = {};
+            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            
+            if (lineas.length < 2) {
+                throw new Error('El archivo CSV está vacío');
+            }
+            
+            // Detectar separador
+            const primeraLinea = lineas[0];
+            const separador = primeraLinea.includes('\t') ? '\t' : ',';
+            
+            // Verificar encabezados
+            const encabezados = primeraLinea.split(separador).map(h => h.trim().replace(/^"|"$/g, ''));
+            
+            if (encabezados.length < 3 || 
+                !encabezados[0].includes('UPC') || 
+                !encabezados[1].includes('ARTICULO') || 
+                !encabezados[2].includes('DEPOSITO')) {
+                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL');
+            }
+            
+            // Procesar datos
+            let registrosProcesados = 0;
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (!linea) continue;
+                
+                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                
+                if (partes.length >= 3) {
+                    const upc = partes[0];
+                    const articulo = partes[1];
+                    const deposito = partes[2];
+                    
+                    if (upc && articulo && deposito) {
+                        datos[upc] = {
+                            articulo: articulo,
+                            deposito: deposito
+                        };
+                        registrosProcesados++;
+                    }
+                }
+            }
+            
+            if (registrosProcesados === 0) {
+                throw new Error('No se encontraron datos válidos en el archivo');
+            }
+            
+            return datos;
+        }
+
+        async function cargarSlotingDesdeFirebase() {
+            try {
+                const snapshot = await database.ref('sloting').once('value');
+                slotingData = snapshot.val() || {};
+                
+                // Actualizar información en la UI
+                document.getElementById('slotingTotalRecords').textContent = Object.keys(slotingData).length;
+                
+                if (Object.keys(slotingData).length > 0) {
+                    document.getElementById('slotingStatus').textContent = 'Datos cargados';
+                    document.getElementById('slotingStatus').style.color = '#27ae60';
+                    document.getElementById('slotingLastUpdate').textContent = new Date().toLocaleString();
+                    
+                    // Mostrar vista previa
+                    mostrarVistaPreviaSloting();
+                } else {
+                    document.getElementById('slotingStatus').textContent = 'No hay datos cargados';
+                    document.getElementById('slotingStatus').style.color = '#e74c3c';
+                    document.getElementById('slotingPreview').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error cargando sloting:', error);
+                document.getElementById('slotingStatus').textContent = 'Error al cargar datos';
+                document.getElementById('slotingStatus').style.color = '#e74c3c';
+            }
+        }
+
+        function mostrarVistaPreviaSloting() {
+            const previewBody = document.getElementById('slotingPreviewBody');
+            previewBody.innerHTML = '';
+            
+            const upcs = Object.keys(slotingData);
+            const registrosMostrar = Math.min(5, upcs.length);
+            
+            for (let i = 0; i < registrosMostrar; i++) {
+                const upc = upcs[i];
+                const registro = slotingData[upc];
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${upc}</td>
+                    <td>${registro.articulo}</td>
+                    <td>${registro.deposito}</td>
+                `;
+                previewBody.appendChild(row);
+            }
+            
+            document.getElementById('slotingPreview').style.display = 'block';
+        }
+
+        function verificarSlotingActual() {
+            if (Object.keys(slotingData).length === 0) {
+                mostrarMensaje('No hay datos de sloting cargados', false);
+                return;
+            }
+            
+            cargarSlotingDesdeFirebase();
+            mostrarMensaje(`Sloting cargado: ${Object.keys(slotingData).length} registros`, true);
+        }
+
+        function descargarBackupSloting() {
+            if (Object.keys(slotingData).length === 0) {
+                mostrarMensaje('No hay datos de sloting para descargar', false);
+                return;
+            }
+            
+            let csvContent = "CODIGO_UPC,ARTICULO,DEPOSITO FINAL\n";
+            
+            Object.keys(slotingData).forEach(upc => {
+                const registro = slotingData[upc];
+                csvContent += `"${upc}","${registro.articulo}","${registro.deposito}"\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `backup_sloting_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            mostrarMensaje(`✅ Backup descargado (${Object.keys(slotingData).length} registros)`, true);
+        }
+
+        // ================= FUNCIONES ORIGINALES DEL ADMINISTRADOR =================
         async function cargarDashboard() {
             try {
                 mostrarMensaje('Cargando datos del sistema...', true);
@@ -576,7 +950,6 @@
             }
         }
 
-        // ================= PROCESAMIENTO DE DATOS RECOLECCIÓN =================
         function procesarCSVRecoleccion(csvText) {
             const rutas = {};
             const lineas = csvText.split('\n').filter(linea => linea.trim());
@@ -637,7 +1010,6 @@
             return rutas;
         }
 
-        // ================= PROCESAMIENTO DE DATOS REPOSICIÓN =================
         function procesarCSVReposicion(csvText) {
             const rutas = {};
             const lineas = csvText.split('\n').filter(linea => linea.trim());
@@ -708,7 +1080,6 @@
             return rutas;
         }
 
-        // ================= ACTUALIZAR INTERFAZ =================
         function actualizarEstadisticas() {
             let rutasActivas, rutasCompletadas, operariosUnicos, totalRegistros;
             
@@ -815,7 +1186,6 @@
             document.getElementById('dashboardTable').style.display = 'table';
         }
 
-        // ================= CÁLCULO DE PROGRESO =================
         function calcularProgresoRecoleccion(ruta, cola) {
             const datosSheets = rutasRecoleccionDesdeSheets[ruta][cola];
             const total = datosSheets.totalUnidades;
@@ -892,7 +1262,6 @@
             };
         }
 
-        // ================= VERIFICACIÓN DE CONSISTENCIA =================
         async function verificarConsistencia() {
             try {
                 mostrarMensaje('Verificando consistencia entre Sheets y Firebase...', true);
@@ -976,7 +1345,6 @@
             mostrarMensaje(`Verificación completada: ${inconsistencias.length} inconsistencias encontradas`, inconsistencias.length === 0);
         }
 
-        // ================= GESTIÓN DEL SISTEMA =================
         async function actualizarDesdeSheets() {
             try {
                 mostrarMensaje('Actualizando desde Google Sheets...', true);
@@ -997,7 +1365,6 @@
             }
         }
 
-        // ================= GENERACIÓN DE REPORTES =================
         async function descargarReporteRecoleccion() {
             try {
                 const fechaInicio = document.getElementById('fechaInicioRecoleccion').value;
@@ -1112,12 +1479,10 @@
             mostrarMensaje(`✅ Reporte de reposición descargado (${registros.length} registros)`, true);
         }
 
-        // ================= NAVEGACIÓN =================
         function volverInterfazPrincipal() {
             window.location.href = 'index.html';
         }
 
-        // ================= UTILIDADES =================
         function mostrarMensaje(mensaje, esExito) {
             const statusDiv = document.getElementById('statusMessage');
             statusDiv.textContent = mensaje;
