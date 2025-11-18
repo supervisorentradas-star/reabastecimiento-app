@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor - REABASTECIMIENTO SOKSO</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: white;
+            padding: 10px;
+            color: black;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        h1 {
+            color: #6600a1;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+        .connection-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .connection-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .admin-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .action-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px dashed #bdc3c7;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn-primary {
+            background: #6600a1;
+            color: white;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #55008a;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            font-size: 14px;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning-message {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #6600a1;
+            margin: 5px 0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #27ae60;
+            transition: width 0.3s ease;
+        }
+        .progress-warning {
+            background: #f39c12;
+        }
+        .progress-danger {
+            background: #e74c3c;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .back-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .file-info {
+            background: #e8f4fc;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 12px;
+            text-align: center;
+        }
+        .buttons-horizontal {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .section-title {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #6600a1;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <!-- Librería para exportar a Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- CABECERA -->
+        <div class="header">
+            <h1>MONITOR SOKSO</h1>
+            <div class="connection-status">
+                <div class="connection-item">
+                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                    <span>FIREBASE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENSAJES DE ESTADO -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- ESTADÍSTICAS ACTUALES -->
+        <div class="action-section">
+            <h2 class="section-title">📊 ESTADÍSTICAS ACTUALES</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">RECOLECCIONES</div>
+                    <div class="stat-value" id="countRecolecciones">0</div>
+                    <div class="stat-label">registros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">REPOSICIONES</div>
+                    <div class="stat-value" id="countReposiciones">0</div>
+                    <div class="stat-label">registros</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="storageProgress" style="width: 0%"></div>
+            </div>
+            <div class="stat-label" id="storageText">Almacenamiento estimado: 0 MB / 1 GB</div>
+            
+            <div class="buttons-horizontal">
+                <button onclick="actualizarEstadisticas()" class="btn-primary">🔄 Actualizar Estadísticas</button>
+            </div>
+        </div>
+
+        <!-- PANEL DE ADMINISTRACIÓN -->
+        <div class="admin-panel">
+            <div class="action-section">
+                <h2 class="section-title">📥 DESCARGAR BACKUP COMPLETO</h2>
+                <p style="text-align: center;">Descarga todos los datos de recolección y reposición como archivo Excel</p>
+                
+                <div class="buttons-horizontal">
+                    <button class="btn-primary" onclick="descargarBackupExcel()">📊 Descargar Excel Completo</button>
+                    <button class="btn-primary" onclick="descargarRecoleccionesExcel()">📋 Solo Recolecciones</button>
+                    <button class="btn-primary" onclick="descargarReposicionesExcel()">📋 Solo Reposiciones</button>
+                </div>
+                
+                <div class="file-info" id="fileInfo">
+                    Los archivos se descargarán en formato Excel (.xlsx)
+                </div>
+            </div>
+
+            <div class="action-section">
+                <h2 class="section-title">🗑️ LIMPIAR DATOS FIREBASE</h2>
+                <p style="text-align: center;">⚠️ <strong>ADVERTENCIA:</strong> Esta acción elimina TODOS los datos históricos.</p>
+                <p style="text-align: center;">✅ <strong>RECOMENDACIÓN:</strong> Descarga el backup antes de limpiar</p>
+                
+                <div class="buttons-horizontal">
+                    <button class="btn-danger" onclick="limpiarDatosFirebase()">🗑️ Limpiar Todos los Datos</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <button class="back-button" onclick="volverAlPrincipal()">🏠 Volver al Sistema Principal</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURACIÓN FIREBASE =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // ================= INICIALIZAR FIREBASE =================
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ================= VARIABLES GLOBALES =================
+        let estadisticas = {
+            recolecciones: 0,
+            reposiciones: 0,
+            almacenamientoMB: 0
+        };
+
+        // ================= INICIALIZACIÓN =================
+        window.addEventListener('load', function() {
+            inicializarFirebase();
+            actualizarEstadisticas();
+        });
+
+        // ================= CONEXIÓN FIREBASE =================
+        function inicializarFirebase() {
+            verificarConexionFirebase();
+        }
+
+        function verificarConexionFirebase() {
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", function(snap) {
+                if (snap.val() === true) {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
+                } else {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+                }
+            });
+        }
+
+        // ================= ACTUALIZAR ESTADÍSTICAS =================
+        async function actualizarEstadisticas() {
+            try {
+                mostrarMensaje('🔄 Actualizando estadísticas...', true);
+                
+                // Obtener recolecciones
+                const snapshotRecoleccion = await database.ref('recolecciones').once('value');
+                const datosRecoleccion = snapshotRecoleccion.val();
+                estadisticas.recolecciones = datosRecoleccion ? Object.keys(datosRecoleccion).length : 0;
+                
+                // Obtener reposiciones
+                const snapshotReposicion = await database.ref('reposiciones').once('value');
+                const datosReposicion = snapshotReposicion.val();
+                estadisticas.reposiciones = datosReposicion ? Object.keys(datosReposicion).length : 0;
+                
+                // Calcular almacenamiento estimado (aproximado)
+                estadisticas.almacenamientoMB = await calcularAlmacenamientoEstimado();
+                
+                // Actualizar interfaz
+                actualizarInterfazEstadisticas();
+                
+                mostrarMensaje('✅ Estadísticas actualizadas', true);
+                
+            } catch (error) {
+                console.error('Error actualizando estadísticas:', error);
+                mostrarMensaje('❌ Error al actualizar estadísticas', false);
+            }
+        }
+
+        async function calcularAlmacenamientoEstimado() {
+            try {
+                let tamañoTotal = 0;
+                
+                // Calcular recolecciones
+                const snapshotRec = await database.ref('recolecciones').once('value');
+                const recData = snapshotRec.val();
+                if (recData) {
+                    const jsonString = JSON.stringify(recData);
+                    tamañoTotal += new Blob([jsonString]).size;
+                }
+                
+                // Calcular reposiciones
+                const snapshotRep = await database.ref('reposiciones').once('value');
+                const repData = snapshotRep.val();
+                if (repData) {
+                    const jsonString = JSON.stringify(repData);
+                    tamañoTotal += new Blob([jsonString]).size;
+                }
+                
+                // Convertir a MB
+                return Math.round((tamañoTotal / (1024 * 1024)) * 100) / 100;
+                
+            } catch (error) {
+                console.error('Error calculando almacenamiento:', error);
+                return 0;
+            }
+        }
+
+        function actualizarInterfazEstadisticas() {
+            // Actualizar contadores
+            document.getElementById('countRecolecciones').textContent = estadisticas.recolecciones;
+            document.getElementById('countReposiciones').textContent = estadisticas.reposiciones;
+            
+            // Actualizar barra de progreso (1 GB = 1024 MB)
+            const porcentaje = Math.min((estadisticas.almacenamientoMB / 1024) * 100, 100);
+            const progressBar = document.getElementById('storageProgress');
+            progressBar.style.width = porcentaje + '%';
+            
+            // Cambiar color según el porcentaje
+            if (porcentaje > 80) {
+                progressBar.className = 'progress-fill progress-danger';
+            } else if (porcentaje > 60) {
+                progressBar.className = 'progress-fill progress-warning';
+            } else {
+                progressBar.className = 'progress-fill';
+            }
+            
+            // Actualizar texto
+            document.getElementById('storageText').textContent = 
+                `Almacenamiento estimado: ${estadisticas.almacenamientoMB} MB / 1 GB (${Math.round(porcentaje)}%)`;
+        }
+
+        // ================= DESCARGAR BACKUP EN EXCEL =================
+        async function descargarBackupExcel() {
+            try {
+                mostrarMensaje('📥 Preparando backup en Excel...', true);
+                
+                // Obtener todos los datos
+                const snapshotRecoleccion = await database.ref('recolecciones').once('value');
+                const snapshotReposicion = await database.ref('reposiciones').once('value');
+                
+                const datosRecoleccion = snapshotRecoleccion.val();
+                const datosReposicion = snapshotReposicion.val();
+                
+                // Crear libro de Excel
+                const wb = XLSX.utils.book_new();
+                
+                // Procesar recolecciones
+                if (datosRecoleccion) {
+                    const recoleccionesArray = Object.values(datosRecoleccion);
+                    const wsRecoleccion = XLSX.utils.json_to_sheet(recoleccionesArray);
+                    XLSX.utils.book_append_sheet(wb, wsRecoleccion, "Recolecciones");
+                }
+                
+                // Procesar reposiciones
+                if (datosReposicion) {
+                    const reposicionesArray = Object.values(datosReposicion);
+                    const wsReposicion = XLSX.utils.json_to_sheet(reposicionesArray);
+                    XLSX.utils.book_append_sheet(wb, wsReposicion, "Reposiciones");
+                }
+                
+                // Agregar hoja de resumen
+                const resumenData = [{
+                    "Tipo de Datos": "Recolecciones",
+                    "Total Registros": datosRecoleccion ? Object.keys(datosRecoleccion).length : 0
+                }, {
+                    "Tipo de Datos": "Reposiciones",
+                    "Total Registros": datosReposicion ? Object.keys(datosReposicion).length : 0
+                }, {
+                    "Tipo de Datos": "TOTAL",
+                    "Total Registros": (datosRecoleccion ? Object.keys(datosRecoleccion).length : 0) + 
+                                      (datosReposicion ? Object.keys(datosReposicion).length : 0)
+                }];
+                
+                const wsResumen = XLSX.utils.json_to_sheet(resumenData);
+                XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+                
+                // Generar y descargar archivo
+                const fecha = new Date().toISOString().split('T')[0];
+                const nombreArchivo = `backup_sokso_${fecha}.xlsx`;
+                
+                XLSX.writeFile(wb, nombreArchivo);
+                
+                // Actualizar información del archivo
+                document.getElementById('fileInfo').innerHTML = 
+                    `✅ <strong>Backup Excel descargado:</strong> ${nombreArchivo}<br>
+                     <small>Recolecciones: ${datosRecoleccion ? Object.keys(datosRecoleccion).length : 0} | Reposiciones: ${datosReposicion ? Object.keys(datosReposicion).length : 0}</small>`;
+                
+                mostrarMensaje('✅ Backup Excel descargado correctamente', true);
+                
+            } catch (error) {
+                console.error('Error descargando backup Excel:', error);
+                mostrarMensaje('❌ Error al descargar backup Excel: ' + error.message, false);
+            }
+        }
+
+        async function descargarRecoleccionesExcel() {
+            try {
+                mostrarMensaje('📥 Preparando recolecciones en Excel...', true);
+                
+                const snapshotRecoleccion = await database.ref('recolecciones').once('value');
+                const datosRecoleccion = snapshotRecoleccion.val();
+                
+                if (!datosRecoleccion || Object.keys(datosRecoleccion).length === 0) {
+                    mostrarMensaje('❌ No hay datos de recolección para descargar', false);
+                    return;
+                }
+                
+                const wb = XLSX.utils.book_new();
+                const recoleccionesArray = Object.values(datosRecoleccion);
+                const wsRecoleccion = XLSX.utils.json_to_sheet(recoleccionesArray);
+                XLSX.utils.book_append_sheet(wb, wsRecoleccion, "Recolecciones");
+                
+                const fecha = new Date().toISOString().split('T')[0];
+                const nombreArchivo = `recolecciones_sokso_${fecha}.xlsx`;
+                
+                XLSX.writeFile(wb, nombreArchivo);
+                
+                document.getElementById('fileInfo').innerHTML = 
+                    `✅ <strong>Recolecciones descargadas:</strong> ${nombreArchivo}<br>
+                     <small>Total registros: ${Object.keys(datosRecoleccion).length}</small>`;
+                
+                mostrarMensaje('✅ Recolecciones descargadas correctamente', true);
+                
+            } catch (error) {
+                console.error('Error descargando recolecciones:', error);
+                mostrarMensaje('❌ Error al descargar recolecciones: ' + error.message, false);
+            }
+        }
+
+        async function descargarReposicionesExcel() {
+            try {
+                mostrarMensaje('📥 Preparando reposiciones en Excel...', true);
+                
+                const snapshotReposicion = await database.ref('reposiciones').once('value');
+                const datosReposicion = snapshotReposicion.val();
+                
+                if (!datosReposicion || Object.keys(datosReposicion).length === 0) {
+                    mostrarMensaje('❌ No hay datos de reposición para descargar', false);
+                    return;
+                }
+                
+                const wb = XLSX.utils.book_new();
+                const reposicionesArray = Object.values(datosReposicion);
+                const wsReposicion = XLSX.utils.json_to_sheet(reposicionesArray);
+                XLSX.utils.book_append_sheet(wb, wsReposicion, "Reposiciones");
+                
+                const fecha = new Date().toISOString().split('T')[0];
+                const nombreArchivo = `reposiciones_sokso_${fecha}.xlsx`;
+                
+                XLSX.writeFile(wb, nombreArchivo);
+                
+                document.getElementById('fileInfo').innerHTML = 
+                    `✅ <strong>Reposiciones descargadas:</strong> ${nombreArchivo}<br>
+                     <small>Total registros: ${Object.keys(datosReposicion).length}</small>`;
+                
+                mostrarMensaje('✅ Reposiciones descargadas correctamente', true);
+                
+            } catch (error) {
+                console.error('Error descargando reposiciones:', error);
+                mostrarMensaje('❌ Error al descargar reposiciones: ' + error.message, false);
+            }
+        }
+
+        // ================= LIMPIAR DATOS =================
+        async function limpiarDatosFirebase() {
+            // Confirmación EXTRA segura
+            const confirmacion1 = confirm('⚠️ ¿ESTÁS ABSOLUTAMENTE SEGURO DE ELIMINAR TODOS LOS DATOS?\n\nEsta acción NO se puede deshacer.');
+            if (!confirmacion1) return;
+            
+            const confirmacion2 = confirm('🔴 CONFIRMACIÓN FINAL:\n\n¿Realmente quieres ELIMINAR TODOS los datos de recolección y reposición?\n\n✅ Asegúrate de haber descargado el backup antes de continuar.');
+            if (!confirmacion2) return;
+            
+            try {
+                mostrarMensaje('🗑️ Eliminando datos... Esto puede tomar unos segundos.', true);
+                
+                // Eliminar recolecciones
+                await database.ref('recolecciones').remove();
+                console.log('✅ Recolecciones eliminadas');
+                
+                // Eliminar reposiciones
+                await database.ref('reposiciones').remove();
+                console.log('✅ Reposiciones eliminadas');
+                
+                // Eliminar otros datos temporales si existen
+                await database.ref('estado_reposicion').remove();
+                console.log('✅ Estado de reposición eliminado');
+                
+                // Esperar un momento para que se complete
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Actualizar estadísticas
+                await actualizarEstadisticas();
+                
+                mostrarMensaje('✅ TODOS los datos han sido eliminados correctamente', true);
+                
+            } catch (error) {
+                console.error('Error eliminando datos:', error);
+                mostrarMensaje('❌ Error al eliminar datos: ' + error.message, false);
+            }
+        }
+
+        // ================= UTILIDADES =================
+        function mostrarMensaje(mensaje, esExito) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function volverAlPrincipal() {
+            window.location.href = 'index.html';
+        }
+
+        // Actualizar automáticamente cada 30 segundos
+        setInterval(() => {
+            actualizarEstadisticas();
+        }, 30000);
+    </script>
+</body>
+</html>

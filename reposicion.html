@@ -356,10 +356,6 @@
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
                     <span>FIRE</span>
                 </div>
-                <div class="connection-item">
-                    <div id="sheetsIndicator" class="connection-indicator checking"></div>
-                    <span>GS</span>
-                </div>
             </div>
         </div>
 
@@ -468,7 +464,6 @@
 
     <script>
         // ================= CONFIGURACIÓN =================
-        const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
         const firebaseConfig = {
@@ -531,7 +526,6 @@
         function inicializarFirebase() {
             try {
                 verificarConexionFirebase();
-                verificarConexionSheets();
             } catch (error) {
                 document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
             }
@@ -550,21 +544,6 @@
                     document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
                 }
             });
-        }
-
-        async function verificarConexionSheets() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_URL);
-                if (response.ok) {
-                    document.getElementById('sheetsIndicator').className = 'connection-indicator connected';
-                    return true;
-                } else {
-                    throw new Error('No se pudo conectar');
-                }
-            } catch (error) {
-                document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
-                return false;
-            }
         }
 
         // ================= GESTIÓN DE SESIÓN =================
@@ -606,26 +585,22 @@
             sesionActiva = null;
         }
 
-        // ================= CARGA DE DATOS =================
+        // ================= CARGA DE DATOS DESDE FIREBASE =================
         async function cargarDatosReposicion() {
             try {
-                mostrarEstado('📥 Cargando desde Google Sheets...', 'info');
+                mostrarEstado('📥 Cargando desde Firebase...', 'info');
                 
-                const response = await fetch(GOOGLE_SHEETS_URL);
+                // Cargar datos de reposición desde Firebase
+                const snapshot = await database.ref('reposicion_rutas').once('value');
+                const datosFirebase = snapshot.val();
                 
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: No se pudo conectar`);
+                if (!datosFirebase) {
+                    throw new Error('No hay datos de reposición disponibles en Firebase');
                 }
                 
-                const csvText = await response.text();
-                
-                if (!csvText || csvText.includes('error') || csvText.length < 10) {
-                    throw new Error('No hay datos disponibles');
-                }
-                
-                procesarCSVReposicion(csvText);
-                guardarEnCache(csvText);
-                mostrarEstado('✅ Datos cargados correctamente', 'success');
+                procesarDatosFirebase(datosFirebase);
+                guardarEnCache(datosFirebase);
+                mostrarEstado('✅ Datos cargados correctamente desde Firebase', 'success');
                 
                 // Si hay sesión activa, cargar estado de Firebase
                 if (sesionActiva) {
@@ -643,66 +618,53 @@
             }
         }
 
-        function procesarCSVReposicion(csvText) {
+        function procesarDatosFirebase(datosFirebase) {
             datosReposicion = {};
             rutasDisponibles = [];
             
-            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            console.log('Procesando datos de Firebase:', datosFirebase);
             
-            if (lineas.length < 2) {
-                throw new Error('El archivo CSV está vacío');
-            }
-            
-            const separador = csvText.includes('\t') ? '\t' : ',';
-            
-            for (let i = 1; i < lineas.length; i++) {
-                const linea = lineas[i].trim();
-                if (!linea) continue;
+            // Procesar cada registro de Firebase
+            Object.values(datosFirebase).forEach(registro => {
+                const deposito = registro.deposito;
+                const upc = registro.upc || registro.CODIGO_UPC; // Soporta ambos nombres
+                const articulo = registro.articulo || registro.ARTICULO;
+                const cantidad = parseInt(registro.cantidad) || parseInt(registro.CANTIDAD) || 0;
+                const fecha = registro.fecha || registro.FECHA;
                 
-                const partes = linea.split(separador).map(part => 
-                    part.trim().replace(/^"|"$/g, '')
-                );
-                
-                if (partes.length >= 4) {
-                    const deposito = partes[0];
-                    const upc = partes[1];
-                    const articulo = partes[2];
-                    const cantidad = parseInt(partes[3]) || 0;
+                if (deposito && upc && cantidad > 0) {
+                    // Extraer cola del depósito (P01, P05, 8, etc.)
+                    const cola = extraerCola(deposito);
                     
-                    if (deposito && upc && cantidad > 0) {
-                        // Extraer cola del depósito (P01, P05, 8, etc.)
-                        const cola = extraerCola(deposito);
-                        
-                        if (!datosReposicion[cola]) {
-                            datosReposicion[cola] = {
-                                depositos: {},
-                                cantidadTotal: 0,
-                                nombre: `Cola ${cola}`
-                            };
-                            if (!rutasDisponibles.includes(cola)) {
-                                rutasDisponibles.push(cola);
-                            }
-                        }
-                        
-                        // Agrupar por depósito
-                        if (!datosReposicion[cola].depositos[deposito]) {
-                            datosReposicion[cola].depositos[deposito] = {
-                                upcs: {},
-                                cantidadTotal: 0,
-                                articulo: articulo
-                            };
-                        }
-                        
-                        // Agregar UPC al depósito
-                        datosReposicion[cola].depositos[deposito].upcs[upc] = {
-                            articulo: articulo,
-                            cantidad: cantidad
+                    if (!datosReposicion[cola]) {
+                        datosReposicion[cola] = {
+                            depositos: {},
+                            cantidadTotal: 0,
+                            nombre: `Cola ${cola}`
                         };
-                        datosReposicion[cola].depositos[deposito].cantidadTotal += cantidad;
-                        datosReposicion[cola].cantidadTotal += cantidad;
+                        if (!rutasDisponibles.includes(cola)) {
+                            rutasDisponibles.push(cola);
+                        }
                     }
+                    
+                    // Agrupar por depósito
+                    if (!datosReposicion[cola].depositos[deposito]) {
+                        datosReposicion[cola].depositos[deposito] = {
+                            upcs: {},
+                            cantidadTotal: 0,
+                            articulo: articulo
+                        };
+                    }
+                    
+                    // Agregar UPC al depósito
+                    datosReposicion[cola].depositos[deposito].upcs[upc] = {
+                        articulo: articulo,
+                        cantidad: cantidad
+                    };
+                    datosReposicion[cola].depositos[deposito].cantidadTotal += cantidad;
+                    datosReposicion[cola].cantidadTotal += cantidad;
                 }
-            }
+            });
             
             // Ordenar colas y depósitos
             rutasDisponibles.sort(ordenarColas);
@@ -1231,7 +1193,8 @@
                 const tiempoTranscurrido = ahora - parseInt(cacheTime);
                 
                 if (tiempoTranscurrido < CACHE_DURATION) {
-                    procesarCSVReposicion(cacheData);
+                    const data = JSON.parse(cacheData);
+                    procesarDatosFirebase(data);
                     mostrarEstado('✅ Datos cargados desde cache', 'success');
                     return true;
                 }
@@ -1239,8 +1202,8 @@
             return false;
         }
 
-        function guardarEnCache(csvText) {
-            localStorage.setItem('cacheReposicion', csvText);
+        function guardarEnCache(data) {
+            localStorage.setItem('cacheReposicion', JSON.stringify(data));
             localStorage.setItem('cacheReposicionTime', new Date().getTime().toString());
             actualizarInfoCache();
         }

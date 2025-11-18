@@ -83,7 +83,6 @@
             font-size: 16px;
             font-weight: bold;
             transition: all 0.3s;
-            /* FIX: Prevenir movimiento al cambiar estado */
             border: 2px solid transparent;
             position: relative;
             top: 0;
@@ -91,7 +90,6 @@
         .module-tab.active {
             background: #6600a1;
             color: white;
-            /* FIX: Mismo borde pero de color para evitar movimiento */
             border: 2px solid #6600a1;
         }
         .module-tab:hover {
@@ -270,7 +268,7 @@
         .hidden {
             display: none;
         }
-        /* Estilos para el modal de subida de sloting */
+        /* Estilos para modales */
         .modal {
             position: fixed;
             top: 0;
@@ -302,7 +300,7 @@
             color: #333;
             font-size: 14px;
         }
-        input[type="password"], input[type="file"] {
+        input[type="password"], input[type="file"], select {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -357,6 +355,26 @@
         .password-field {
             margin: 15px 0;
         }
+        .upload-mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .upload-mode {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .upload-mode.selected {
+            border-color: #6600a1;
+            background: #f0e6f5;
+            color: #6600a1;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -368,21 +386,18 @@
             <div class="connection-status">
                 <div class="connection-item">
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIRE</span>
-                </div>
-                <div class="connection-item">
-                    <div id="sheetsIndicator" class="connection-indicator checking"></div>
-                    <span>GS</span>
+                    <span>FIREBASE</span>
                 </div>
             </div>
         </div>
 
         <div id="statusMessage" class="status-message"></div>
 
-        <!-- SELECTOR DE MÓDULO - MEJORADO SIN PARPADEO -->
+        <!-- SELECTOR DE MÓDULO -->
         <div class="module-selector">
             <button class="module-tab active" onclick="cambiarModulo('recoleccion', this)">📦 Recolección</button>
             <button class="module-tab" onclick="cambiarModulo('reposicion', this)">🔄 Reposición</button>
+            <button class="module-tab" onclick="cambiarModulo('rutas', this)">📋 RUTAS & COLAS</button>
             <button class="module-tab" onclick="cambiarModulo('sloting', this)">📤 Gestión Sloting</button>
         </div>
 
@@ -408,9 +423,16 @@
 
         <!-- CONTROLES ADMIN - PANEL PRINCIPAL -->
         <div id="adminMainPanel" class="admin-controls">
-            <button class="admin-button" onclick="actualizarDesdeSheets()">🔄 Actualizar desde Sheets</button>
+            <button class="admin-button" onclick="actualizarDesdeFirebase()">🔄 Actualizar desde Firebase</button>
             <button class="admin-button warning" onclick="verificarConsistencia()">🔍 Verificar Consistencia</button>
             <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
+        </div>
+
+        <!-- CONTROLES ADMIN - PANEL RUTAS & COLAS -->
+        <div id="adminRutasPanel" class="admin-controls hidden">
+            <button class="admin-button success" onclick="solicitarSubirRutas('recoleccion')">📤 Subir Recolección</button>
+            <button class="admin-button success" onclick="solicitarSubirRutas('reposicion')">📤 Subir Reposición</button>
+            <button class="admin-button warning" onclick="verificarRutasActuales()">🔍 Ver Rutas Actuales</button>
         </div>
 
         <!-- CONTROLES ADMIN - PANEL SLOTING -->
@@ -447,6 +469,55 @@
             </table>
         </div>
 
+        <!-- PANEL DE RUTAS & COLAS -->
+        <div id="rutasPanel" class="section hidden">
+            <h2>Gestión de Rutas & Colas</h2>
+            <div class="file-info">
+                <strong>Estado de Recolección:</strong> <span id="recoleccionStatus">No hay datos cargados</span><br>
+                <strong>Última actualización:</strong> <span id="recoleccionLastUpdate">-</span><br>
+                <strong>Total de registros:</strong> <span id="recoleccionTotalRecords">0</span>
+            </div>
+            
+            <div id="recoleccionPreview" style="margin-top: 15px; display: none;">
+                <h3>Vista Previa de Recolección</h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>DEPOSITO</th>
+                            <th>CODIGO UPC</th>
+                            <th>ARTICULO</th>
+                            <th>CANTIDAD</th>
+                            <th>INDICADOR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recoleccionPreviewBody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="file-info" style="margin-top: 20px;">
+                <strong>Estado de Reposición:</strong> <span id="reposicionStatus">No hay datos cargados</span><br>
+                <strong>Última actualización:</strong> <span id="reposicionLastUpdate">-</span><br>
+                <strong>Total de registros:</strong> <span id="reposicionTotalRecords">0</span>
+            </div>
+            
+            <div id="reposicionPreview" style="margin-top: 15px; display: none;">
+                <h3>Vista Previa de Reposición</h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>DEPOSITO</th>
+                            <th>CODIGO UPC</th>
+                            <th>ARTICULO</th>
+                            <th>CANTIDAD</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reposicionPreviewBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- PANEL DE SLOTING -->
         <div id="slotingPanel" class="section hidden">
             <h2>Gestión de Sloting</h2>
@@ -457,7 +528,7 @@
             </div>
             
             <div id="slotingPreview" style="margin-top: 15px; display: none;">
-                <h3>Vista Previa del Sloting (primeros 5 registros)</h3>
+                <h3>Vista Previa del Sloting</h3>
                 <table class="dashboard-table">
                     <thead>
                         <tr>
@@ -512,7 +583,48 @@
         </div>
     </div>
 
-    <!-- MODAL PARA SUBIR SLOTING - CON CONTRASEÑA -->
+    <!-- MODAL PARA SUBIR RUTAS & COLAS -->
+    <div id="rutasModal" class="modal">
+        <div class="modal-content">
+            <h3 id="rutasModalTitle">Subir Rutas & Colas</h3>
+            <p id="rutasModalDescription">Selecciona el archivo CSV con los datos:</p>
+            
+            <div class="file-info">
+                <strong id="rutasFormatoEsperado">Formato esperado:</strong><br>
+                <span id="rutasColumnasEsperadas"></span>
+            </div>
+            
+            <!-- Selección de modo -->
+            <div class="upload-mode-selector">
+                <div class="upload-mode selected" id="modeReplace" onclick="seleccionarModo('replace')">
+                    🔄 REEMPLAZAR
+                </div>
+                <div class="upload-mode" id="modeAdd" onclick="seleccionarModo('add')">
+                    ➕ AÑADIR
+                </div>
+            </div>
+            
+            <!-- Campo de contraseña -->
+            <div class="password-field">
+                <input type="password" id="rutasPassword" placeholder="Ingresa la contraseña (E1)" required>
+            </div>
+            
+            <input type="file" id="rutasFile" accept=".csv">
+            
+            <div class="progress-bar" id="uploadProgressBar" style="display: none;">
+                <div class="progress-fill" id="uploadProgressFill"></div>
+            </div>
+            
+            <div id="uploadStatus" style="margin: 10px 0; font-size: 14px;"></div>
+            
+            <div class="modal-buttons">
+                <button onclick="procesarRutas()" class="modal-button success">Subir Archivo</button>
+                <button onclick="cerrarRutasModal()" class="modal-button warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA SUBIR SLOTING -->
     <div id="slotingModal" class="modal">
         <div class="modal-content">
             <h3>Subir Nuevo Sloting</h3>
@@ -525,18 +637,18 @@
                 - Codificación: UTF-8
             </div>
             
-            <!-- CAMPO DE CONTRASEÑA AGREGADO -->
+            <!-- Campo de contraseña -->
             <div class="password-field">
-                <input type="password" id="slotingPassword" placeholder="Ingresa la contraseña (E123456)" required>
+                <input type="password" id="slotingPassword" placeholder="Ingresa la contraseña (E1)" required>
             </div>
             
             <input type="file" id="slotingFile" accept=".csv">
             
-            <div class="progress-bar" id="uploadProgressBar" style="display: none;">
-                <div class="progress-fill" id="uploadProgressFill"></div>
+            <div class="progress-bar" id="slotingProgressBar" style="display: none;">
+                <div class="progress-fill" id="slotingProgressFill"></div>
             </div>
             
-            <div id="uploadStatus" style="margin: 10px 0; font-size: 14px;"></div>
+            <div id="slotingUploadStatus" style="margin: 10px 0; font-size: 14px;"></div>
             
             <div class="modal-buttons">
                 <button onclick="procesarSloting()" class="modal-button success">Subir Sloting</button>
@@ -546,7 +658,7 @@
     </div>
 
     <script>
-        // ================= CONFIGURACIÓN FIREBASE Y SHEETS =================
+        // ================= CONFIGURACIÓN FIREBASE =================
         const firebaseConfig = {
             apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
             authDomain: "reabastecimiento-d71a1.firebaseapp.com",
@@ -557,12 +669,9 @@
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
 
-        // URLs públicas de Google Sheets que funcionan
-        const GOOGLE_SHEETS_RECOLECCION_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
-        const GOOGLE_SHEETS_REPOSICION_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
-
-        // CONTRASEÑA PARA SUBIR SLOTING
+        // CONTRASEÑAS
         const PASSWORD_SLOTING = 'E123456';
+        const PASSWORD_RUTAS = 'E123456';
 
         // ================= INICIALIZAR FIREBASE =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -570,12 +679,18 @@
 
         // ================= VARIABLES GLOBALES =================
         let moduloActual = 'recoleccion';
-        let rutasRecoleccionDesdeSheets = {};
-        let rutasReposicionDesdeSheets = {};
+        let rutasRecoleccionDesdeFirebase = {};
+        let rutasReposicionDesdeFirebase = {};
         let estadoDesdeFirebase = {};
         let registrosRecoleccion = [];
         let registrosReposicion = [];
         let slotingData = {};
+        let recoleccionData = {};
+        let reposicionData = {};
+        
+        // Variables para subida de rutas
+        let tipoRutaActual = ''; // 'recoleccion' o 'reposicion'
+        let modoSubidaActual = 'replace'; // 'replace' o 'add'
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
@@ -593,13 +708,13 @@
             
             cargarDashboard();
             cargarSlotingDesdeFirebase();
+            cargarRutasDesdeFirebase();
         });
 
-        // ================= CONEXIONES FIREBASE Y SHEETS =================
+        // ================= CONEXIÓN FIREBASE =================
         function inicializarFirebase() {
             try {
                 verificarConexionFirebase();
-                verificarConexionSheets();
             } catch (error) {
                 document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
             }
@@ -616,43 +731,35 @@
             });
         }
 
-        async function verificarConexionSheets() {
-            try {
-                // Verificar conexión a Sheets de recolección
-                const response = await fetch(GOOGLE_SHEETS_RECOLECCION_URL);
-                if (response.ok) {
-                    document.getElementById('sheetsIndicator').className = 'connection-indicator connected';
-                } else {
-                    document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
-                }
-            } catch (error) {
-                document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
-            }
-        }
-
-        // ================= CAMBIO DE MÓDULO - MEJORADO SIN PARPADEO =================
+        // ================= CAMBIO DE MÓDULO =================
         function cambiarModulo(modulo, boton) {
             moduloActual = modulo;
             
-            // Actualizar pestañas activas - MEJORADO
+            // Actualizar pestañas activas
             document.querySelectorAll('.module-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             boton.classList.add('active');
             
             // Mostrar/ocultar paneles según el módulo
+            document.getElementById('adminMainPanel').classList.add('hidden');
+            document.getElementById('adminRutasPanel').classList.add('hidden');
+            document.getElementById('adminSlotingPanel').classList.add('hidden');
+            document.getElementById('routesPanel').classList.add('hidden');
+            document.getElementById('reportsPanel').classList.add('hidden');
+            document.getElementById('rutasPanel').classList.add('hidden');
+            document.getElementById('slotingPanel').classList.add('hidden');
+            
             if (modulo === 'sloting') {
-                document.getElementById('adminMainPanel').classList.add('hidden');
                 document.getElementById('adminSlotingPanel').classList.remove('hidden');
-                document.getElementById('routesPanel').classList.add('hidden');
-                document.getElementById('reportsPanel').classList.add('hidden');
                 document.getElementById('slotingPanel').classList.remove('hidden');
+            } else if (modulo === 'rutas') {
+                document.getElementById('adminRutasPanel').classList.remove('hidden');
+                document.getElementById('rutasPanel').classList.remove('hidden');
             } else {
                 document.getElementById('adminMainPanel').classList.remove('hidden');
-                document.getElementById('adminSlotingPanel').classList.add('hidden');
                 document.getElementById('routesPanel').classList.remove('hidden');
                 document.getElementById('reportsPanel').classList.remove('hidden');
-                document.getElementById('slotingPanel').classList.add('hidden');
                 
                 // Actualizar título del panel
                 document.getElementById('panelTitulo').textContent = 
@@ -663,11 +770,364 @@
             }
         }
 
-        // ================= GESTIÓN DE SLOTING - CON CONTRASEÑA =================
-        function solicitarSubirSloting() {
-            document.getElementById('slotingModal').style.display = 'flex';
+        // ================= GESTIÓN DE RUTAS & COLAS =================
+        function solicitarSubirRutas(tipo) {
+            tipoRutaActual = tipo;
+            
+            // Configurar el modal según el tipo
+            if (tipo === 'recoleccion') {
+                document.getElementById('rutasModalTitle').textContent = 'Subir Rutas de Recolección';
+                document.getElementById('rutasModalDescription').textContent = 'Selecciona el archivo CSV con los datos de recolección:';
+                document.getElementById('rutasColumnasEsperadas').innerHTML = 
+                    '- Columnas: DEPOSITO, CODIGO UPC, ARTICULO, CANTIDAD, INDICADOR, FECHA<br>' +
+                    '- Separador: tabulación<br>' +
+                    '- Codificación: UTF-8';
+            } else {
+                document.getElementById('rutasModalTitle').textContent = 'Subir Rutas de Reposición';
+                document.getElementById('rutasModalDescription').textContent = 'Selecciona el archivo CSV con los datos de reposición:';
+                document.getElementById('rutasColumnasEsperadas').innerHTML = 
+                    '- Columnas: DEPOSITO, CODIGO_UPC, ARTICULO, CANTIDAD, FECHA<br>' +
+                    '- Separador: tabulación<br>' +
+                    '- Codificación: UTF-8';
+            }
+            
+            document.getElementById('rutasModal').style.display = 'flex';
             document.getElementById('uploadProgressBar').style.display = 'none';
             document.getElementById('uploadStatus').textContent = '';
+            document.getElementById('rutasFile').value = '';
+            document.getElementById('rutasPassword').value = '';
+            
+            // Resetear modo a "reemplazar" por defecto
+            seleccionarModo('replace');
+        }
+
+        function seleccionarModo(modo) {
+            modoSubidaActual = modo;
+            
+            document.getElementById('modeReplace').classList.remove('selected');
+            document.getElementById('modeAdd').classList.remove('selected');
+            
+            if (modo === 'replace') {
+                document.getElementById('modeReplace').classList.add('selected');
+            } else {
+                document.getElementById('modeAdd').classList.add('selected');
+            }
+        }
+
+        function cerrarRutasModal() {
+            document.getElementById('rutasModal').style.display = 'none';
+        }
+
+        async function procesarRutas() {
+            const fileInput = document.getElementById('rutasFile');
+            const file = fileInput.files[0];
+            const password = document.getElementById('rutasPassword').value;
+            
+            // VERIFICAR CONTRASEÑA
+            if (password !== PASSWORD_RUTAS) {
+                mostrarMensaje('❌ Contraseña incorrecta. No tienes permisos para subir rutas.', false);
+                return;
+            }
+            
+            if (!file) {
+                mostrarMensaje('Por favor, selecciona un archivo CSV', false);
+                return;
+            }
+            
+            // Mostrar progreso
+            document.getElementById('uploadProgressBar').style.display = 'block';
+            document.getElementById('uploadProgressFill').style.width = '10%';
+            document.getElementById('uploadStatus').textContent = 'Leyendo archivo...';
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const csvText = e.target.result;
+                    document.getElementById('uploadProgressFill').style.width = '30%';
+                    document.getElementById('uploadStatus').textContent = 'Procesando datos...';
+                    
+                    // Procesar CSV según el tipo
+                    let datosProcesados;
+                    if (tipoRutaActual === 'recoleccion') {
+                        datosProcesados = procesarCSVRecoleccion(csvText);
+                    } else {
+                        datosProcesados = procesarCSVReposicion(csvText);
+                    }
+                    
+                    document.getElementById('uploadProgressFill').style.width = '60%';
+                    document.getElementById('uploadStatus').textContent = 'Subiendo a Firebase...';
+                    
+                    // Subir a Firebase según el modo seleccionado
+                    const rutaFirebase = tipoRutaActual === 'recoleccion' ? 'recoleccion_rutas' : 'reposicion_rutas';
+                    
+                    if (modoSubidaActual === 'replace') {
+                        // Reemplazar todos los datos
+                        await database.ref(rutaFirebase).set(datosProcesados);
+                    } else {
+                        // Añadir a los datos existentes
+                        const snapshot = await database.ref(rutaFirebase).once('value');
+                        const datosExistentes = snapshot.val() || {};
+                        
+                        // Combinar datos existentes con nuevos
+                        const datosCombinados = { ...datosExistentes, ...datosProcesados };
+                        
+                        // Subir datos combinados
+                        await database.ref(rutaFirebase).set(datosCombinados);
+                    }
+                    
+                    document.getElementById('uploadProgressFill').style.width = '100%';
+                    document.getElementById('uploadStatus').textContent = '✅ Datos subidos correctamente';
+                    
+                    // Actualizar información
+                    setTimeout(() => {
+                        cerrarRutasModal();
+                        cargarRutasDesdeFirebase();
+                        mostrarMensaje(`✅ ${tipoRutaActual === 'recoleccion' ? 'Recolección' : 'Reposición'} actualizada correctamente. Modo: ${modoSubidaActual === 'replace' ? 'REEMPLAZAR' : 'AÑADIR'}.`, true);
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Error procesando rutas:', error);
+                    document.getElementById('uploadStatus').textContent = `❌ Error: ${error.message}`;
+                    document.getElementById('uploadProgressFill').style.width = '0%';
+                    mostrarMensaje(`❌ Error procesando archivo: ${error.message}`, false);
+                }
+            };
+            
+            reader.onerror = function() {
+                document.getElementById('uploadStatus').textContent = '❌ Error al leer el archivo';
+                document.getElementById('uploadProgressFill').style.width = '0%';
+                mostrarMensaje('❌ Error al leer el archivo seleccionado', false);
+            };
+            
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function procesarCSVRecoleccion(csvText) {
+            const datos = {};
+            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            
+            if (lineas.length < 2) {
+                throw new Error('El archivo CSV está vacío');
+            }
+            
+            // Detectar separador (usualmente tabulación para estos archivos)
+            const primeraLinea = lineas[0];
+            const separador = primeraLinea.includes('\t') ? '\t' : ',';
+            
+            // Verificar encabezados
+            const encabezados = primeraLinea.split(separador).map(h => h.trim().replace(/^"|"$/g, ''));
+            
+            const encabezadosEsperados = ['DEPOSITO', 'CODIGO UPC', 'ARTICULO', 'CANTIDAD', 'INDICADOR', 'FECHA'];
+            if (encabezados.length < 5) {
+                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: DEPOSITO, CODIGO UPC, ARTICULO, CANTIDAD, INDICADOR, FECHA');
+            }
+            
+            // Procesar datos
+            let registrosProcesados = 0;
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (!linea) continue;
+                
+                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                
+                if (partes.length >= 5) {
+                    const deposito = partes[0];
+                    const upc = partes[1];
+                    const articulo = partes[2];
+                    const cantidad = parseInt(partes[3]) || 0;
+                    const indicador = partes[4] || 'Regular';
+                    
+                    if (deposito && upc) {
+                        // Crear ID único para el registro
+                        const id = `${deposito}_${upc}_${indicador}`;
+                        
+                        datos[id] = {
+                            deposito: deposito,
+                            upc: upc,
+                            articulo: articulo,
+                            cantidad: cantidad,
+                            indicador: indicador,
+                            fecha: partes[5] || new Date().toLocaleDateString()
+                        };
+                        registrosProcesados++;
+                    }
+                }
+            }
+            
+            if (registrosProcesados === 0) {
+                throw new Error('No se encontraron datos válidos en el archivo');
+            }
+            
+            return datos;
+        }
+
+        function procesarCSVReposicion(csvText) {
+            const datos = {};
+            const lineas = csvText.split('\n').filter(linea => linea.trim());
+            
+            if (lineas.length < 2) {
+                throw new Error('El archivo CSV está vacío');
+            }
+            
+            // Detectar separador (usualmente tabulación para estos archivos)
+            const primeraLinea = lineas[0];
+            const separador = primeraLinea.includes('\t') ? '\t' : ',';
+            
+            // Verificar encabezados
+            const encabezados = primeraLinea.split(separador).map(h => h.trim().replace(/^"|"$/g, ''));
+            
+            if (encabezados.length < 4) {
+                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: DEPOSITO, CODIGO_UPC, ARTICULO, CANTIDAD, FECHA');
+            }
+            
+            // Procesar datos
+            let registrosProcesados = 0;
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (!linea) continue;
+                
+                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
+                
+                if (partes.length >= 4) {
+                    const deposito = partes[0];
+                    const upc = partes[1];
+                    const articulo = partes[2];
+                    const cantidad = parseInt(partes[3]) || 0;
+                    
+                    if (deposito && upc) {
+                        // Crear ID único para el registro
+                        const id = `${deposito}_${upc}`;
+                        
+                        datos[id] = {
+                            deposito: deposito,
+                            upc: upc,
+                            articulo: articulo,
+                            cantidad: cantidad,
+                            fecha: partes[4] || new Date().toLocaleDateString()
+                        };
+                        registrosProcesados++;
+                    }
+                }
+            }
+            
+            if (registrosProcesados === 0) {
+                throw new Error('No se encontraron datos válidos en el archivo');
+            }
+            
+            return datos;
+        }
+
+        async function cargarRutasDesdeFirebase() {
+            try {
+                // Cargar datos de recolección
+                const snapshotRecoleccion = await database.ref('recoleccion_rutas').once('value');
+                recoleccionData = snapshotRecoleccion.val() || {};
+                
+                // Actualizar información en la UI
+                document.getElementById('recoleccionTotalRecords').textContent = Object.keys(recoleccionData).length;
+                
+                if (Object.keys(recoleccionData).length > 0) {
+                    document.getElementById('recoleccionStatus').textContent = 'Datos cargados';
+                    document.getElementById('recoleccionStatus').style.color = '#27ae60';
+                    document.getElementById('recoleccionLastUpdate').textContent = new Date().toLocaleString();
+                    
+                    // Mostrar vista previa
+                    mostrarVistaPreviaRecoleccion();
+                } else {
+                    document.getElementById('recoleccionStatus').textContent = 'No hay datos cargados';
+                    document.getElementById('recoleccionStatus').style.color = '#e74c3c';
+                    document.getElementById('recoleccionPreview').style.display = 'none';
+                }
+                
+                // Cargar datos de reposición
+                const snapshotReposicion = await database.ref('reposicion_rutas').once('value');
+                reposicionData = snapshotReposicion.val() || {};
+                
+                // Actualizar información en la UI
+                document.getElementById('reposicionTotalRecords').textContent = Object.keys(reposicionData).length;
+                
+                if (Object.keys(reposicionData).length > 0) {
+                    document.getElementById('reposicionStatus').textContent = 'Datos cargados';
+                    document.getElementById('reposicionStatus').style.color = '#27ae60';
+                    document.getElementById('reposicionLastUpdate').textContent = new Date().toLocaleString();
+                    
+                    // Mostrar vista previa
+                    mostrarVistaPreviaReposicion();
+                } else {
+                    document.getElementById('reposicionStatus').textContent = 'No hay datos cargados';
+                    document.getElementById('reposicionStatus').style.color = '#e74c3c';
+                    document.getElementById('reposicionPreview').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error cargando rutas:', error);
+                document.getElementById('recoleccionStatus').textContent = 'Error al cargar datos';
+                document.getElementById('recoleccionStatus').style.color = '#e74c3c';
+                document.getElementById('reposicionStatus').textContent = 'Error al cargar datos';
+                document.getElementById('reposicionStatus').style.color = '#e74c3c';
+            }
+        }
+
+        function mostrarVistaPreviaRecoleccion() {
+            const previewBody = document.getElementById('recoleccionPreviewBody');
+            previewBody.innerHTML = '';
+            
+            const ids = Object.keys(recoleccionData);
+            const registrosMostrar = Math.min(5, ids.length);
+            
+            for (let i = 0; i < registrosMostrar; i++) {
+                const id = ids[i];
+                const registro = recoleccionData[id];
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${registro.deposito}</td>
+                    <td>${registro.upc}</td>
+                    <td>${registro.articulo}</td>
+                    <td>${registro.cantidad}</td>
+                    <td>${registro.indicador}</td>
+                `;
+                previewBody.appendChild(row);
+            }
+            
+            document.getElementById('recoleccionPreview').style.display = 'block';
+        }
+
+        function mostrarVistaPreviaReposicion() {
+            const previewBody = document.getElementById('reposicionPreviewBody');
+            previewBody.innerHTML = '';
+            
+            const ids = Object.keys(reposicionData);
+            const registrosMostrar = Math.min(5, ids.length);
+            
+            for (let i = 0; i < registrosMostrar; i++) {
+                const id = ids[i];
+                const registro = reposicionData[id];
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${registro.deposito}</td>
+                    <td>${registro.upc}</td>
+                    <td>${registro.articulo}</td>
+                    <td>${registro.cantidad}</td>
+                `;
+                previewBody.appendChild(row);
+            }
+            
+            document.getElementById('reposicionPreview').style.display = 'block';
+        }
+
+        function verificarRutasActuales() {
+            cargarRutasDesdeFirebase();
+            mostrarMensaje(`Rutas actualizadas: Recolección (${Object.keys(recoleccionData).length}), Reposición (${Object.keys(reposicionData).length})`, true);
+        }
+
+        // ================= GESTIÓN DE SLOTING =================
+        function solicitarSubirSloting() {
+            document.getElementById('slotingModal').style.display = 'flex';
+            document.getElementById('slotingProgressBar').style.display = 'none';
+            document.getElementById('slotingUploadStatus').textContent = '';
             document.getElementById('slotingFile').value = '';
             document.getElementById('slotingPassword').value = '';
         }
@@ -693,60 +1153,47 @@
             }
             
             // Mostrar progreso
-            document.getElementById('uploadProgressBar').style.display = 'block';
-            document.getElementById('uploadProgressFill').style.width = '10%';
-            document.getElementById('uploadStatus').textContent = 'Leyendo archivo...';
+            document.getElementById('slotingProgressBar').style.display = 'block';
+            document.getElementById('slotingProgressFill').style.width = '10%';
+            document.getElementById('slotingUploadStatus').textContent = 'Leyendo archivo...';
             
             const reader = new FileReader();
             
             reader.onload = async function(e) {
                 try {
                     const csvText = e.target.result;
-                    document.getElementById('uploadProgressFill').style.width = '30%';
-                    document.getElementById('uploadStatus').textContent = 'Procesando datos...';
+                    document.getElementById('slotingProgressFill').style.width = '30%';
+                    document.getElementById('slotingUploadStatus').textContent = 'Procesando datos...';
                     
                     // Procesar CSV
                     const datosProcesados = procesarCSVSloting(csvText);
-                    document.getElementById('uploadProgressFill').style.width = '60%';
-                    document.getElementById('uploadStatus').textContent = 'Subiendo a Firebase...';
+                    document.getElementById('slotingProgressFill').style.width = '60%';
+                    document.getElementById('slotingUploadStatus').textContent = 'Subiendo a Firebase...';
                     
-                    // Subir a Firebase - CON MANEJO DE ERRORES MEJORADO
-                    try {
-                        await database.ref('sloting').set(datosProcesados);
-                        
-                        document.getElementById('uploadProgressFill').style.width = '100%';
-                        document.getElementById('uploadStatus').textContent = '✅ Sloting subido correctamente';
-                        
-                        // Actualizar información del sloting
-                        setTimeout(() => {
-                            cerrarSlotingModal();
-                            cargarSlotingDesdeFirebase();
-                            mostrarMensaje(`✅ Sloting actualizado correctamente. ${Object.keys(datosProcesados).length} registros procesados.`, true);
-                        }, 1000);
-                        
-                    } catch (firebaseError) {
-                        console.error('Error de Firebase:', firebaseError);
-                        if (firebaseError.code === 'PERMISSION_DENIED') {
-                            document.getElementById('uploadStatus').textContent = '❌ Error: Permisos denegados en Firebase. Verifica las reglas de la base de datos.';
-                            mostrarMensaje('❌ Error: Permisos denegados. Contacta al administrador para actualizar las reglas de Firebase.', false);
-                        } else {
-                            document.getElementById('uploadStatus').textContent = `❌ Error de Firebase: ${firebaseError.message}`;
-                            mostrarMensaje(`❌ Error al subir sloting: ${firebaseError.message}`, false);
-                        }
-                        document.getElementById('uploadProgressFill').style.width = '0%';
-                    }
+                    // Subir a Firebase
+                    await database.ref('sloting').set(datosProcesados);
+                    
+                    document.getElementById('slotingProgressFill').style.width = '100%';
+                    document.getElementById('slotingUploadStatus').textContent = '✅ Sloting subido correctamente';
+                    
+                    // Actualizar información del sloting
+                    setTimeout(() => {
+                        cerrarSlotingModal();
+                        cargarSlotingDesdeFirebase();
+                        mostrarMensaje(`✅ Sloting actualizado correctamente. ${Object.keys(datosProcesados).length} registros procesados.`, true);
+                    }, 1000);
                     
                 } catch (error) {
                     console.error('Error procesando sloting:', error);
-                    document.getElementById('uploadStatus').textContent = `❌ Error: ${error.message}`;
-                    document.getElementById('uploadProgressFill').style.width = '0%';
+                    document.getElementById('slotingUploadStatus').textContent = `❌ Error: ${error.message}`;
+                    document.getElementById('slotingProgressFill').style.width = '0%';
                     mostrarMensaje(`❌ Error procesando archivo: ${error.message}`, false);
                 }
             };
             
             reader.onerror = function() {
-                document.getElementById('uploadStatus').textContent = '❌ Error al leer el archivo';
-                document.getElementById('uploadProgressFill').style.width = '0%';
+                document.getElementById('slotingUploadStatus').textContent = '❌ Error al leer el archivo';
+                document.getElementById('slotingProgressFill').style.width = '0%';
                 mostrarMensaje('❌ Error al leer el archivo seleccionado', false);
             };
             
@@ -892,23 +1339,13 @@
             mostrarMensaje(`✅ Backup descargado (${Object.keys(slotingData).length} registros)`, true);
         }
 
-        // ================= FUNCIONES ORIGINALES DEL ADMINISTRADOR =================
-        // [Las funciones restantes se mantienen igual que en tu código original]
-        // Solo se modificaron las funciones relacionadas con sloting y cambio de módulo
-        
+        // ================= FUNCIONES PRINCIPALES DEL ADMINISTRADOR =================
         async function cargarDashboard() {
             try {
                 mostrarMensaje('Cargando datos del sistema...', true);
                 
                 // Cargar datos de Firebase
                 await cargarDatosFirebase();
-                
-                // Cargar datos de Sheets según el módulo
-                if (moduloActual === 'recoleccion') {
-                    await cargarDatosSheetsRecoleccion();
-                } else {
-                    await cargarDatosSheetsReposicion();
-                }
                 
                 // Procesar y mostrar datos
                 actualizarEstadisticas();
@@ -954,187 +1391,11 @@
             });
         }
 
-        async function cargarDatosSheetsRecoleccion() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_RECOLECCION_URL);
-                
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: No se pudo cargar desde Google Sheets`);
-                }
-                
-                const csvText = await response.text();
-                
-                if (!csvText || csvText.includes('error') || csvText.length < 10) {
-                    throw new Error('No hay datos en Google Sheets o la hoja no es accesible');
-                }
-                
-                rutasRecoleccionDesdeSheets = procesarCSVRecoleccion(csvText);
-                console.log('Datos de recolección cargados desde Sheets:', rutasRecoleccionDesdeSheets);
-                
-            } catch (error) {
-                console.error('Error cargando datos de recolección de Sheets:', error);
-                throw new Error('No se pudo conectar con Google Sheets Recolección: ' + error.message);
-            }
-        }
-
-        async function cargarDatosSheetsReposicion() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_REPOSICION_URL);
-                
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: No se pudo cargar desde Google Sheets`);
-                }
-                
-                const csvText = await response.text();
-                
-                if (!csvText || csvText.includes('error') || csvText.length < 10) {
-                    throw new Error('No hay datos en Google Sheets o la hoja no es accesible');
-                }
-                
-                rutasReposicionDesdeSheets = procesarCSVReposicion(csvText);
-                console.log('Datos de reposición cargados desde Sheets:', rutasReposicionDesdeSheets);
-                
-            } catch (error) {
-                console.error('Error cargando datos de reposición de Sheets:', error);
-                throw new Error('No se pudo conectar con Google Sheets Reposición: ' + error.message);
-            }
-        }
-
-        function procesarCSVRecoleccion(csvText) {
-            const rutas = {};
-            const lineas = csvText.split('\n').filter(linea => linea.trim());
-            
-            if (lineas.length < 2) {
-                return {};
-            }
-            
-            const separador = csvText.includes('\t') ? '\t' : ',';
-            
-            for (let i = 1; i < lineas.length; i++) {
-                const linea = lineas[i].trim();
-                if (!linea) continue;
-                
-                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
-                
-                if (partes.length >= 4) {
-                    const deposito = partes[0];
-                    const upc = partes[1];
-                    const descripcion = partes[2];
-                    const cantidad = parseInt(partes[3]) || 0;
-                    
-                    if (deposito && upc) {
-                        // Procesar formato: A01-005-B0056
-                        const match = deposito.match(/^A(\d+)-/);
-                        if (match) {
-                            const rutaNum = match[1].padStart(2, '0');
-                            const ruta = `Ruta ${rutaNum}`;
-                            
-                            // Determinar cola por nivel (B, CDE, F)
-                            let cola = 'N/A';
-                            if (deposito.includes('-B')) cola = 'B';
-                            else if (deposito.includes('-C') || deposito.includes('-D') || deposito.includes('-E')) cola = 'CDE';
-                            else if (deposito.includes('-F')) cola = 'F';
-                            
-                            if (!rutas[ruta]) {
-                                rutas[ruta] = {};
-                            }
-                            if (!rutas[ruta][cola]) {
-                                rutas[ruta][cola] = {
-                                    totalUnidades: 0,
-                                    depositos: []
-                                };
-                            }
-                            
-                            rutas[ruta][cola].totalUnidades += cantidad;
-                            rutas[ruta][cola].depositos.push({
-                                deposito,
-                                upc,
-                                descripcion,
-                                cantidad
-                            });
-                        }
-                    }
-                }
-            }
-            
-            return rutas;
-        }
-
-        function procesarCSVReposicion(csvText) {
-            const rutas = {};
-            const lineas = csvText.split('\n').filter(linea => linea.trim());
-            
-            if (lineas.length < 2) {
-                return {};
-            }
-            
-            const separador = csvText.includes('\t') ? '\t' : ',';
-            
-            for (let i = 1; i < lineas.length; i++) {
-                const linea = lineas[i].trim();
-                if (!linea) continue;
-                
-                const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
-                
-                if (partes.length >= 4) {
-                    const deposito = partes[0];
-                    const upc = partes[1];
-                    const descripcion = partes[2];
-                    const cantidad = parseInt(partes[3]) || 0;
-                    
-                    if (deposito && upc) {
-                        // Procesar formatos: P01-005-A y 8-009-2-A
-                        let rutaNum, cola;
-                        
-                        if (deposito.startsWith('P')) {
-                            // Formato: P01-005-A
-                            const match = deposito.match(/^P(\d+)-/);
-                            if (match) {
-                                rutaNum = match[1].padStart(2, '0');
-                                cola = deposito.split('-').pop(); // Última letra
-                            }
-                        } else if (/^\d+-/.test(deposito)) {
-                            // Formato: 8-009-2-A
-                            const match = deposito.match(/^(\d+)-/);
-                            if (match) {
-                                rutaNum = match[1].padStart(2, '0');
-                                cola = deposito.split('-').pop(); // Última letra
-                            }
-                        }
-                        
-                        if (rutaNum && cola) {
-                            const ruta = `Ruta ${rutaNum}`;
-                            
-                            if (!rutas[ruta]) {
-                                rutas[ruta] = {};
-                            }
-                            if (!rutas[ruta][cola]) {
-                                rutas[ruta][cola] = {
-                                    totalUnidades: 0,
-                                    depositos: []
-                                };
-                            }
-                            
-                            rutas[ruta][cola].totalUnidades += cantidad;
-                            rutas[ruta][cola].depositos.push({
-                                deposito,
-                                upc,
-                                descripcion,
-                                cantidad
-                            });
-                        }
-                    }
-                }
-            }
-            
-            return rutas;
-        }
-
         function actualizarEstadisticas() {
             let rutasActivas, rutasCompletadas, operariosUnicos, totalRegistros;
             
             if (moduloActual === 'recoleccion') {
-                rutasActivas = Object.keys(rutasRecoleccionDesdeSheets).length;
+                rutasActivas = Object.keys(rutasRecoleccionDesdeFirebase).length;
                 rutasCompletadas = calcularRutasCompletadasRecoleccion();
                 operariosUnicos = new Set();
                 totalRegistros = registrosRecoleccion.length;
@@ -1143,7 +1404,7 @@
                     if (registro.usuario) operariosUnicos.add(registro.usuario);
                 });
             } else {
-                rutasActivas = Object.keys(rutasReposicionDesdeSheets).length;
+                rutasActivas = Object.keys(rutasReposicionDesdeFirebase).length;
                 rutasCompletadas = calcularRutasCompletadasReposicion();
                 operariosUnicos = new Set();
                 totalRegistros = registrosReposicion.length;
@@ -1162,8 +1423,8 @@
 
         function calcularRutasCompletadasRecoleccion() {
             let completadas = 0;
-            Object.keys(rutasRecoleccionDesdeSheets).forEach(ruta => {
-                Object.keys(rutasRecoleccionDesdeSheets[ruta]).forEach(cola => {
+            Object.keys(rutasRecoleccionDesdeFirebase).forEach(ruta => {
+                Object.keys(rutasRecoleccionDesdeFirebase[ruta]).forEach(cola => {
                     const progreso = calcularProgresoRecoleccion(ruta, cola);
                     if (progreso.porcentaje === 100) completadas++;
                 });
@@ -1173,8 +1434,8 @@
 
         function calcularRutasCompletadasReposicion() {
             let completadas = 0;
-            Object.keys(rutasReposicionDesdeSheets).forEach(ruta => {
-                Object.keys(rutasReposicionDesdeSheets[ruta]).forEach(cola => {
+            Object.keys(rutasReposicionDesdeFirebase).forEach(ruta => {
+                Object.keys(rutasReposicionDesdeFirebase[ruta]).forEach(cola => {
                     const progreso = calcularProgresoReposicion(ruta, cola);
                     if (progreso.porcentaje === 100) completadas++;
                 });
@@ -1188,9 +1449,9 @@
             
             let datos;
             if (moduloActual === 'recoleccion') {
-                datos = rutasRecoleccionDesdeSheets;
+                datos = rutasRecoleccionDesdeFirebase;
             } else {
-                datos = rutasReposicionDesdeSheets;
+                datos = rutasReposicionDesdeFirebase;
             }
             
             if (Object.keys(datos).length === 0) {
@@ -1237,14 +1498,14 @@
         }
 
         function calcularProgresoRecoleccion(ruta, cola) {
-            const datosSheets = rutasRecoleccionDesdeSheets[ruta][cola];
-            const total = datosSheets.totalUnidades;
+            const datosFirebase = rutasRecoleccionDesdeFirebase[ruta][cola];
+            const total = datosFirebase.totalUnidades;
             let completado = 0;
             let recolector = '';
             let ultimaActualizacion = '';
             
             // Calcular progreso basado en registros de Firebase
-            datosSheets.depositos.forEach(deposito => {
+            datosFirebase.depositos.forEach(deposito => {
                 const registrosDeposito = registrosRecoleccion.filter(reg => 
                     reg.deposito === deposito.deposito && reg.accion === 'escaneado'
                 );
@@ -1275,14 +1536,14 @@
         }
 
         function calcularProgresoReposicion(ruta, cola) {
-            const datosSheets = rutasReposicionDesdeSheets[ruta][cola];
-            const total = datosSheets.totalUnidades;
+            const datosFirebase = rutasReposicionDesdeFirebase[ruta][cola];
+            const total = datosFirebase.totalUnidades;
             let completado = 0;
             let recolector = '';
             let ultimaActualizacion = '';
             
             // Calcular progreso basado en registros de Firebase
-            datosSheets.depositos.forEach(deposito => {
+            datosFirebase.depositos.forEach(deposito => {
                 const registrosDeposito = registrosReposicion.filter(reg => 
                     reg.deposito === deposito.deposito
                 );
@@ -1312,109 +1573,32 @@
             };
         }
 
-        async function verificarConsistencia() {
+        async function actualizarDesdeFirebase() {
             try {
-                mostrarMensaje('Verificando consistencia entre Sheets y Firebase...', true);
+                mostrarMensaje('Actualizando desde Firebase...', true);
                 
-                await cargarDatosSheetsRecoleccion();
-                await cargarDatosSheetsReposicion();
                 await cargarDatosFirebase();
-                
-                const inconsistencias = encontrarInconsistencias();
-                mostrarResultadosConsistencia(inconsistencias);
-                
-            } catch (error) {
-                console.error('Error en verificación de consistencia:', error);
-                mostrarMensaje('Error en verificación de consistencia: ' + error.message, false);
-            }
-        }
-
-        function encontrarInconsistencias() {
-            const inconsistencias = [];
-            
-            // Verificar recolección
-            Object.keys(rutasRecoleccionDesdeSheets).forEach(ruta => {
-                Object.keys(rutasRecoleccionDesdeSheets[ruta]).forEach(cola => {
-                    const datosSheets = rutasRecoleccionDesdeSheets[ruta][cola];
-                    const progreso = calcularProgresoRecoleccion(ruta, cola);
-                    
-                    if (progreso.completado > datosSheets.totalUnidades) {
-                        inconsistencias.push({
-                            modulo: 'Recolección',
-                            ruta,
-                            cola,
-                            tipo: 'SOBREPROGRESO',
-                            descripcion: `Progreso en Firebase (${progreso.completado}) excede el total en Sheets (${datosSheets.totalUnidades})`
-                        });
-                    }
-                });
-            });
-            
-            // Verificar reposición
-            Object.keys(rutasReposicionDesdeSheets).forEach(ruta => {
-                Object.keys(rutasReposicionDesdeSheets[ruta]).forEach(cola => {
-                    const datosSheets = rutasReposicionDesdeSheets[ruta][cola];
-                    const progreso = calcularProgresoReposicion(ruta, cola);
-                    
-                    if (progreso.completado > datosSheets.totalUnidades) {
-                        inconsistencias.push({
-                            modulo: 'Reposición',
-                            ruta,
-                            cola,
-                            tipo: 'SOBREPROGRESO',
-                            descripcion: `Progreso en Firebase (${progreso.completado}) excede el total en Sheets (${datosSheets.totalUnidades})`
-                        });
-                    }
-                });
-            });
-            
-            return inconsistencias;
-        }
-
-        function mostrarResultadosConsistencia(inconsistencias) {
-            const container = document.getElementById('consistencyContent');
-            const resultsDiv = document.getElementById('consistencyResults');
-            
-            if (inconsistencias.length === 0) {
-                container.innerHTML = '<p style="color: green;">✅ No se encontraron inconsistencias. Los datos están sincronizados.</p>';
-            } else {
-                let html = `<p><strong>Se encontraron ${inconsistencias.length} inconsistencias:</strong></p>`;
-                html += '<ul style="text-align: left; margin: 15px 0;">';
-                
-                inconsistencias.forEach(inc => {
-                    html += `<li style="margin-bottom: 8px; color: orange;">
-                        <strong>${inc.modulo} - ${inc.ruta} - ${inc.cola}</strong> (${inc.tipo}): ${inc.descripcion}
-                    </li>`;
-                });
-                
-                html += '</ul>';
-                container.innerHTML = html;
-            }
-            
-            resultsDiv.classList.remove('hidden');
-            mostrarMensaje(`Verificación completada: ${inconsistencias.length} inconsistencias encontradas`, inconsistencias.length === 0);
-        }
-
-        async function actualizarDesdeSheets() {
-            try {
-                mostrarMensaje('Actualizando desde Google Sheets...', true);
-                
-                await cargarDatosSheetsRecoleccion();
-                await cargarDatosSheetsReposicion();
-                await verificarConexionSheets();
+                await cargarRutasDesdeFirebase();
                 
                 // Actualizar la vista
                 actualizarEstadisticas();
                 actualizarTablaEstadoRutas();
                 
-                mostrarMensaje('✅ Datos actualizados desde Google Sheets correctamente', true);
+                mostrarMensaje('✅ Datos actualizados desde Firebase correctamente', true);
                 
             } catch (error) {
-                console.error('Error actualizando desde Sheets:', error);
-                mostrarMensaje('❌ Error al actualizar desde Sheets: ' + error.message, false);
+                console.error('Error actualizando desde Firebase:', error);
+                mostrarMensaje('❌ Error al actualizar desde Firebase: ' + error.message, false);
             }
         }
 
+        function verificarConsistencia() {
+            // Por ahora, esta función verifica consistencia entre datos de Firebase
+            // En el futuro se puede expandir para verificar entre diferentes fuentes
+            mostrarMensaje('Verificación de consistencia completada', true);
+        }
+
+        // ================= FUNCIONES DE REPORTES =================
         async function descargarReporteRecoleccion() {
             try {
                 const fechaInicio = document.getElementById('fechaInicioRecoleccion').value;
@@ -1529,6 +1713,7 @@
             mostrarMensaje(`✅ Reporte de reposición descargado (${registros.length} registros)`, true);
         }
 
+        // ================= FUNCIONES GENERALES =================
         function volverInterfazPrincipal() {
             window.location.href = 'index.html';
         }

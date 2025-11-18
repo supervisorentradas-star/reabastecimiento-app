@@ -87,6 +87,12 @@
         .module-button.admin {
             background: rgb(82, 0, 130);
         }
+        .module-button.monitor {
+            background: #27ae60;
+        }
+        .module-button.monitor:hover {
+            background: #219653;
+        }
         .footer {
             text-align: center;
             margin-top: 15px;
@@ -215,14 +221,6 @@
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
                     <span>FIRE</span>
                 </div>
-                <div class="connection-item">
-                    <div id="gsRcIndicator" class="connection-indicator checking"></div>
-                    <span>GS-RC</span>
-                </div>
-                <div class="connection-item">
-                    <div id="gsRpIndicator" class="connection-indicator checking"></div>
-                    <span>GS-RP</span>
-                </div>
             </div>
         </div>
         
@@ -238,6 +236,7 @@
             <button class="module-button" onclick="irAModulo('reposicion')">🔄 Reposición</button>
             <button class="module-button admin" onclick="solicitarAccesoAdmin()">👨‍💼 Admin</button>
             <button class="module-button" onclick="irAModulo('productividad')">📊 Productividad</button>
+            <button class="module-button monitor" onclick="irAModulo('monitor')">📈 Monitor</button>
         </div>
         <div class="footer">
             <button class="back-button" onclick="salirSistema()">🚪 Salir</button>
@@ -328,8 +327,6 @@
 
         function inicializarConexiones() {
             verificarConexionFirebase();
-            verificarConexionGS_RC();
-            verificarConexionGS_RP();
         }
 
         function verificarConexionFirebase() {
@@ -343,38 +340,6 @@
             });
         }
 
-        async function verificarConexionGS_RC() {
-            try {
-                const response = await fetch(URL_GS_RECOLECCION);
-                if (response.ok) {
-                    document.getElementById('gsRcIndicator').className = 'connection-indicator connected';
-                    return true;
-                } else {
-                    document.getElementById('gsRcIndicator').className = 'connection-indicator disconnected';
-                    return false;
-                }
-            } catch (error) {
-                document.getElementById('gsRcIndicator').className = 'connection-indicator disconnected';
-                return false;
-            }
-        }
-
-        async function verificarConexionGS_RP() {
-            try {
-                const response = await fetch(URL_GS_REPOSICION);
-                if (response.ok) {
-                    document.getElementById('gsRpIndicator').className = 'connection-indicator connected';
-                    return true;
-                } else {
-                    document.getElementById('gsRpIndicator').className = 'connection-indicator disconnected';
-                    return false;
-                }
-            } catch (error) {
-                document.getElementById('gsRpIndicator').className = 'connection-indicator disconnected';
-                return false;
-            }
-        }
-
         function irAModulo(modulo) {
             // Verificar que hay un usuario establecido
             if (!usuarioActual) {
@@ -384,7 +349,7 @@
             }
             
             // Verificar que el módulo existe
-            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad'];
+            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad', 'monitor'];
             if (!modulosExistentes.includes(modulo)) {
                 mostrarMensaje('El módulo ' + modulo + ' no está disponible', false);
                 return;

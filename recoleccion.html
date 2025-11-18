@@ -62,15 +62,6 @@
         .checking {
             background-color: #f39c12;
         }
-        .user-info {
-            background: #f8f8f8;
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-            text-align: center;
-            font-weight: bold;
-            color: #6600a1;
-        }
         .admin-button {
             background: #6600a1;
             color: white;
@@ -313,18 +304,9 @@
             <div class="connection-status">
                 <div class="connection-item">
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIRE</span>
-                </div>
-                <div class="connection-item">
-                    <div id="sheetsIndicator" class="connection-indicator checking"></div>
-                    <span>GS</span>
+                    <span>FIREBASE</span>
                 </div>
             </div>
-        </div>
-
-        <!-- INFORMACIÓN DE USUARIO -->
-        <div class="user-info" id="userInfo">
-            Usuario: No identificado
         </div>
 
         <!-- MENSAJES DE ESTADO -->
@@ -333,8 +315,7 @@
         <!-- SECCIÓN PRINCIPAL DE USUARIO -->
         <div class="section user-panel" id="userSection">
             <h2>Modo Recolección</h2>
-            <button onclick="cargarRutasDesdeSheets()" class="admin-button">🔄 Cargar Rutas</button>
-            <button onclick="solicitarAccesoAdmin()" class="admin-button warning">👨‍💼 Modo Admin</button>
+            <button onclick="cargarRutasDesdeFirebase()" class="admin-button">🔄 Cargar Rutas</button>
             
             <div class="picking-info" id="fileInfo">
                 Presiona "Cargar Rutas" para comenzar...
@@ -455,19 +436,6 @@
         </div>
     </div>
 
-    <!-- MODAL PARA ADMIN -->
-    <div id="adminModal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Acceso Administrador</h3>
-            <p>Ingresa la contraseña:</p>
-            <input type="password" id="adminPassword" placeholder="Contraseña">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px;">
-                <button onclick="verificarContrasena()" class="admin-button">Aceptar</button>
-                <button onclick="cerrarAdminModal()" class="admin-button warning">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // ================= CONFIGURACIÓN FIREBASE =================
         const firebaseConfig = {
@@ -479,11 +447,6 @@
             messagingSenderId: "107012533068",
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
-
-        // ================= CONFIGURACIÓN GOOGLE SHEETS CORREGIDA =================
-        // URL CORREGIDA - Usando la URL pública que proporcionaste
-        const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpi3dSS6SW6p6wnas8gS-976rMiTlhWifG3lw81dfy8EGO68cTn9w7l2VH1zSE5yebdVRLcbmR1mQ3/pub?output=csv';
-        const ADMIN_PASSWORD = "E123456";
 
         // ================= INICIALIZAR FIREBASE =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -508,10 +471,17 @@
         window.addEventListener('load', async function() {
             // Inicializar Firebase y verificar conexiones
             inicializarFirebase();
-            await verificarConexionSheets();
             
             // Cargar estado global desde Firebase
             await cargarEstadoGlobalDesdeFirebase();
+            
+            // Recuperar usuario desde localStorage
+            usuarioActual = localStorage.getItem('usuarioSokso');
+            if (!usuarioActual) {
+                // Si no hay usuario, redirigir al inicio
+                window.location.href = 'index.html';
+                return;
+            }
             
             // Verificar y recuperar sesión activa
             await verificarSesionActiva();
@@ -523,7 +493,7 @@
             configurarEventListeners();
         });
 
-        // ================= CONEXIONES MEJORADAS =================
+        // ================= CONEXIÓN FIREBASE =================
         function inicializarFirebase() {
             try {
                 verificarConexionFirebase();
@@ -548,43 +518,15 @@
             });
         }
 
-        async function verificarConexionSheets() {
-            try {
-                console.log('Verificando conexión con Google Sheets...');
-                const response = await fetch(GOOGLE_SHEETS_URL);
-                
-                if (response.ok) {
-                    const text = await response.text();
-                    if (text && text.length > 10 && !text.includes('error')) {
-                        document.getElementById('sheetsIndicator').className = 'connection-indicator connected';
-                        console.log('✅ Conexión Google Sheets: OK');
-                        return true;
-                    } else {
-                        throw new Error('Respuesta vacía o con error');
-                    }
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-            } catch (error) {
-                console.error('❌ Error conexión Google Sheets:', error);
-                document.getElementById('sheetsIndicator').className = 'connection-indicator disconnected';
-                return false;
-            }
-        }
-
         // ================= GESTIÓN DE SESIÓN MEJORADA =================
         async function verificarSesionActiva() {
             const sesionGuardada = localStorage.getItem('sesionRecoleccionActiva');
             if (sesionGuardada) {
                 try {
                     sesionActiva = JSON.parse(sesionGuardada);
-                    usuarioActual = sesionActiva.usuario;
                     rutaActual = sesionActiva.ruta;
                     colaActual = sesionActiva.cola;
                     depositoActualIndex = sesionActiva.depositoActualIndex || 0;
-                    
-                    // Actualizar información de usuario
-                    document.getElementById('userInfo').textContent = `Usuario: ${usuarioActual}`;
                     
                     // Cargar datos y continuar sesión
                     await cargarDashboardRecoleccion();
@@ -615,15 +557,15 @@
             sesionActiva = null;
         }
 
-        // ================= CARGA DE DATOS MEJORADA =================
+        // ================= CARGA DE DATOS DESDE FIREBASE =================
         async function cargarDashboardRecoleccion() {
             try {
                 if (!rutaActual || !usuarioActual) return;
                 
                 mostrarMensaje('🔄 Actualizando datos...', true);
                 
-                // Cargar datos de Sheets
-                await cargarRutasDesdeSheets(true);
+                // Cargar datos de Firebase
+                await cargarRutasDesdeFirebase(true);
                 
                 // Si hay cola actual, cargar picking
                 if (colaActual && itemsPorCola[colaActual]) {
@@ -649,48 +591,35 @@
             }
         }
 
-        async function cargarRutasDesdeSheets(silencioso = false) {
+        async function cargarRutasDesdeFirebase(silencioso = false) {
             try {
                 if (!silencioso) {
-                    mostrarMensaje('📥 Cargando desde Google Sheets...', true);
+                    mostrarMensaje('📥 Cargando desde Firebase...', true);
                 }
                 
-                let csvText = '';
+                let datos = {};
                 let fuente = '';
                 
-                // Intentar desde Google Sheets primero
+                // Intentar desde Firebase
                 try {
-                    console.log('📡 Conectando a Google Sheets...');
-                    const response = await fetch(GOOGLE_SHEETS_URL);
+                    console.log('📡 Conectando a Firebase...');
+                    const snapshot = await database.ref('recoleccion_rutas').once('value');
                     
-                    if (!response.ok) {
-                        throw new Error(`Error HTTP ${response.status}`);
+                    datos = snapshot.val();
+                    
+                    if (!datos) {
+                        throw new Error('Firebase no accesible o vacío');
                     }
                     
-                    csvText = await response.text();
-                    
-                    if (!csvText || csvText.includes('error') || csvText.length < 10) {
-                        throw new Error('Google Sheets no accesible o vacío');
-                    }
-                    
-                    fuente = 'Google Sheets';
-                    await verificarConexionSheets(); // Actualizar indicador
-                    console.log('✅ Datos cargados correctamente desde Google Sheets');
+                    fuente = 'Firebase';
+                    console.log('✅ Datos cargados correctamente desde Firebase');
                     
                 } catch (error) {
-                    console.error('❌ Error cargando desde Google Sheets:', error);
-                    
-                    // Fallback a localStorage
-                    csvText = localStorage.getItem('rutasCSV');
-                    fuente = localStorage.getItem('fuente') || 'Respaldo Local';
-                    
-                    if (!csvText) {
-                        throw new Error('No hay datos disponibles. El administrador debe subir un archivo CSV primero.');
-                    }
-                    console.log('📂 Usando datos de respaldo local');
+                    console.error('❌ Error cargando desde Firebase:', error);
+                    throw new Error('No hay datos disponibles. El administrador debe subir rutas primero.');
                 }
                 
-                procesarCSV(csvText, fuente);
+                procesarDatosFirebase(datos, fuente);
                 
                 if (!silencioso) {
                     mostrarMensaje(`✅ Rutas cargadas desde ${fuente}`, true);
@@ -705,69 +634,60 @@
             }
         }
 
-        // ================= PROCESAMIENTO CSV (MANTENIDO) =================
-        function procesarCSV(csvText, fuente) {
+        // ================= PROCESAMIENTO DE DATOS DESDE FIREBASE =================
+        function procesarDatosFirebase(datosFirebase, fuente) {
             try {
                 rutasMaestras = {};
                 totalUnidadesGlobal = 0;
-                const lineas = csvText.split('\n').filter(linea => linea.trim());
                 
-                console.log('Procesando', lineas.length, 'líneas desde:', fuente);
+                console.log('Procesando datos desde:', fuente);
                 
-                if (lineas.length < 2) {
-                    throw new Error('El archivo CSV está vacío o no tiene datos');
+                if (!datosFirebase || Object.keys(datosFirebase).length === 0) {
+                    throw new Error('No hay datos disponibles en Firebase');
                 }
                 
-                // Detectar separador
-                const primeraLinea = lineas[0];
-                const separador = primeraLinea.includes('\t') ? '\t' : ',';
-                
-                for (let i = 1; i < lineas.length; i++) {
-                    const linea = lineas[i].trim();
-                    if (!linea) continue;
+                // Procesar cada registro de Firebase
+                Object.values(datosFirebase).forEach(registro => {
+                    const deposito = registro.deposito;
+                    const upc = registro.upc;
+                    const descripcion = registro.articulo;
+                    const cantidad = parseInt(registro.cantidad) || 0;
+                    const indicador = registro.indicador || 'Regular';
                     
-                    const partes = linea.split(separador).map(part => part.trim().replace(/^"|"$/g, ''));
-                    
-                    if (partes.length >= 4) {
-                        const deposito = partes[0];
-                        const upc = partes[1].replace(',', '.');
-                        const descripcion = partes[2];
-                        const cantidad = parseInt(partes[3]) || 0;
+                    if (deposito && upc) {
+                        // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
+                        const rutaMatch = deposito.match(/^[A-Z](\d+)/);
+                        let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
+                        ruta = 'Ruta ' + ruta;
                         
-                        if (deposito && upc) {
-                            // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
-                            const rutaMatch = deposito.match(/^[A-Z](\d+)/);
-                            let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
-                            ruta = 'Ruta ' + ruta;
-                            
-                            if (!rutasMaestras[ruta]) {
-                                rutasMaestras[ruta] = [];
-                            }
-                            
-                            rutasMaestras[ruta].push({
-                                deposito,
-                                upc,
-                                descripcion,
-                                cantidad,
-                                recolectado: 0,
-                                no_encontrado: 0,
-                                completado: false
-                            });
-                            
-                            totalUnidadesGlobal += cantidad;
+                        if (!rutasMaestras[ruta]) {
+                            rutasMaestras[ruta] = [];
                         }
+                        
+                        rutasMaestras[ruta].push({
+                            deposito,
+                            upc,
+                            descripcion,
+                            cantidad,
+                            indicador,
+                            recolectado: 0,
+                            no_encontrado: 0,
+                            completado: false
+                        });
+                        
+                        totalUnidadesGlobal += cantidad;
                     }
-                }
+                });
                 
                 if (Object.keys(rutasMaestras).length === 0) {
-                    throw new Error('No se encontraron datos válidos en el archivo');
+                    throw new Error('No se encontraron datos válidos en Firebase');
                 }
                 
                 mostrarInfoRutas(fuente);
                 mostrarOpcionesRutas();
                 
             } catch (error) {
-                throw new Error('Error procesando CSV: ' + error.message);
+                throw new Error('Error procesando datos: ' + error.message);
             }
         }
 
@@ -815,19 +735,6 @@
                 
                 if (!registros) return false;
                 
-                // Agrupar por cola y verificar progreso
-                const colas = {};
-                Object.values(registros).forEach(registro => {
-                    if (!colas[registro.cola]) {
-                        colas[registro.cola] = { recolectado: 0, no_encontrado: 0 };
-                    }
-                    if (registro.accion === 'escaneado') {
-                        colas[registro.cola].recolectado += registro.recolectado;
-                    } else if (registro.accion === 'no_encontrado') {
-                        colas[registro.cola].no_encontrado += registro.no_encontrado;
-                    }
-                });
-                
                 // Verificar cada depósito en la ruta
                 for (const item of rutasMaestras[ruta]) {
                     let totalEjecutado = 0;
@@ -858,14 +765,6 @@
 
         // ================= SELECCIÓN DE RUTA Y COLA MEJORADA =================
         async function seleccionarRuta(ruta) {
-            if (!usuarioActual) {
-                usuarioActual = prompt("👤 Ingresa tu nombre de usuario:", "Operador");
-                if (!usuarioActual) return;
-                
-                // Actualizar información de usuario
-                document.getElementById('userInfo').textContent = `Usuario: ${usuarioActual}`;
-            }
-            
             rutaActual = ruta;
             
             // Verificar si la ruta está completada
@@ -959,7 +858,7 @@
             }
         }
 
-        // ================= VALIDACIÓN CRUZADA SHEETS-FIREBASE =================
+        // ================= VALIDACIÓN CRUZADA FIREBASE =================
         async function verificarEstadoRealCola(ruta, cola) {
             try {
                 // Obtener todos los registros de Firebase para esta ruta
@@ -983,7 +882,7 @@
                     }
                 });
                 
-                // Calcular total planificado desde Sheets
+                // Calcular total planificado desde Firebase
                 const itemsCola = itemsPorCola[cola];
                 const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
                 
@@ -1341,7 +1240,7 @@
             document.getElementById('pendingUnidadesPicking').textContent = pendientesUnidades;
         }
 
-        // ================= GUARDAR REGISTROS MEJORADO =================
+        // ================= GUARDAR REGISTROS EN FIREBASE =================
         async function guardarRegistroEnFirebase(registro) {
             try {
                 console.log('Enviando registro a Firebase:', registro);
@@ -1461,29 +1360,7 @@
             document.getElementById('userSection').classList.remove('hidden');
         }
 
-        // ================= ADMIN Y UTILIDADES =================
-        function solicitarAccesoAdmin() {
-            document.getElementById('adminModal').classList.remove('hidden');
-            document.getElementById('adminPassword').focus();
-        }
-
-        function verificarContrasena() {
-            const password = document.getElementById('adminPassword').value;
-            
-            if (password === ADMIN_PASSWORD) {
-                window.location.href = 'admin.html';
-            } else {
-                mostrarMensaje('❌ Contraseña incorrecta', false);
-                document.getElementById('adminPassword').value = '';
-                document.getElementById('adminPassword').focus();
-            }
-        }
-
-        function cerrarAdminModal() {
-            document.getElementById('adminModal').classList.add('hidden');
-            document.getElementById('adminPassword').value = '';
-        }
-
+        // ================= UTILIDADES =================
         function mostrarMensajeModal(titulo, mensaje) {
             alert(`${titulo}\n\n${mensaje}`);
         }
