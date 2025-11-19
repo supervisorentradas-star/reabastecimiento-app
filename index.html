@@ -15,6 +15,8 @@
             background-color: white;
             padding: 10px;
             color: black;
+            height: 100vh;
+            overflow: hidden;
         }
         .container {
             max-width: 100%;
@@ -22,10 +24,13 @@
             background: white;
             border-radius: 8px;
             padding: 15px;
+            height: calc(100vh - 20px);
+            display: flex;
+            flex-direction: column;
         }
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px solid #f0f0f0;
         }
@@ -62,36 +67,59 @@
         .checking {
             background-color: #f39c12;
         }
-        .modules-grid {
+        .buttons-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            flex: 1;
+        }
+        .button-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .module-button {
-            background: rgb(102, 0, 161);
+            background: #6600a1;
             color: white;
             border: none;
-            padding: 15px 10px;
+            padding: 12px 8px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
             font-weight: bold;
             transition: all 0.3s;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
+            min-height: 70px;
         }
         .module-button:hover {
-            transform: translateY(-1px);
-            background: rgb(82, 0, 130);
+            background: #55008a;
+            transform: translateY(-2px);
         }
-        .module-button.admin {
-            background: rgb(82, 0, 130);
+        .module-button.productividad {
+            background: rgb(127, 0, 255);
+        }
+        .module-button.productividad:hover {
+            background: rgb(110, 0, 220);
         }
         .module-button.monitor {
-            background: #27ae60;
+            background: #000000;
+            color: white;
         }
         .module-button.monitor:hover {
-            background: #219653;
+            background: #333333;
+        }
+        .button-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .button-text {
+            font-size: 12px;
+            line-height: 1.2;
         }
         .footer {
             text-align: center;
@@ -107,6 +135,11 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            width: 100%;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
         }
         .modal {
             position: fixed;
@@ -123,42 +156,39 @@
         .modal-content {
             background: white;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 10px;
             text-align: center;
-            max-width: 350px;
+            max-width: 300px;
             width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .modal h3 {
             color: #6600a1;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-size: 18px;
         }
-        .modal p {
-            margin-bottom: 15px;
-            color: #333;
-            font-size: 14px;
-        }
-        input[type="text"], input[type="password"] {
+        .modal input {
             width: 100%;
-            padding: 10px;
-            margin: 8px 0;
+            padding: 12px;
+            margin: 10px 0;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 16px;
             text-align: center;
         }
         .modal-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 10px;
             margin-top: 15px;
         }
         .modal-button {
             padding: 10px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: bold;
         }
         .modal-button.success {
             background: #6600a1;
@@ -167,6 +197,16 @@
         .modal-button.warning {
             background: #f0f0f0;
             color: #333;
+        }
+        .user-info {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #6600a1;
+            font-size: 12px;
         }
         .status-message {
             padding: 8px;
@@ -186,27 +226,6 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
-        }
-        .user-info {
-            text-align: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        @media (max-width: 480px) {
-            .modules-grid {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-            h1 {
-                font-size: 20px;
-            }
-            .module-button {
-                padding: 12px 8px;
-                font-size: 13px;
-            }
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -230,14 +249,42 @@
         </div>
         
         <div id="statusMessage" class="status-message"></div>
-        <div class="modules-grid">
-            <button class="module-button" onclick="irAModulo('recoleccion')">📦 Recolección</button>
-            <button class="module-button" onclick="irAModulo('separacion')">📋 Separación</button>
-            <button class="module-button" onclick="irAModulo('reposicion')">🔄 Reposición</button>
-            <button class="module-button admin" onclick="solicitarAccesoAdmin()">👨‍💼 Admin</button>
-            <button class="module-button" onclick="irAModulo('productividad')">📊 Productividad</button>
-            <button class="module-button monitor" onclick="irAModulo('monitor')">📈 Monitor</button>
+        
+        <!-- Grid de botones en 2 columnas -->
+        <div class="buttons-grid">
+            <!-- Columna izquierda -->
+            <div class="button-column">
+                <button class="module-button" onclick="irAModulo('recoleccion')">
+                    <div class="button-icon">📦</div>
+                    <div class="button-text">RECOLECCIÓN</div>
+                </button>
+                <button class="module-button" onclick="irAModulo('separacion')">
+                    <div class="button-icon">📋</div>
+                    <div class="button-text">SEPARACIÓN</div>
+                </button>
+                <button class="module-button" onclick="irAModulo('reposicion')">
+                    <div class="button-icon">🔄</div>
+                    <div class="button-text">REPOSICIÓN</div>
+                </button>
+            </div>
+            
+            <!-- Columna derecha -->
+            <div class="button-column">
+                <button class="module-button productividad" onclick="irAModulo('productividad')">
+                    <div class="button-icon">📊</div>
+                    <div class="button-text">PRODUCTIVIDAD</div>
+                </button>
+                <button class="module-button" onclick="solicitarAccesoAdmin()">
+                    <div class="button-icon">👨‍💼</div>
+                    <div class="button-text">ADMIN</div>
+                </button>
+                <button class="module-button monitor" onclick="solicitarPasswordMonitor()">
+                    <div class="button-icon">📈</div>
+                    <div class="button-text">MONITOR</div>
+                </button>
+            </div>
         </div>
+        
         <div class="footer">
             <button class="back-button" onclick="salirSistema()">🚪 Salir</button>
         </div>
@@ -256,14 +303,28 @@
         </div>
     </div>
 
+    <!-- Modal para contraseña de Admin -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <h3>Acceso Administrador</h3>
             <p>Ingresa la contraseña:</p>
             <input type="password" id="adminPassword" placeholder="Contraseña" autocomplete="off">
             <div class="modal-buttons">
-                <button onclick="verificarContrasena()" class="modal-button success">Aceptar</button>
+                <button onclick="verificarContrasenaAdmin()" class="modal-button success">Aceptar</button>
                 <button onclick="cerrarAdminModal()" class="modal-button warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para contraseña de Monitor -->
+    <div id="monitorModal" class="modal">
+        <div class="modal-content">
+            <h3>Acceso a Monitor</h3>
+            <p>Ingresa la contraseña de acceso:</p>
+            <input type="password" id="monitorPassword" placeholder="Contraseña" autocomplete="off">
+            <div class="modal-buttons">
+                <button onclick="verificarPasswordMonitor()" class="modal-button success">Acceder</button>
+                <button onclick="cerrarModalMonitor()" class="modal-button warning">Cancelar</button>
             </div>
         </div>
     </div>
@@ -286,6 +347,7 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const ADMIN_PASSWORD = "E123456";
+        const MONITOR_PASSWORD = "ahorro123";
         let usuarioActual = "";
 
         window.addEventListener('load', function() {
@@ -303,6 +365,7 @@
             }
             
             document.getElementById('adminModal').style.display = 'none';
+            document.getElementById('monitorModal').style.display = 'none';
         });
 
         function establecerUsuarioInicial() {
@@ -349,7 +412,7 @@
             }
             
             // Verificar que el módulo existe
-            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad', 'monitor'];
+            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad'];
             if (!modulosExistentes.includes(modulo)) {
                 mostrarMensaje('El módulo ' + modulo + ' no está disponible', false);
                 return;
@@ -386,7 +449,7 @@
             document.getElementById('adminPassword').focus();
         }
 
-        function verificarContrasena() {
+        function verificarContrasenaAdmin() {
             const password = document.getElementById('adminPassword').value;
             if (password === ADMIN_PASSWORD) {
                 cerrarAdminModal();
@@ -404,6 +467,44 @@
                 mostrarMensaje('Contraseña incorrecta', false);
                 document.getElementById('adminPassword').value = '';
                 document.getElementById('adminPassword').focus();
+            }
+        }
+
+        function solicitarPasswordMonitor() {
+            // Verificar que hay un usuario establecido
+            if (!usuarioActual) {
+                mostrarMensaje('Primero debes ingresar un nombre de usuario', false);
+                document.getElementById('initialUserModal').style.display = 'flex';
+                return;
+            }
+            
+            document.getElementById('monitorModal').style.display = 'flex';
+            document.getElementById('monitorPassword').focus();
+        }
+
+        function cerrarModalMonitor() {
+            document.getElementById('monitorModal').style.display = 'none';
+            document.getElementById('monitorPassword').value = '';
+        }
+
+        function verificarPasswordMonitor() {
+            const password = document.getElementById('monitorPassword').value;
+            if (password === MONITOR_PASSWORD) {
+                cerrarModalMonitor();
+                // Guardar el usuario en localStorage para que el módulo monitor lo use
+                localStorage.setItem('usuarioSokso', usuarioActual);
+                
+                // Intentar cargar el módulo monitor
+                try {
+                    window.location.href = 'monitor.html';
+                } catch (error) {
+                    console.error('Error al redirigir a monitor:', error);
+                    mostrarMensaje('Error: No se pudo cargar el módulo monitor', false);
+                }
+            } else {
+                mostrarMensaje('❌ Contraseña incorrecta. Acceso denegado.', false);
+                document.getElementById('monitorPassword').value = '';
+                document.getElementById('monitorPassword').focus();
             }
         }
 
@@ -453,6 +554,9 @@
             if (event.target === document.getElementById('adminModal')) {
                 cerrarAdminModal();
             }
+            if (event.target === document.getElementById('monitorModal')) {
+                cerrarModalMonitor();
+            }
         }
 
         // Manejar tecla Enter en modales
@@ -462,7 +566,10 @@
                     establecerUsuarioInicial();
                 }
                 if (document.getElementById('adminModal').style.display === 'flex') {
-                    verificarContrasena();
+                    verificarContrasenaAdmin();
+                }
+                if (document.getElementById('monitorModal').style.display === 'flex') {
+                    verificarPasswordMonitor();
                 }
             }
             if (event.key === 'Escape') {
@@ -472,6 +579,9 @@
                 }
                 if (document.getElementById('adminModal').style.display === 'flex') {
                     cerrarAdminModal();
+                }
+                if (document.getElementById('monitorModal').style.display === 'flex') {
+                    cerrarModalMonitor();
                 }
             }
         });

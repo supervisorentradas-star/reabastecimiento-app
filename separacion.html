@@ -29,29 +29,31 @@
             flex-direction: column;
         }
         .header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px solid #f0f0f0;
         }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header-center {
+            flex: 1;
+            text-align: center;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         h1 {
             color: #6600a1;
             font-size: 22px;
-            margin-bottom: 8px;
-        }
-        .connection-status {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .connection-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            font-weight: bold;
+            margin: 0;
         }
         .connection-indicator {
             width: 10px;
@@ -74,7 +76,6 @@
             overflow: hidden;
         }
         .load-section {
-            text-align: center;
             margin-bottom: 10px;
         }
         .btn-small {
@@ -89,20 +90,20 @@
         }
         .scan-section {
             background: #f8f9fa;
-            padding: 12px;
+            padding: 8px;
             border-radius: 6px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             text-align: center;
             border: 1px dashed #bdc3c7;
         }
         .upc-input {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             font-size: 16px;
             border: 2px solid #6600a1;
             border-radius: 6px;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             background: white;
         }
         .refresh-btn {
@@ -110,9 +111,9 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -121,9 +122,9 @@
         }
         .result-section {
             background: #e8f4fc;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             border: 1px solid #6600a1;
             flex: 1;
             overflow-y: auto;
@@ -131,19 +132,19 @@
         .result-header {
             text-align: center;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: #6600a1;
             font-size: 16px;
         }
         .result-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-            margin: 8px 0;
+            gap: 5px;
+            margin: 6px 0;
         }
         .result-cell {
             background: white;
-            padding: 8px;
+            padding: 6px;
             border-radius: 4px;
             text-align: center;
             font-weight: bold;
@@ -161,26 +162,26 @@
         .deposito-display {
             background: #6600a1;
             color: white;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin: 8px 0;
+            margin: 6px 0;
             text-align: center;
             font-weight: bold;
             font-size: 16px;
         }
         .articulo-info {
             background: white;
-            padding: 8px;
+            padding: 6px;
             border-radius: 4px;
-            margin-top: 8px;
+            margin-top: 6px;
             text-align: center;
             color: #7f8c8d;
             font-size: 11px;
             border: 1px solid #ddd;
         }
         .status-section {
-            margin: 8px 0;
-            padding: 6px;
+            margin: 6px 0;
+            padding: 5px;
             border-radius: 4px;
             text-align: center;
             font-weight: bold;
@@ -230,29 +231,24 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA MEJORADA -->
+        <!-- CABECERA REORGANIZADA -->
         <div class="header">
-            <h1>SEPARACIÓN SOKSO</h1>
-            <div class="connection-status">
-                <div class="connection-item">
-                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIRE</span>
+            <div class="header-left">
+                <button class="btn-small" onclick="cargarDatosDesdeFirebase()">📥 Cargar Sloting</button>
+            </div>
+            <div class="header-center">
+                <h1>SEPARACIÓN SOKSO</h1>
+            </div>
+            <div class="header-right">
+                <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                <div class="status-section status-info" id="dataStatus">
+                    Presiona "Cargar Datos"
                 </div>
             </div>
         </div>
 
         <!-- SECCIÓN DE DATOS -->
         <div class="data-section">
-            <!-- ESTADO DE DATOS -->
-            <div class="status-section status-info" id="dataStatus">
-                📊 Presiona "Cargar Datos" para comenzar
-            </div>
-
-            <!-- SECCIÓN DE CARGA -->
-            <div class="load-section">
-                <button class="btn-small" onclick="cargarDatosDesdeFirebase()">📥 Cargar Sloting</button>
-            </div>
-
             <!-- SECCIÓN DE ESCANEO -->
             <div class="scan-section">
                 <h3>ESCANEAR CÓDIGO UPC</h3>
@@ -300,7 +296,7 @@
         <!-- BOTÓN VOLVER AL PRINCIPAL -->
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
-                ↩️ Volver al Sistema Principal
+                ↩️ Volver a Interfaz
             </button>
         </div>
     </div>
@@ -366,7 +362,7 @@
         // ================= CARGA DE DATOS DESDE FIREBASE =================
         async function cargarDatosDesdeFirebase() {
             try {
-                mostrarEstado('📥 Cargando desde Firebase...', 'info');
+                mostrarEstado('📥 Cargando...', 'info');
                 
                 const snapshot = await database.ref('sloting').once('value');
                 const datosFirebase = snapshot.val();
@@ -380,15 +376,15 @@
                 
                 // Guardar en cache local
                 guardarEnCache(datosSloting);
-                mostrarEstado(`✅ Sloting cargado: ${Object.keys(datosSloting).length} registros`, 'success');
+                mostrarEstado(`✅ ${Object.keys(datosSloting).length} registros`, 'success');
                 
             } catch (error) {
                 console.error('Error:', error);
-                mostrarEstado(`❌ Error: ${error.message}`, 'error');
+                mostrarEstado(`❌ ${error.message}`, 'error');
                 
                 // Intentar cargar desde cache como último recurso
                 if (!cargarDatosDesdeCache()) {
-                    mostrarEstado('⚠️ No hay datos disponibles', 'error');
+                    mostrarEstado('⚠️ Sin datos', 'error');
                 }
             }
         }
@@ -407,7 +403,7 @@
                         datosSloting = JSON.parse(cacheData);
                         ultimaActualizacion = new Date(parseInt(cacheTime));
                         actualizarInfoCache();
-                        mostrarEstado('✅ Datos cargados desde cache', 'success');
+                        mostrarEstado('✅ Desde cache', 'success');
                         return true;
                     }
                 }
@@ -458,7 +454,7 @@
             const resultSection = document.getElementById('resultSection');
             
             if (!resultado) {
-                mostrarEstado('❌ UPC no encontrado en el sloting', 'error');
+                mostrarEstado('❌ UPC no encontrado', 'error');
                 resultSection.classList.add('hidden');
                 return;
             }
@@ -538,7 +534,7 @@
             document.getElementById('upcInput').value = '';
             document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('upcInput').focus();
-            mostrarEstado('Consulta limpiada - Listo para escanear', 'info');
+            mostrarEstado('Listo para escanear', 'info');
         }
 
         function volverAlPrincipal() {

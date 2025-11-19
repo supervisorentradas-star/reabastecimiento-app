@@ -29,29 +29,31 @@
             flex-direction: column;
         }
         .header {
-            text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
             border-bottom: 1px solid #f0f0f0;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-center {
+            flex: 1;
+            text-align: center;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         h1 {
             color: #6600a1;
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
-        .connection-status {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .connection-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 20px;
+            margin: 0;
         }
         .connection-indicator {
             width: 10px;
@@ -74,12 +76,11 @@
             overflow: hidden;
         }
         .load-section {
-            text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .btn-small {
-            padding: 8px 15px;
-            font-size: 12px;
+            padding: 6px 12px;
+            font-size: 11px;
             background: #6600a1;
             color: white;
             border: none;
@@ -87,19 +88,48 @@
             cursor: pointer;
             font-weight: bold;
         }
+        .status-section {
+            margin: 4px 0;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
         .rutas-section {
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             flex: 1;
             overflow-y: auto;
         }
         .ruta-item {
-            padding: 10px;
-            margin: 6px 0;
+            padding: 8px;
+            margin: 4px 0;
             border: 2px solid #ddd;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s;
             background: white;
+            font-size: 12px;
         }
         .ruta-item:hover {
             border-color: #6600a1;
@@ -117,25 +147,30 @@
             background: #fff3cd;
             border-color: #ffc107;
         }
+        .ruta-item.old-data {
+            background: #f8d7da;
+            border-color: #e74c3c;
+        }
         .ruta-info {
             background: #e8f4fc;
-            padding: 10px;
+            padding: 8px;
             border-radius: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-align: center;
             border: 1px solid #6600a1;
+            font-size: 12px;
         }
         .ruta-header {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             color: #6600a1;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         .current-deposito {
             background: #f8f9fa;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-align: center;
             border: 1px solid #ddd;
             transition: all 1s;
@@ -145,70 +180,70 @@
             border-color: #28a745 !important;
         }
         .deposito-header {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             color: #6600a1;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .articulo-info {
-            font-size: 12px;
+            font-size: 11px;
             color: #7f8c8d;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-style: italic;
         }
         .counters {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin: 10px 0;
+            gap: 6px;
+            margin: 8px 0;
         }
         .counter-box {
             background: white;
-            padding: 10px;
+            padding: 8px;
             border-radius: 4px;
             text-align: center;
             border: 1px solid #ddd;
         }
         .counter-label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: bold;
             color: #7f8c8d;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
         .counter-value {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             color: #6600a1;
         }
         .scan-section {
             background: #f8f9fa;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-align: center;
             border: 1px dashed #bdc3c7;
         }
         .scan-input {
             width: 100%;
-            padding: 12px;
-            font-size: 14px;
+            padding: 10px;
+            font-size: 12px;
             border: 2px solid #6600a1;
             border-radius: 6px;
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             background: white;
         }
         .controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 6px;
+            margin-top: 8px;
         }
         button {
-            padding: 10px;
+            padding: 8px;
             border: none;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
@@ -234,19 +269,19 @@
             overflow-y: auto;
             border: 1px solid #ddd;
             border-radius: 6px;
-            padding: 8px;
-            margin-bottom: 10px;
+            padding: 6px;
+            margin-bottom: 8px;
         }
         .deposito-row {
             display: grid;
-            grid-template-columns: 20px 1fr 40px 40px;
-            gap: 8px;
-            padding: 8px;
+            grid-template-columns: 16px 1fr 35px 35px;
+            gap: 6px;
+            padding: 6px;
             border-bottom: 1px solid #ecf0f1;
             align-items: center;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 11px;
+            font-size: 10px;
         }
         .deposito-row:hover {
             background: #f8f9fa;
@@ -261,19 +296,19 @@
         }
         .deposito-header-row {
             display: grid;
-            grid-template-columns: 20px 1fr 40px 40px;
-            gap: 8px;
-            padding: 8px;
+            grid-template-columns: 16px 1fr 35px 35px;
+            gap: 6px;
+            padding: 6px;
             background: #6600a1;
             color: white;
             font-weight: bold;
             border-radius: 4px;
-            margin-bottom: 5px;
-            font-size: 10px;
+            margin-bottom: 4px;
+            font-size: 9px;
         }
         .status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             display: inline-block;
         }
@@ -286,61 +321,38 @@
         .status-selected {
             background: #6600a1;
         }
-        .status-section {
-            margin: 8px 0;
-            padding: 8px;
-            border-radius: 4px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-        }
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .status-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
         .hidden {
             display: none;
         }
         .cache-info {
-            font-size: 9px;
+            font-size: 8px;
             color: #7f8c8d;
             text-align: center;
             margin-top: 6px;
         }
         .footer {
-            margin-top: 8px;
+            margin-top: 6px;
         }
         .back-button {
             background: #6600a1;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             width: 100%;
             font-weight: bold;
         }
         .user-section {
             background: #f8f9fa;
-            padding: 8px;
+            padding: 6px;
             border-radius: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: center;
             font-weight: bold;
             color: #6600a1;
-            font-size: 12px;
+            font-size: 11px;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -348,34 +360,27 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA MEJORADA -->
+        <!-- CABECERA REORGANIZADA -->
         <div class="header">
-            <h1>REPOSICIÓN SOKSO</h1>
-            <div class="connection-status">
-                <div class="connection-item">
-                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIRE</span>
+            <div class="header-left">
+                <button class="btn-small" onclick="cargarDatosReposicion()">🔄 Actualizar Datos</button>
+            </div>
+            <div class="header-center">
+                <h1>REPOSICIÓN SOKSO</h1>
+            </div>
+            <div class="header-right">
+                <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                <div class="status-section status-info" id="dataStatus">
+                    Presiona "Actualizar Datos"
                 </div>
             </div>
         </div>
 
-        <div id="statusMessage" class="status-message"></div>
-
         <!-- SECCIÓN DE DATOS -->
         <div class="data-section">
-            <!-- ESTADO DE DATOS -->
-            <div class="status-section status-info" id="dataStatus">
-                📊 Presiona "Actualizar Datos" para comenzar
-            </div>
-
             <!-- INFORMACIÓN DE USUARIO -->
             <div id="userSection" class="user-section hidden">
                 Usuario: <span id="userName">-</span> | Ruta: <span id="userRuta">-</span>
-            </div>
-
-            <!-- SECCIÓN DE CARGA -->
-            <div class="load-section">
-                <button class="btn-small" onclick="cargarDatosReposicion()">🔄 Actualizar Datos</button>
             </div>
 
             <!-- SELECCIÓN DE RUTAS -->
@@ -448,7 +453,7 @@
                 </div>
             </div>
 
-            <!-- INFORMACIÓN DE CACHE -->
+            <!-- INFORMACIÓN DE CACHE (AL FINAL) -->
             <div class="cache-info" id="cacheInfo">
                 Última actualización: No disponible
             </div>
@@ -457,7 +462,7 @@
         <!-- BOTÓN VOLVER AL PRINCIPAL -->
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
-                ↩️ Volver al Sistema Principal
+                ↩️ Volver a Interfaz
             </button>
         </div>
     </div>
@@ -483,14 +488,13 @@
         // ================= VARIABLES GLOBALES =================
         let datosReposicion = {};
         let rutasDisponibles = [];
-        let depositosDisponibles = [];
         let depositoActual = null;
         let usuarioActual = null;
         let rutaSeleccionada = null;
-        let escaneosPendientes = [];
         let estadoFirebase = {};
         let ultimaActualizacion = null;
         let sesionActiva = null;
+        let fechaDatosActual = '';
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
@@ -548,11 +552,19 @@
 
         // ================= GESTIÓN DE SESIÓN =================
         async function verificarSesionActiva() {
+            // Obtener usuario del localStorage (ya inició sesión)
+            usuarioActual = localStorage.getItem('usuarioSokso');
+            
+            if (!usuarioActual) {
+                // Si no hay usuario, redirigir al inicio
+                window.location.href = 'index.html';
+                return;
+            }
+            
             const sesionGuardada = localStorage.getItem('sesionReposicionActiva');
             if (sesionGuardada) {
                 try {
                     sesionActiva = JSON.parse(sesionGuardada);
-                    usuarioActual = sesionActiva.usuario;
                     rutaSeleccionada = sesionActiva.ruta;
                     
                     // Cargar datos y continuar sesión
@@ -621,13 +633,30 @@
         function procesarDatosFirebase(datosFirebase) {
             datosReposicion = {};
             rutasDisponibles = [];
+            fechaDatosActual = '';
             
             console.log('Procesando datos de Firebase:', datosFirebase);
             
+            // Obtener fecha del primer registro
+            const primerRegistro = Object.values(datosFirebase)[0];
+            if (primerRegistro && primerRegistro.FECHA) {
+                fechaDatosActual = primerRegistro.FECHA;
+            }
+            
+            // Verificar si los datos son del día anterior
+            const fechaHoy = new Date();
+            const diaHoy = fechaHoy.getDate();
+            const mesHoy = fechaHoy.getMonth() + 1;
+            const añoHoy = fechaHoy.getFullYear();
+            
+            const fechaHoyFormateada = `${diaHoy.toString().padStart(2, '0')}/${mesHoy.toString().padStart(2, '0')}/${añoHoy}`;
+            
+            const datosObsoletos = fechaDatosActual !== fechaHoyFormateada;
+            
             // Procesar cada registro de Firebase
             Object.values(datosFirebase).forEach(registro => {
-                const deposito = registro.deposito;
-                const upc = registro.upc || registro.CODIGO_UPC; // Soporta ambos nombres
+                const deposito = registro.deposito || registro.DEPOSITO;
+                const upc = registro.upc || registro.CODIGO_UPC;
                 const articulo = registro.articulo || registro.ARTICULO;
                 const cantidad = parseInt(registro.cantidad) || parseInt(registro.CANTIDAD) || 0;
                 const fecha = registro.fecha || registro.FECHA;
@@ -640,7 +669,8 @@
                         datosReposicion[cola] = {
                             depositos: {},
                             cantidadTotal: 0,
-                            nombre: `Cola ${cola}`
+                            nombre: `Cola ${cola}`,
+                            datosObsoletos: datosObsoletos
                         };
                         if (!rutasDisponibles.includes(cola)) {
                             rutasDisponibles.push(cola);
@@ -672,7 +702,7 @@
             ultimaActualizacion = new Date();
             actualizarInfoCache();
             
-            console.log(`📊 Datos procesados: ${rutasDisponibles.length} colas`);
+            console.log(`📊 Datos procesados: ${rutasDisponibles.length} colas | Fecha: ${fechaDatosActual}`);
             
             // Mostrar selección de colas
             mostrarSeleccionCola();
@@ -733,47 +763,6 @@
                 
             } catch (error) {
                 console.error('Error cargando estado desde Firebase:', error);
-            }
-        }
-
-        async function verificarColaDisponible(cola) {
-            try {
-                // Verificar si alguien más está trabajando esta cola
-                const snapshot = await database.ref(`estado_reposicion/${cola}`).once('value');
-                const estado = snapshot.val();
-                
-                if (estado && estado.usuario !== usuarioActual) {
-                    return { disponible: false, usuario: estado.usuario };
-                }
-                
-                return { disponible: true };
-                
-            } catch (error) {
-                console.error('Error verificando cola:', error);
-                return { disponible: true }; // En caso de error, permitir acceso
-            }
-        }
-
-        async function ocuparCola(cola) {
-            try {
-                await database.ref(`estado_reposicion/${cola}`).set({
-                    usuario: usuarioActual,
-                    timestamp: new Date().getTime()
-                });
-                return true;
-            } catch (error) {
-                console.error('Error ocupando cola:', error);
-                return false;
-            }
-        }
-
-        async function liberarCola(cola) {
-            try {
-                await database.ref(`estado_reposicion/${cola}`).remove();
-                return true;
-            } catch (error) {
-                console.error('Error liberando cola:', error);
-                return false;
             }
         }
 
@@ -861,39 +850,35 @@
                 const div = document.createElement('div');
                 
                 // Verificar estado de la cola
-                const estadoCola = estadoFirebase ? calcularEstadoCola(cola) : { completada: false, enUso: false };
+                const estadoCola = estadoFirebase ? calcularEstadoCola(cola) : { completada: false };
+                
                 let claseExtra = '';
+                let mensajeAdicional = '';
                 
                 if (estadoCola.completada) {
                     claseExtra = 'completed';
-                } else if (estadoCola.enUso && estadoCola.usuario !== usuarioActual) {
-                    claseExtra = 'in-use';
+                    mensajeAdicional = '<br><small>✅ COMPLETADA</small>';
+                } else if (datosCola.datosObsoletos) {
+                    claseExtra = 'old-data';
+                    mensajeAdicional = '<br><small>⚠️ DATOS ANTIGUOS</small>';
                 }
                 
                 div.className = `ruta-item ${claseExtra}`;
                 div.innerHTML = `
                     <strong>COLA ${cola}</strong><br>
                     <small>${datosCola.cantidadTotal} unidades - ${Object.keys(datosCola.depositos).length} depósitos</small>
-                    ${estadoCola.completada ? '<br><small>✅ COMPLETADA</small>' : ''}
-                    ${estadoCola.enUso && estadoCola.usuario !== usuarioActual ? `<br><small>🔄 En uso por: ${estadoCola.usuario}</small>` : ''}
+                    ${mensajeAdicional}
                 `;
                 
-                if (!estadoCola.completada && (!estadoCola.enUso || estadoCola.usuario === usuarioActual)) {
-                    div.onclick = () => seleccionarCola(cola);
-                }
+                // Permitir selección incluso si está completada o tiene datos antiguos
+                div.onclick = () => seleccionarCola(cola);
                 
                 container.appendChild(div);
             });
         }
 
         function calcularEstadoCola(cola) {
-            if (!estadoFirebase) return { completada: false, enUso: false };
-            
-            // Verificar si está en uso
-            const estadoUso = Object.values(estadoFirebase).find(reg => 
-                reg.cola === cola && 
-                new Date().getTime() - reg.timestamp < 30 * 60 * 1000 // Últimos 30 minutos
-            );
+            if (!estadoFirebase) return { completada: false };
             
             // Verificar si está completada
             const depositosCola = Object.keys(datosReposicion[cola].depositos);
@@ -906,32 +891,17 @@
             });
             
             return {
-                completada: completada,
-                enUso: !!estadoUso,
-                usuario: estadoUso ? estadoUso.reponedor : null
+                completada: completada
             };
         }
 
         async function seleccionarCola(cola) {
-            // Verificar disponibilidad
-            const disponibilidad = await verificarColaDisponible(cola);
-            
-            if (!disponibilidad.disponible) {
-                mostrarEstado(`❌ La cola ${cola} está siendo trabajada por ${disponibilidad.usuario}`, 'error');
-                return;
-            }
-            
-            // Solicitar usuario si no existe
-            if (!usuarioActual) {
-                usuarioActual = prompt("👤 Ingresa tu nombre:", "Reponedor");
-                if (!usuarioActual) return;
-            }
-            
-            // Ocupar cola
-            const exito = await ocuparCola(cola);
-            if (!exito) {
-                mostrarEstado('❌ Error al acceder a la cola', 'error');
-                return;
+            // Verificar si los datos son del día anterior
+            const datosCola = datosReposicion[cola];
+            if (datosCola.datosObsoletos) {
+                if (!confirm(`¡Cuidado! Estás intentando trabajar con datos del ${fechaDatosActual} (día anterior).\n\n¿Continuar de todos modos?\n\nSi es un error, reportalo a James Jimenez.`)) {
+                    return;
+                }
             }
             
             rutaSeleccionada = cola;
@@ -948,7 +918,7 @@
             document.getElementById('rutasSection').classList.add('hidden');
             mostrarPanelReposicion();
             
-            mostrarEstado(`✅ Cola ${cola} seleccionada - Usuario: ${usuarioActual}`, 'success');
+            mostrarEstado(`✅ Cola ${cola} seleccionada`, 'success');
         }
 
         function mostrarPanelReposicion() {
@@ -1157,7 +1127,7 @@
 
         // ================= FINALIZACIÓN =================
         async function finalizarReposicion() {
-            if (!confirm('¿Finalizar reposición y liberar la cola?')) {
+            if (!confirm('¿Finalizar reposición?')) {
                 return;
             }
             
@@ -1165,13 +1135,10 @@
                 // Sincronizar cualquier escaneo pendiente
                 await sincronizarEscaneosPendientes();
                 
-                // Liberar cola
-                await liberarCola(rutaSeleccionada);
-                
                 // Limpiar sesión
                 limpiarSesionActiva();
                 
-                mostrarEstado('🏁 Reposición finalizada - Cola liberada', 'success');
+                mostrarEstado('🏁 Reposición finalizada', 'success');
                 
                 // Volver a selección de colas
                 setTimeout(() => {
@@ -1222,7 +1189,7 @@
                     textoTiempo = 'Recién actualizado';
                 }
                 
-                infoDiv.textContent = `Última actualización: ${textoTiempo} | ${Object.keys(datosReposicion).length} colas`;
+                infoDiv.textContent = `Última actualización: ${textoTiempo} | ${Object.keys(datosReposicion).length} colas | Fecha: ${fechaDatosActual || 'Desconocida'}`;
             }
         }
 
@@ -1236,13 +1203,13 @@
                 case 'success': statusDiv.classList.add('status-success'); break;
                 case 'error': statusDiv.classList.add('status-error'); break;
                 case 'info': statusDiv.classList.add('status-info'); break;
+                case 'warning': statusDiv.classList.add('status-warning'); break;
             }
         }
 
         function volverAlPrincipal() {
             if (sesionActiva) {
                 if (confirm('Tienes una reposición en progreso. ¿Estás seguro de salir?')) {
-                    liberarCola(rutaSeleccionada);
                     window.location.href = 'index.html';
                 }
             } else {

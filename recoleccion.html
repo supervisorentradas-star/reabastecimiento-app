@@ -284,8 +284,28 @@
             border-radius: 6px;
             background: #fafafa;
         }
+        .indicador-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .indicador-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 12px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .indicador-button.active {
+            background: #27ae60;
+            border: 2px solid #155724;
+        }
         @media (max-width: 480px) {
-            .info-grid, .controls-grid, .route-selector {
+            .info-grid, .controls-grid, .route-selector, .indicador-selector {
                 grid-template-columns: 1fr;
             }
             .stats {
@@ -304,7 +324,7 @@
             <div class="connection-status">
                 <div class="connection-item">
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIREBASE</span>
+                    <span>FIRE</span>
                 </div>
             </div>
         </div>
@@ -314,7 +334,13 @@
 
         <!-- SECCIÓN PRINCIPAL DE USUARIO -->
         <div class="section user-panel" id="userSection">
-            <h2>Modo Recolección</h2>
+            <!-- SELECTOR DE TIPO DE RECOLECCIÓN -->
+            <div class="indicador-selector">
+                <button class="indicador-button active" data-indicador="Regular">Regular</button>
+                <button class="indicador-button" data-indicador="Backorder">Backorder</button>
+                <button class="indicador-button" data-indicador="Unificado">Unificado</button>
+            </div>
+            
             <button onclick="cargarRutasDesdeFirebase()" class="admin-button">🔄 Cargar Rutas</button>
             
             <div class="picking-info" id="fileInfo">
@@ -340,8 +366,8 @@
                         <div class="info-value" id="rutaActual">-</div>
                     </div>
                     <div class="info-item">
-                        <div class="info-label">TOTAL UNIDADES</div>
-                        <div class="info-value" id="totalUnidadesCola">0</div>
+                        <div class="info-label">TIPO</div>
+                        <div class="info-value" id="tipoRecoleccion">-</div>
                     </div>
                 </div>
             </div>
@@ -466,6 +492,8 @@
         let totalUnidadesGlobal = 0;
         let tieneEscaneosPendientes = false;
         let sesionActiva = null;
+        let tipoRecoleccionActual = 'Regular'; // Por defecto
+        let fechaRecoleccion = '';
 
         // ================= INICIALIZACIÓN MEJORADA =================
         window.addEventListener('load', async function() {
@@ -483,6 +511,9 @@
                 return;
             }
             
+            // Configurar selectores de tipo de recolección
+            configurarSelectoresTipo();
+            
             // Verificar y recuperar sesión activa
             await verificarSesionActiva();
             
@@ -492,6 +523,27 @@
             // Configurar event listeners mejorados
             configurarEventListeners();
         });
+
+        // ================= CONFIGURACIÓN SELECTORES DE TIPO =================
+        function configurarSelectoresTipo() {
+            const botones = document.querySelectorAll('.indicador-button');
+            botones.forEach(boton => {
+                boton.addEventListener('click', function() {
+                    // Remover clase active de todos los botones
+                    botones.forEach(btn => btn.classList.remove('active'));
+                    // Agregar clase active al botón clickeado
+                    this.classList.add('active');
+                    // Actualizar tipo de recolección
+                    tipoRecoleccionActual = this.getAttribute('data-indicador');
+                    console.log('Tipo de recolección seleccionado:', tipoRecoleccionActual);
+                    
+                    // Si ya hay rutas cargadas, recargar con el nuevo filtro
+                    if (Object.keys(rutasMaestras).length > 0) {
+                        mostrarOpcionesRutas();
+                    }
+                });
+            });
+        }
 
         // ================= CONEXIÓN FIREBASE =================
         function inicializarFirebase() {
@@ -527,6 +579,10 @@
                     rutaActual = sesionActiva.ruta;
                     colaActual = sesionActiva.cola;
                     depositoActualIndex = sesionActiva.depositoActualIndex || 0;
+                    tipoRecoleccionActual = sesionActiva.tipoRecoleccion || 'Regular';
+                    
+                    // Actualizar selector de tipo
+                    actualizarSelectorTipo();
                     
                     // Cargar datos y continuar sesión
                     await cargarDashboardRecoleccion();
@@ -539,12 +595,23 @@
             }
         }
 
+        function actualizarSelectorTipo() {
+            const botones = document.querySelectorAll('.indicador-button');
+            botones.forEach(boton => {
+                boton.classList.remove('active');
+                if (boton.getAttribute('data-indicador') === tipoRecoleccionActual) {
+                    boton.classList.add('active');
+                }
+            });
+        }
+
         function guardarSesionActiva() {
             if (rutaActual && usuarioActual && colaActual) {
                 sesionActiva = {
                     usuario: usuarioActual,
                     ruta: rutaActual,
                     cola: colaActual,
+                    tipoRecoleccion: tipoRecoleccionActual,
                     depositoActualIndex: depositoActualIndex,
                     timestamp: new Date().getTime()
                 };
@@ -639,48 +706,72 @@
             try {
                 rutasMaestras = {};
                 totalUnidadesGlobal = 0;
+                fechaRecoleccion = '';
                 
                 console.log('Procesando datos desde:', fuente);
+                console.log('Tipo de recolección seleccionado:', tipoRecoleccionActual);
                 
                 if (!datosFirebase || Object.keys(datosFirebase).length === 0) {
                     throw new Error('No hay datos disponibles en Firebase');
                 }
                 
-                // Procesar cada registro de Firebase
+                // Obtener la fecha del primer registro
+                const primerRegistro = Object.values(datosFirebase)[0];
+                if (primerRegistro && primerRegistro.fecha) {
+                    fechaRecoleccion = primerRegistro.fecha;
+                }
+                
+                // Agrupar datos por depósito para el modo unificado
+                const datosAgrupados = {};
+                
                 Object.values(datosFirebase).forEach(registro => {
                     const deposito = registro.deposito;
                     const upc = registro.upc;
                     const descripcion = registro.articulo;
                     const cantidad = parseInt(registro.cantidad) || 0;
                     const indicador = registro.indicador || 'Regular';
+                    const fecha = registro.fecha || '';
                     
-                    if (deposito && upc) {
-                        // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
-                        const rutaMatch = deposito.match(/^[A-Z](\d+)/);
-                        let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
-                        ruta = 'Ruta ' + ruta;
+                    // Solo procesar si coincide con el tipo seleccionado
+                    if (tipoRecoleccionActual === 'Unificado' || indicador === tipoRecoleccionActual) {
                         
-                        if (!rutasMaestras[ruta]) {
-                            rutasMaestras[ruta] = [];
+                        if (tipoRecoleccionActual === 'Unificado') {
+                            // En modo unificado, agrupar por depósito y sumar cantidades
+                            const clave = `${deposito}_${upc}`;
+                            if (!datosAgrupados[clave]) {
+                                datosAgrupados[clave] = {
+                                    deposito,
+                                    upc,
+                                    descripcion,
+                                    cantidad: 0,
+                                    indicador: 'Unificado',
+                                    fecha
+                                };
+                            }
+                            datosAgrupados[clave].cantidad += cantidad;
+                        } else {
+                            // En modos Regular o Backorder, procesar normalmente
+                            procesarRegistroRuta({
+                                deposito,
+                                upc,
+                                descripcion,
+                                cantidad,
+                                indicador,
+                                fecha
+                            });
                         }
-                        
-                        rutasMaestras[ruta].push({
-                            deposito,
-                            upc,
-                            descripcion,
-                            cantidad,
-                            indicador,
-                            recolectado: 0,
-                            no_encontrado: 0,
-                            completado: false
-                        });
-                        
-                        totalUnidadesGlobal += cantidad;
                     }
                 });
                 
+                // Procesar datos agrupados para modo unificado
+                if (tipoRecoleccionActual === 'Unificado') {
+                    Object.values(datosAgrupados).forEach(registro => {
+                        procesarRegistroRuta(registro);
+                    });
+                }
+                
                 if (Object.keys(rutasMaestras).length === 0) {
-                    throw new Error('No se encontraron datos válidos en Firebase');
+                    throw new Error('No se encontraron datos válidos en Firebase para el tipo seleccionado: ' + tipoRecoleccionActual);
                 }
                 
                 mostrarInfoRutas(fuente);
@@ -691,11 +782,50 @@
             }
         }
 
+        function procesarRegistroRuta(registro) {
+            const deposito = registro.deposito;
+            const upc = registro.upc;
+            const descripcion = registro.descripcion;
+            const cantidad = parseInt(registro.cantidad) || 0;
+            const indicador = registro.indicador;
+            
+            if (deposito && upc) {
+                // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
+                const rutaMatch = deposito.match(/^[A-Z](\d+)/);
+                let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
+                ruta = 'Ruta ' + ruta;
+                
+                if (!rutasMaestras[ruta]) {
+                    rutasMaestras[ruta] = [];
+                }
+                
+                rutasMaestras[ruta].push({
+                    deposito,
+                    upc,
+                    descripcion,
+                    cantidad,
+                    indicador,
+                    recolectado: 0,
+                    no_encontrado: 0,
+                    completado: false
+                });
+                
+                totalUnidadesGlobal += cantidad;
+            }
+        }
+
         function mostrarInfoRutas(fuente) {
             const totalRutas = Object.keys(rutasMaestras).length;
             
+            let fechaInfo = '';
+            if (fechaRecoleccion) {
+                fechaInfo = `<strong>📅 Fecha: ${fechaRecoleccion}</strong><br>`;
+            }
+            
             document.getElementById('fileInfo').innerHTML = 
-                `<strong>✅ Fuente: ${fuente}</strong><br>
+                `${fechaInfo}
+                 <strong>✅ Fuente: ${fuente}</strong><br>
+                 <strong>Tipo: ${tipoRecoleccionActual}</strong><br>
                  <strong>📊 Rutas disponibles: ${totalRutas}</strong><br>
                  <strong>📦 Total Unidades: ${totalUnidadesGlobal}</strong>`;
         }
@@ -710,16 +840,17 @@
                 const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
                 const button = document.createElement('button');
                 
-                // Verificar si la ruta está completada
-                const rutaCompletada = verificarRutaCompletada(ruta);
+                // Verificar si la ruta está completada - CORREGIDO: No deshabilitar rutas
+                const rutaCompletada = false; // Cambiado a false para permitir selección
                 
                 button.className = rutaCompletada ? 'route-button completed' : 'route-button';
                 button.textContent = `📍 ${ruta} (${totalUnidadesRuta})`;
                 button.onclick = () => seleccionarRuta(ruta);
                 
-                if (rutaCompletada) {
-                    button.disabled = true;
-                }
+                // NO deshabilitar botones - CORRECCIÓN DEL PROBLEMA
+                // if (rutaCompletada) {
+                //     button.disabled = true;
+                // }
                 
                 selector.appendChild(button);
             });
@@ -741,7 +872,7 @@
                     
                     // Buscar registros para este depósito
                     Object.values(registros).forEach(registro => {
-                        if (registro.deposito === item.deposito) {
+                        if (registro.deposito === item.deposito && registro.tipoRecoleccion === tipoRecoleccionActual) {
                             if (registro.accion === 'escaneado') {
                                 totalEjecutado += registro.recolectado;
                             } else if (registro.accion === 'no_encontrado') {
@@ -767,11 +898,12 @@
         async function seleccionarRuta(ruta) {
             rutaActual = ruta;
             
-            // Verificar si la ruta está completada
+            // Verificar si la ruta está completada - CORREGIDO: Permitir selección aunque esté completada
             const rutaCompletada = await verificarRutaCompletada(ruta);
             if (rutaCompletada) {
-                mostrarMensaje('✅ Esta ruta ya ha sido completada', true);
-                return;
+                if (!confirm('✅ Esta ruta ya ha sido completada. ¿Deseas continuar de todos modos?')) {
+                    return;
+                }
             }
             
             // Agrupar por colas (A, B, CDE, F)
@@ -782,9 +914,9 @@
             
             document.getElementById('recolectorNombre').textContent = usuarioActual;
             document.getElementById('rutaActual').textContent = ruta;
+            document.getElementById('tipoRecoleccion').textContent = tipoRecoleccionActual;
             
             const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
-            document.getElementById('totalUnidadesCola').textContent = totalUnidadesRuta;
             
             await mostrarOpcionesColas();
         }
@@ -843,7 +975,7 @@
                 if (estadoReal.completada) {
                     button.className = 'route-button completed';
                     button.textContent = `✅ COLA: ${cola} (COMPLETADA)`;
-                    button.disabled = true;
+                    button.onclick = () => comenzarPicking(cola);
                 } else if (estadoReal.enProgreso) {
                     button.className = 'route-button';
                     button.textContent = `🔄 COLA: ${cola} (EN PROGRESO)`;
@@ -873,7 +1005,7 @@
                 let totalNoEncontrado = 0;
                 
                 Object.values(registros).forEach(registro => {
-                    if (registro.cola === cola) {
+                    if (registro.cola === cola && registro.tipoRecoleccion === tipoRecoleccionActual) {
                         if (registro.accion === 'escaneado') {
                             totalRecolectado += registro.recolectado;
                         } else if (registro.accion === 'no_encontrado') {
@@ -950,7 +1082,7 @@
                 
                 // Actualizar itemsPorCola con los registros de Firebase
                 Object.values(registros).forEach(registro => {
-                    if (registro.cola === colaActual) {
+                    if (registro.cola === colaActual && registro.tipoRecoleccion === tipoRecoleccionActual) {
                         const itemIndex = itemsPorCola[colaActual].findIndex(item => item.deposito === registro.deposito);
                         if (itemIndex !== -1) {
                             if (registro.accion === 'escaneado') {
@@ -1115,7 +1247,8 @@
                 accion: 'escaneado',
                 fecha: fechaHora.toLocaleDateString(),
                 hora: fechaHora.toLocaleTimeString(),
-                timestamp: fechaHora.getTime()
+                timestamp: fechaHora.getTime(),
+                tipoRecoleccion: tipoRecoleccionActual
             };
             
             await guardarRegistroEnFirebase(registro);
@@ -1204,7 +1337,8 @@
                 accion: 'no_encontrado',
                 fecha: fechaHora.toLocaleDateString(),
                 hora: fechaHora.toLocaleTimeString(),
-                timestamp: fechaHora.getTime()
+                timestamp: fechaHora.getTime(),
+                tipoRecoleccion: tipoRecoleccionActual
             };
             
             await guardarRegistroEnFirebase(registro);
