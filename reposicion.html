@@ -262,12 +262,12 @@
             background: #6600a1;
             color: white;
         }
-        .btn-success {
-            background: #27ae60;
-            color: white;
-        }
         .btn-warning {
             background: #f39c12;
+            color: white;
+        }
+        .btn-success {
+            background: #27ae60;
             color: white;
         }
         .btn-danger {
@@ -366,22 +366,15 @@
             color: #6600a1;
             font-size: 11px;
         }
-        .compact-section {
-            margin-bottom: 4px;
-        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA COMPACTA -->
         <div class="header">
             <div class="header-left">
                 <button class="refresh-button" onclick="cargarDatosReposicion()" title="Actualizar datos">🔄</button>
-            </div>
-            <div class="header-center">
-                <!-- TÍTULO ELIMINADO -->
             </div>
             <div class="header-right">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
@@ -391,14 +384,11 @@
             </div>
         </div>
 
-        <!-- SECCIÓN DE DATOS COMPACTA -->
         <div class="data-section">
-            <!-- INFORMACIÓN DE USUARIO COMPACTA -->
             <div id="userSection" class="user-section hidden">
                 Usuario: <span id="userName">-</span> | Ruta: <span id="userRuta">-</span>
             </div>
 
-            <!-- SELECCIÓN DE RUTAS COMPACTA -->
             <div class="rutas-section hidden" id="rutasSection">
                 <h3 style="font-size: 12px; margin-bottom: 6px;">SELECCIONA UNA COLA:</h3>
                 <div id="rutasContainer">
@@ -406,13 +396,11 @@
                 </div>
             </div>
 
-            <!-- INFORMACIÓN DE RUTA ACTUAL COMPACTA -->
             <div class="ruta-info hidden" id="rutaInfoSection">
                 <span style="color: #28a745;">✅</span>
                 <div class="ruta-header" id="rutaActual">-</div>
             </div>
 
-            <!-- DEPÓSITO ACTUAL COMPACTO -->
             <div class="current-deposito hidden" id="currentDepositoSection">
                 <div class="deposito-header" id="currentDeposito">-</div>
                 <div class="articulo-info" id="currentArticulo">-</div>
@@ -433,7 +421,6 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN DE ESCANEO COMPACTA -->
             <div class="scan-section hidden" id="scanSection">
                 <h3>ESCANEAR DEPÓSITO</h3>
                 <input type="text" 
@@ -456,7 +443,6 @@
                 </div>
             </div>
 
-            <!-- LISTA DE DEPÓSITOS COMPACTA -->
             <div class="depositos-list hidden" id="depositosListSection">
                 <div class="deposito-header-row">
                     <div></div>
@@ -469,13 +455,11 @@
                 </div>
             </div>
 
-            <!-- INFORMACIÓN DE CACHE COMPACTA -->
             <div class="cache-info" id="cacheInfo">
                 Última actualización: No disponible
             </div>
         </div>
 
-        <!-- BOTÓN VOLVER VISIBLE -->
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
                 ↩️ Volver a Interfaz
@@ -485,7 +469,7 @@
 
     <script>
         // ================= CONFIGURACIÓN =================
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+        const CACHE_DURATION = 5 * 60 * 1000;
 
         const firebaseConfig = {
             apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
@@ -510,14 +494,12 @@
         let estadoFirebase = {};
         let ultimaActualizacion = null;
         let sesionActiva = null;
-        let fechaDatosActual = '';
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
             inicializarFirebase();
             verificarSesionActiva();
             
-            // Configurar eventos de escaneo
             document.getElementById('depositoInput').addEventListener('input', function(e) {
                 const deposito = e.target.value.trim();
                 if (deposito) {
@@ -556,7 +538,6 @@
             connectedRef.on("value", function(snap) {
                 if (snap.val() === true) {
                     document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
-                    // Reconexión - sincronizar datos pendientes
                     if (sesionActiva) {
                         sincronizarEscaneosPendientes();
                     }
@@ -568,11 +549,9 @@
 
         // ================= GESTIÓN DE SESIÓN =================
         async function verificarSesionActiva() {
-            // Obtener usuario del localStorage (ya inició sesión)
             usuarioActual = localStorage.getItem('usuarioSokso');
             
             if (!usuarioActual) {
-                // Si no hay usuario, redirigir al inicio
                 window.location.href = 'index.html';
                 return;
             }
@@ -583,7 +562,6 @@
                     sesionActiva = JSON.parse(sesionGuardada);
                     rutaSeleccionada = sesionActiva.ruta;
                     
-                    // Cargar datos y continuar sesión
                     await cargarDatosReposicion();
                     await cargarEstadoDesdeFirebase();
                     
@@ -618,7 +596,7 @@
             try {
                 mostrarEstado('📥 Cargando datos reales...', 'info');
                 
-                // Cargar datos de recolección REALES - CORREGIDO: 'recolecciones' no 'recoleccion'
+                // Cargar datos de recolección REALES
                 const recoleccionSnapshot = await database.ref('recolecciones').once('value');
                 const recoleccionData = recoleccionSnapshot.val();
                 
@@ -626,7 +604,7 @@
                     throw new Error('No hay datos de recolección en Firebase');
                 }
                 
-                console.log('Datos de recolección encontrados:', recoleccionData);
+                console.log('Datos de recolección encontrados:', Object.keys(recoleccionData).length, 'registros');
                 
                 // Cargar datos de sloting
                 const slotingSnapshot = await database.ref('sloting').once('value');
@@ -636,13 +614,12 @@
                     throw new Error('No hay datos de sloting en Firebase');
                 }
                 
-                console.log('Datos de sloting encontrados:', slotingData);
+                console.log('Datos de sloting encontrados:', Object.keys(slotingData).length, 'registros');
                 
                 // Cruzar datos para generar colas REALES
                 await generarColasDesdeRecoleccion(recoleccionData, slotingData);
                 mostrarEstado('✅ Datos reales cargados', 'success');
                 
-                // Si hay sesión activa, cargar estado de Firebase
                 if (sesionActiva) {
                     await cargarEstadoDesdeFirebase();
                 }
@@ -651,7 +628,6 @@
                 console.error('Error cargando datos:', error);
                 mostrarEstado(`❌ Error: ${error.message}`, 'error');
                 
-                // Intentar cargar desde cache
                 if (!cargarDatosDesdeCache()) {
                     mostrarEstado('⚠️ No hay datos disponibles', 'error');
                 }
@@ -663,10 +639,8 @@
             rutasDisponibles = [];
             
             console.log('Generando colas desde recolección real...');
-            console.log('Recolección data:', recoleccionData);
-            console.log('Sloting data:', slotingData);
             
-            // Crear mapa de sloting para búsqueda rápida
+            // Crear mapa de sloting para búsqueda rápida: UPC -> DEPOSITO_FINAL
             const mapaSloting = {};
             Object.values(slotingData).forEach(item => {
                 if (item.CODIGO_UPC && item.DEPOSITO_FINAL) {
@@ -674,55 +648,63 @@
                 }
             });
             
-            console.log('Mapa de sloting creado:', mapaSloting);
+            console.log('Mapa de sloting creado con', Object.keys(mapaSloting).length, 'UPCs');
+            
+            // Crear mapa temporal para agrupar por depósito final
+            const mapaTemporal = {};
             
             // Procesar cada registro de recolección REAL
             Object.values(recoleccionData).forEach(registro => {
-                // CORREGIDO: Manejar diferentes estructuras de datos
-                const upc = registro.CODIGO_UPC || registro.upc || registro.codigo_upc;
-                const cantidad = parseInt(registro.CANTIDAD) || parseInt(registro.cantidad) || 0;
-                const articulo = registro.ARTICULO || registro.articulo || registro.descripcion;
-                const fecha = registro.FECHA || registro.fecha;
+                // Solo procesar registros escaneados (no los no_encontrados)
+                if (registro.accion !== 'escaneado') return;
+                
+                const upc = registro.upc;
+                const cantidad = parseInt(registro.recolectado) || 0;
+                const descripcion = registro.descripcion;
                 
                 if (upc && cantidad > 0) {
                     // Buscar depósito final en sloting
                     const depositoFinal = mapaSloting[upc];
                     
-                    if (depositoFinal) {
-                        // Extraer cola del depósito final
+                    if (depositoFinal && depositoFinal !== '0') {
+                        // Extraer cola del depósito final (P01-101-A → "P01")
                         const cola = extraerCola(depositoFinal);
                         
-                        if (!datosReposicion[cola]) {
-                            datosReposicion[cola] = {
+                        if (!mapaTemporal[cola]) {
+                            mapaTemporal[cola] = {
                                 depositos: {},
-                                cantidadTotal: 0,
-                                nombre: `Cola ${cola}`,
-                                datosReales: true // ← DATOS REALES, NO PLANEADOS
+                                cantidadTotal: 0
                             };
-                            if (!rutasDisponibles.includes(cola)) {
-                                rutasDisponibles.push(cola);
-                            }
                         }
                         
-                        // Agrupar por depósito final
-                        if (!datosReposicion[cola].depositos[depositoFinal]) {
-                            datosReposicion[cola].depositos[depositoFinal] = {
+                        if (!mapaTemporal[cola].depositos[depositoFinal]) {
+                            mapaTemporal[cola].depositos[depositoFinal] = {
                                 upcs: {},
                                 cantidadTotal: 0,
-                                articulo: articulo
+                                articulo: descripcion
                             };
                         }
                         
                         // Agregar UPC al depósito
-                        datosReposicion[cola].depositos[depositoFinal].upcs[upc] = {
-                            articulo: articulo,
-                            cantidad: cantidad
-                        };
-                        datosReposicion[cola].depositos[depositoFinal].cantidadTotal += cantidad;
-                        datosReposicion[cola].cantidadTotal += cantidad;
-                    } else {
-                        console.log('UPC no encontrado en sloting:', upc, articulo);
+                        if (!mapaTemporal[cola].depositos[depositoFinal].upcs[upc]) {
+                            mapaTemporal[cola].depositos[depositoFinal].upcs[upc] = {
+                                articulo: descripcion,
+                                cantidad: 0
+                            };
+                        }
+                        
+                        mapaTemporal[cola].depositos[depositoFinal].upcs[upc].cantidad += cantidad;
+                        mapaTemporal[cola].depositos[depositoFinal].cantidadTotal += cantidad;
+                        mapaTemporal[cola].cantidadTotal += cantidad;
                     }
+                }
+            });
+            
+            // Convertir mapa temporal a estructura final
+            Object.keys(mapaTemporal).forEach(cola => {
+                if (mapaTemporal[cola].cantidadTotal > 0) {
+                    datosReposicion[cola] = mapaTemporal[cola];
+                    rutasDisponibles.push(cola);
                 }
             });
             
@@ -733,41 +715,34 @@
             actualizarInfoCache();
             
             console.log(`📊 Colas reales generadas: ${rutasDisponibles.length} colas | ${Object.keys(datosReposicion).reduce((sum, cola) => sum + datosReposicion[cola].cantidadTotal, 0)} unidades`);
-            console.log('Datos reposición:', datosReposicion);
+            console.log('Colas disponibles:', rutasDisponibles);
             
-            // Mostrar selección de colas
             mostrarSeleccionCola();
         }
 
         function extraerCola(deposito) {
-            // Extraer cola del depósito: P01-005-A → "P01", 8-002-2-A → "8"
             const match = deposito.match(/^([A-Z]?\d+)/);
             return match ? match[1] : deposito;
         }
 
         function ordenarColas(a, b) {
-            // Ordenar colas: P01, P02, ..., 8, 9, etc.
             const numA = parseInt(a.replace(/\D/g, '')) || 0;
             const numB = parseInt(b.replace(/\D/g, '')) || 0;
             return numA - numB;
         }
 
         function ordenarDepositos(a, b) {
-            // Ordenar depósitos: P01-001-A, P01-001-B, P01-002-A, etc.
             const partesA = a.split('-');
             const partesB = b.split('-');
             
-            // Comparar cola
             const colaA = parseInt(partesA[0].replace('P', '')) || 0;
             const colaB = parseInt(partesB[0].replace('P', '')) || 0;
             if (colaA !== colaB) return colaA - colaB;
             
-            // Comparar columna
             const columnaA = parseInt(partesA[1]) || 0;
             const columnaB = parseInt(partesB[1]) || 0;
             if (columnaA !== columnaB) return columnaA - columnaB;
             
-            // Comparar nivel (A antes que B)
             const nivelA = partesA[2] || '';
             const nivelB = partesB[2] || '';
             return nivelA.localeCompare(nivelB);
@@ -783,10 +758,9 @@
                 
                 if (data) {
                     estadoFirebase = data;
-                    console.log('✅ Estado de Firebase cargado:', estadoFirebase);
+                    console.log('✅ Estado de Firebase cargado:', Object.keys(estadoFirebase).length, 'escaneos');
                 }
                 
-                // Actualizar interfaz
                 actualizarListaColas();
                 if (rutaSeleccionada) {
                     actualizarListaDepositos();
@@ -823,7 +797,6 @@
                 
             } catch (error) {
                 console.error('Error guardando en Firebase:', error);
-                // Guardar en localStorage para sincronizar después
                 guardarEscaneoLocal(registro);
                 return false;
             }
@@ -855,7 +828,6 @@
                     );
                 }
                 
-                // Limpiar escaneos sincronizados
                 localStorage.removeItem('escaneosReposicionPendientes');
                 console.log('Escaneos pendientes sincronizados correctamente');
                 
@@ -883,7 +855,6 @@
                 const datosCola = datosReposicion[cola];
                 const div = document.createElement('div');
                 
-                // Verificar estado de la cola
                 const estadoCola = estadoFirebase ? calcularEstadoCola(cola) : { completada: false };
                 
                 let claseExtra = '';
@@ -892,8 +863,6 @@
                 if (estadoCola.completada) {
                     claseExtra = 'completed';
                     mensajeAdicional = '<br><small>✅ COMPLETADA</small>';
-                } else if (datosCola.datosReales) {
-                    mensajeAdicional = '<br><small>📦 DATOS REALES</small>';
                 }
                 
                 div.className = `ruta-item ${claseExtra}`;
@@ -920,16 +889,13 @@
                 return cantidadEscaneada >= datosReposicion[cola].depositos[deposito].cantidadTotal;
             });
             
-            return {
-                completada: completada
-            };
+            return { completada: completada };
         }
 
         async function seleccionarCola(cola) {
             rutaSeleccionada = cola;
             guardarSesionActiva();
             
-            // Actualizar interfaz
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('userName').textContent = usuarioActual;
             document.getElementById('userRuta').textContent = cola;
@@ -1060,7 +1026,6 @@
             
             const datosDeposito = datosReposicion[rutaSeleccionada].depositos[depositoActual];
             
-            // Verificar si el UPC pertenece a este depósito
             const upcValido = Object.keys(datosDeposito.upcs).some(upcExistente => 
                 upcExistente === upc
             );
@@ -1071,7 +1036,6 @@
                 return;
             }
             
-            // Verificar límite de cantidad
             const cantidadEscaneada = calcularCantidadEscaneada(depositoActual);
             if (cantidadEscaneada >= datosDeposito.cantidadTotal) {
                 mostrarEstado('✅ Depósito completado', 'success');
@@ -1079,7 +1043,6 @@
                 return;
             }
             
-            // Guardar escaneo en Firebase
             const exito = await guardarEscaneoEnFirebase(depositoActual, upc, 1);
             
             if (exito) {
@@ -1176,7 +1139,6 @@
                     const data = JSON.parse(cacheData);
                     datosReposicion = data.datosReposicion;
                     rutasDisponibles = data.rutasDisponibles;
-                    fechaDatosActual = data.fechaDatosActual;
                     
                     mostrarSeleccionCola();
                     mostrarEstado('✅ Datos cargados desde cache', 'success');
@@ -1190,7 +1152,6 @@
             const cacheData = {
                 datosReposicion: datosReposicion,
                 rutasDisponibles: rutasDisponibles,
-                fechaDatosActual: fechaDatosActual,
                 timestamp: new Date().getTime()
             };
             localStorage.setItem('cacheReposicion', JSON.stringify(cacheData));
@@ -1212,7 +1173,7 @@
                     textoTiempo = 'Recién actualizado';
                 }
                 
-                infoDiv.textContent = `Última actualización: ${textoTiempo} | ${Object.keys(datosReposicion).length} colas | Datos reales`;
+                infoDiv.textContent = `Última actualización: ${textoTiempo} | ${Object.keys(datosReposicion).length} colas | ${rutasDisponibles.reduce((sum, cola) => sum + datosReposicion[cola].cantidadTotal, 0)} unidades`;
             }
         }
 
