@@ -23,21 +23,22 @@
             margin: 0 auto;
             background: white;
             border-radius: 8px;
-            padding: 12px;
+            padding: 10px;
             height: calc(100vh - 20px);
             display: flex;
             flex-direction: column;
+            overflow-y: auto; /* Activar scroll vertical */
         }
         .header {
             text-align: center;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #f0f0f0;
         }
         h1 {
             color: #6600a1;
-            font-size: 16px; /* Reducido de 22px a 16px */
-            margin-bottom: 6px;
+            font-size: 16px;
+            margin-bottom: 4px;
             line-height: 1.2;
         }
         .header-info {
@@ -68,20 +69,20 @@
         .buttons-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 6px; /* Reducido de 8px */
             flex: 1;
-            margin-bottom: 8px;
+            margin-bottom: 6px; /* Reducido de 8px */
         }
         .button-column {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px; /* Reducido de 8px */
         }
         .module-button {
             background: #6600a1;
             color: white;
             border: none;
-            padding: 10px 6px;
+            padding: 8px 4px; /* Reducido de 10px 6px */
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
@@ -93,7 +94,7 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            min-height: 60px; /* Reducido de 70px */
+            min-height: 45px; /* Reducido de 60px */
         }
         .module-button:hover {
             background: #55008a;
@@ -113,24 +114,24 @@
             background: #333333;
         }
         .button-icon {
-            font-size: 18px; /* Reducido de 20px */
-            margin-bottom: 3px;
+            font-size: 16px; /* Reducido de 18px */
+            margin-bottom: 2px; /* Reducido de 3px */
         }
         .button-text {
-            font-size: 11px; /* Reducido de 12px */
+            font-size: 11px;
             line-height: 1.2;
         }
         .footer {
             text-align: center;
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 6px; /* Reducido de 8px */
+            padding-top: 6px; /* Reducido de 8px */
             border-top: 1px solid #f0f0f0;
         }
         .back-button {
             background: #6600a1;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px; /* Reducido de 10px 20px */
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
