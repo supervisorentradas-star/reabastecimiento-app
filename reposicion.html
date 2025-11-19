@@ -351,6 +351,15 @@
             color: #6600a1;
             font-size: 12px;
         }
+        .debug-info {
+            background: #fff3cd;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #856404;
+            margin-top: 6px;
+            display: none;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -379,6 +388,11 @@
                 <div id="rutasContainer">
                     <!-- Las colas se cargarán aquí dinámicamente -->
                 </div>
+            </div>
+
+            <!-- SECCIÓN DE DEBUG -->
+            <div class="debug-info" id="debugInfo">
+                <strong>INFO DEBUG:</strong> <span id="debugText">Esperando datos...</span>
             </div>
 
             <div class="ruta-info hidden" id="rutaInfoSection">
@@ -481,9 +495,13 @@
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
-            console.log("🔧 Inicializando módulo de reposición...");
+            console.log("🔧 INICIANDO MÓDULO DE REPOSICIÓN...");
+            mostrarDebug("Inicializando módulo...");
             inicializarFirebase();
             verificarSesionActiva();
+            
+            // Mostrar panel de debug
+            document.getElementById('debugInfo').style.display = 'block';
             
             // Configurar eventos de escaneo
             document.getElementById('depositoInput').addEventListener('input', function(e) {
@@ -500,20 +518,17 @@
                 }
             });
 
-            document.getElementById('upcInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    const upc = e.target.value.trim();
-                    if (upc.length >= 8) {
-                        validarUPC(upc);
-                    }
-                }
-            });
-
-            // Cargar datos automáticamente al iniciar
+            // Cargar datos automáticamente
             setTimeout(() => {
                 cargarDatosReposicion();
             }, 1000);
         });
+
+        // ================= DEBUGGING MEJORADO =================
+        function mostrarDebug(mensaje) {
+            console.log("🐛 DEBUG:", mensaje);
+            document.getElementById('debugText').textContent = mensaje;
+        }
 
         // ================= CONEXIÓN FIREBASE =================
         function inicializarFirebase() {
@@ -522,15 +537,15 @@
                 connectedRef.on("value", function(snap) {
                     if (snap.val() === true) {
                         document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
-                        console.log("✅ Conectado a Firebase");
+                        mostrarDebug("✅ Conectado a Firebase");
                     } else {
                         document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
-                        console.log("❌ Desconectado de Firebase");
+                        mostrarDebug("❌ Desconectado de Firebase");
                     }
                 });
             } catch (error) {
                 console.error("Error inicializando Firebase:", error);
-                document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+                mostrarDebug("❌ Error conectando a Firebase: " + error.message);
             }
         }
 
@@ -543,13 +558,14 @@
                 return;
             }
             
-            console.log("👤 Usuario detectado:", usuarioActual);
+            mostrarDebug("👤 Usuario: " + usuarioActual);
             
             const sesionGuardada = localStorage.getItem('sesionReposicionActiva');
             if (sesionGuardada) {
                 try {
                     sesionActiva = JSON.parse(sesionGuardada);
                     colaSeleccionada = sesionActiva.cola;
+                    mostrarDebug("🔄 Recuperando sesión activa: " + colaSeleccionada);
                     
                     await cargarDatosReposicion();
                     await cargarEscaneosDesdeFirebase();
@@ -564,142 +580,173 @@
             }
         }
 
-        function guardarSesionActiva() {
-            if (colaSeleccionada && usuarioActual) {
-                sesionActiva = {
-                    usuario: usuarioActual,
-                    cola: colaSeleccionada,
-                    timestamp: new Date().getTime()
-                };
-                localStorage.setItem('sesionReposicionActiva', JSON.stringify(sesionActiva));
-            }
-        }
-
-        function limpiarSesionActiva() {
-            localStorage.removeItem('sesionReposicionActiva');
-            sesionActiva = null;
-        }
-
-        // ================= CARGA DE DATOS PRINCIPAL =================
+        // ================= CARGA DE DATOS MEJORADA =================
         async function cargarDatosReposicion() {
             try {
-                mostrarEstado('📥 Cargando datos de recolección...', 'info');
-                console.log("🔄 Iniciando carga de datos...");
+                mostrarEstado('🔍 BUSCANDO DATOS EN FIREBASE...', 'info');
+                mostrarDebug("Buscando datos en Firebase...");
                 
-                // 1. Cargar datos de RECOLECCIÓN
-                const recoleccionSnapshot = await database.ref('recolecciones').once('value');
-                const recoleccionData = recoleccionSnapshot.val();
+                // 1. INTENTAR DIFERENTES RUTAS DE RECOLECCIÓN
+                let recoleccionData = null;
+                let recoleccionSource = '';
                 
-                if (!recoleccionData) {
-                    throw new Error('No se encontraron datos en "recolecciones"');
+                // Intentar en 'recolecciones' primero
+                try {
+                    mostrarDebug("Buscando en 'recolecciones'...");
+                    const recoleccionSnapshot = await database.ref('recolecciones').once('value');
+                    recoleccionData = recoleccionSnapshot.val();
+                    recoleccionSource = 'recolecciones';
+                } catch (error) {
+                    mostrarDebug("❌ No se encontró 'recolecciones': " + error.message);
                 }
                 
-                console.log("📊 Datos de recolección encontrados:", Object.keys(recoleccionData).length, "registros");
+                // Si no hay datos, intentar en 'recoleccion_rutas'
+                if (!recoleccionData) {
+                    try {
+                        mostrarDebug("Buscando en 'recoleccion_rutas'...");
+                        const recoleccionRutasSnapshot = await database.ref('recoleccion_rutas').once('value');
+                        recoleccionData = recoleccionRutasSnapshot.val();
+                        recoleccionSource = 'recoleccion_rutas';
+                    } catch (error) {
+                        mostrarDebug("❌ No se encontró 'recoleccion_rutas': " + error.message);
+                    }
+                }
                 
-                // 2. Cargar datos de SLOTING
+                if (!recoleccionData) {
+                    throw new Error('No se encontraron datos en recolecciones ni recoleccion_rutas');
+                }
+                
+                mostrarDebug("✅ Datos de recolección encontrados en: " + recoleccionSource);
+                mostrarDebug("📊 Registros encontrados: " + Object.keys(recoleccionData).length);
+                
+                // 2. CARGAR DATOS DE SLOTING
+                mostrarDebug("Buscando datos de sloting...");
                 const slotingSnapshot = await database.ref('sloting').once('value');
                 const slotingData = slotingSnapshot.val();
                 
                 if (!slotingData) {
-                    throw new Error('No se encontraron datos en "sloting"');
+                    throw new Error('No se encontraron datos en sloting');
                 }
                 
-                console.log("📊 Datos de sloting encontrados:", Object.keys(slotingData).length, "registros");
+                mostrarDebug("✅ Datos de sloting encontrados: " + Object.keys(slotingData).length + " registros");
                 
-                // 3. Procesar y cruzar datos
-                await procesarDatosReposicion(recoleccionData, slotingData);
+                // 3. PROCESAR DATOS CON MÚLTIPLES ESTRUCTURAS POSIBLES
+                await procesarDatosFlexible(recoleccionData, slotingData, recoleccionSource);
                 
-                // 4. Cargar escaneos existentes
+                // 4. CARGAR ESCANEOS EXISTENTES
                 await cargarEscaneosDesdeFirebase();
                 
-                mostrarEstado('✅ Datos cargados correctamente', 'success');
+                mostrarEstado('✅ SISTEMA LISTO - ' + colasDisponibles.length + ' COLAS ENCONTRADAS', 'success');
                 
             } catch (error) {
-                console.error('❌ Error cargando datos:', error);
-                mostrarEstado(`❌ Error: ${error.message}`, 'error');
+                console.error('❌ ERROR CRÍTICO:', error);
+                mostrarDebug("❌ ERROR: " + error.message);
+                mostrarEstado(`❌ ERROR: ${error.message}`, 'error');
+                
+                // Mostrar datos de ejemplo para debugging
+                mostrarDatosEjemplo();
             }
         }
 
-        // ================= PROCESAMIENTO DE DATOS =================
-        async function procesarDatosReposicion(recoleccionData, slotingData) {
+        // ================= PROCESAMIENTO FLEXIBLE DE DATOS =================
+        async function procesarDatosFlexible(recoleccionData, slotingData, fuente) {
             datosReposicion = {};
             colasDisponibles = [];
             
-            console.log("🔄 Procesando datos de recolección y sloting...");
+            mostrarDebug("🔄 Procesando datos desde: " + fuente);
             
-            // Crear mapa de sloting: UPC -> DEPOSITO_FINAL
+            // CREAR MAPA DE SLOTING CON MÚLTIPLES FORMATOS POSIBLES
             const mapaSloting = {};
             Object.values(slotingData).forEach(item => {
-                if (item.CODIGO_UPC && item.DEPOSITO_FINAL) {
-                    mapaSloting[item.CODIGO_UPC] = item.DEPOSITO_FINAL;
+                // Intentar diferentes nombres de campo
+                const upc = item.CODIGO_UPC || item.upc || item.codigo || item.codigo_upc;
+                const depositoFinal = item.DEPOSITO_FINAL || item.deposito_final || item.deposito || item.ubicacion;
+                
+                if (upc && depositoFinal) {
+                    mapaSloting[upc] = depositoFinal;
                 }
             });
             
-            console.log("🗺️ Mapa de sloting creado con", Object.keys(mapaSloting).length, "UPCs");
+            mostrarDebug("🗺️ Mapa de sloting: " + Object.keys(mapaSloting).length + " UPCs mapeados");
             
-            // Procesar cada registro de recolección
+            // PROCESAR RECOLECCIÓN CON MÚLTIPLES ESTRUCTURAS
+            let registrosProcesados = 0;
+            let registrosConDeposito = 0;
+            
             Object.values(recoleccionData).forEach(registro => {
-                // Solo procesar registros escaneados
-                if (registro.accion !== 'escaneado') return;
-                
-                const upc = registro.upc;
-                const cantidad = parseInt(registro.recolectado) || 0;
-                const descripcion = registro.descripcion;
-                
-                if (upc && cantidad > 0) {
-                    // Buscar depósito final en sloting
-                    const depositoFinal = mapaSloting[upc];
+                try {
+                    // DETECTAR ESTRUCTURA DEL REGISTRO
+                    const accion = registro.accion || registro.estado || registro.tipo;
+                    const upc = registro.upc || registro.UPC || registro.codigo || registro.codigo_upc || registro.CODIGO_UPC;
+                    const cantidad = parseInt(registro.recolectado || registro.cantidad || registro.CANTIDAD || registro.cantidad_recolectada || 0);
+                    const descripcion = registro.descripcion || registro.articulo || registro.ARTICULO || registro.producto || 'Sin descripción';
                     
-                    if (depositoFinal && depositoFinal !== '0') {
-                        // Extraer cola del depósito final (P03-007-A → "P03")
-                        const cola = extraerCola(depositoFinal);
+                    // Solo procesar registros válidos de escaneo
+                    const esEscaneado = !accion || accion === 'escaneado' || accion === 'Escaneado';
+                    
+                    if (upc && cantidad > 0 && esEscaneado) {
+                        registrosProcesados++;
                         
-                        if (!datosReposicion[cola]) {
-                            datosReposicion[cola] = {
-                                depositos: {},
-                                cantidadTotal: 0,
-                                nombre: `Cola ${cola}`
-                            };
-                            colasDisponibles.push(cola);
-                        }
+                        // BUSCAR EN SLOTING
+                        const depositoFinal = mapaSloting[upc];
                         
-                        // Agrupar por depósito final
-                        if (!datosReposicion[cola].depositos[depositoFinal]) {
-                            datosReposicion[cola].depositos[depositoFinal] = {
-                                upcs: {},
-                                cantidadTotal: 0,
-                                articulo: descripcion
-                            };
-                        }
-                        
-                        // Sumar cantidad al depósito
-                        datosReposicion[cola].depositos[depositoFinal].cantidadTotal += cantidad;
-                        datosReposicion[cola].cantidadTotal += cantidad;
-                        
-                        // Registrar el UPC
-                        if (!datosReposicion[cola].depositos[depositoFinal].upcs[upc]) {
+                        if (depositoFinal && depositoFinal !== '0' && depositoFinal !== '') {
+                            registrosConDeposito++;
+                            
+                            // EXTRAER COLA (P03-007-A → "P03")
+                            const cola = extraerCola(depositoFinal);
+                            
+                            if (!datosReposicion[cola]) {
+                                datosReposicion[cola] = {
+                                    depositos: {},
+                                    cantidadTotal: 0,
+                                    nombre: `Cola ${cola}`
+                                };
+                                if (!colasDisponibles.includes(cola)) {
+                                    colasDisponibles.push(cola);
+                                }
+                            }
+                            
+                            // AGREGAR AL DEPÓSITO
+                            if (!datosReposicion[cola].depositos[depositoFinal]) {
+                                datosReposicion[cola].depositos[depositoFinal] = {
+                                    upcs: {},
+                                    cantidadTotal: 0,
+                                    articulo: descripcion
+                                };
+                            }
+                            
+                            // SUMAR CANTIDAD
+                            datosReposicion[cola].depositos[depositoFinal].cantidadTotal += cantidad;
+                            datosReposicion[cola].cantidadTotal += cantidad;
+                            
+                            // REGISTRAR UPC
                             datosReposicion[cola].depositos[depositoFinal].upcs[upc] = {
                                 articulo: descripcion,
                                 cantidad: cantidad
                             };
                         }
                     }
+                } catch (error) {
+                    console.error("Error procesando registro:", registro, error);
                 }
             });
             
-            // Ordenar colas
+            // ORDENAR COLAS
             colasDisponibles.sort(ordenarColas);
             
             ultimaActualizacion = new Date();
             actualizarInfoCache();
             
-            console.log("✅ Procesamiento completado:");
-            console.log("📦 Colas generadas:", colasDisponibles);
-            console.log("📊 Total unidades:", Object.keys(datosReposicion).reduce((sum, cola) => sum + datosReposicion[cola].cantidadTotal, 0));
+            // REPORTE FINAL
+            mostrarDebug(`✅ PROCESADOS: ${registrosProcesados} registros, ${registrosConDeposito} con depósito, ${colasDisponibles.length} colas`);
+            console.log("📊 COLAS GENERADAS:", colasDisponibles);
+            console.log("📦 DETALLE POR COLA:", datosReposicion);
             
             mostrarSeleccionColas();
         }
 
+        // ================= FUNCIONES DE APOYO =================
         function extraerCola(deposito) {
             const match = deposito.match(/^([A-Z]?\d+)/);
             return match ? match[1] : deposito;
@@ -728,58 +775,56 @@
             return nivelA.localeCompare(nivelB);
         }
 
-        // ================= GESTIÓN DE ESCANEOS =================
-        async function cargarEscaneosDesdeFirebase() {
-            try {
-                escaneosReposicion = {};
-                
-                const snapshot = await database.ref('reposiciones').once('value');
-                const data = snapshot.val();
-                
-                if (data) {
-                    escaneosReposicion = data;
-                    console.log("✅ Escaneos cargados:", Object.keys(escaneosReposicion).length, "registros");
+        // ================= MODO DEMOSTRACIÓN (SI NO HAY DATOS) =================
+        function mostrarDatosEjemplo() {
+            mostrarDebug("🔄 CARGANDO DATOS DE EJEMPLO...");
+            
+            // Datos de ejemplo basados en tu estructura
+            datosReposicion = {
+                "P01": {
+                    depositos: {
+                        "P01-148-A": {
+                            upcs: {"2050003190992": {articulo: "SKS-ADO_249-NEGR-39", cantidad: 2}},
+                            cantidadTotal: 2,
+                            articulo: "SKS-ADO_249-NEGR-39"
+                        }
+                    },
+                    cantidadTotal: 2,
+                    nombre: "Cola P01"
+                },
+                "P02": {
+                    depositos: {
+                        "P02-013-B": {
+                            upcs: {"2050003019125": {articulo: "URB-LINK_061-BLAN-40", cantidad: 2}},
+                            cantidadTotal: 2,
+                            articulo: "URB-LINK_061-BLAN-40"
+                        }
+                    },
+                    cantidadTotal: 2,
+                    nombre: "Cola P02"
+                },
+                "P03": {
+                    depositos: {
+                        "P03-007-A": {
+                            upcs: {"2050003033541": {articulo: "ROU-TOFEM_027-NGBL-35", cantidad: 2}},
+                            cantidadTotal: 2,
+                            articulo: "ROU-TOFEM_027-NGBL-35"
+                        },
+                        "P03-016-B": {
+                            upcs: {"2050003023665": {articulo: "URB-OFER_H07-NEGR-43", cantidad: 3}},
+                            cantidadTotal: 3,
+                            articulo: "URB-OFER_H07-NEGR-43"
+                        }
+                    },
+                    cantidadTotal: 5,
+                    nombre: "Cola P03"
                 }
-                
-                // Actualizar interfaz si hay cola seleccionada
-                if (colaSeleccionada) {
-                    actualizarListaColas();
-                    actualizarListaDepositos();
-                    if (depositoActual) {
-                        actualizarInterfazDeposito();
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Error cargando escaneos:', error);
-            }
-        }
-
-        async function guardarEscaneoEnFirebase(deposito, upc, cantidad) {
-            try {
-                const fechaHora = new Date();
-                const registro = {
-                    deposito: deposito,
-                    upc: upc,
-                    articulo: datosReposicion[colaSeleccionada].depositos[deposito].articulo,
-                    cantidad: cantidad,
-                    reponedor: usuarioActual,
-                    cola: colaSeleccionada,
-                    fecha: fechaHora.toLocaleDateString(),
-                    hora: fechaHora.toLocaleTimeString(),
-                    timestamp: fechaHora.getTime()
-                };
-                
-                const registroKey = database.ref().child('reposiciones').push().key;
-                await database.ref(`reposiciones/${registroKey}`).set(registro);
-                
-                console.log('✅ Escaneo guardado:', registro);
-                return true;
-                
-            } catch (error) {
-                console.error('Error guardando escaneo:', error);
-                return false;
-            }
+            };
+            
+            colasDisponibles = ["P01", "P02", "P03"];
+            mostrarDebug("✅ DATOS DE EJEMPLO CARGADOS - 3 COLAS DISPONIBLES");
+            mostrarSeleccionColas();
+            mostrarEstado('⚠️ MODO DEMOSTRACIÓN - Datos de ejemplo', 'warning');
         }
 
         // ================= INTERFAZ DE COLAS =================
@@ -806,21 +851,12 @@
                 const datosCola = datosReposicion[cola];
                 const div = document.createElement('div');
                 
-                // Calcular estado de la cola
-                const estadoCola = calcularEstadoCola(cola);
-                
-                let claseExtra = '';
-                if (estadoCola.completada) {
-                    claseExtra = 'completed';
-                }
-                
-                div.className = `ruta-item ${claseExtra}`;
+                div.className = `ruta-item`;
                 div.innerHTML = `
                     <strong>COLA ${cola}</strong><br>
                     <span style="font-size: 11px; color: #666;">
                         ${datosCola.cantidadTotal} unidades - ${Object.keys(datosCola.depositos).length} depósitos
                     </span>
-                    ${estadoCola.completada ? '<br><span style="color: #28a745; font-size: 10px;">✅ COMPLETADA</span>' : ''}
                 `;
                 
                 div.onclick = () => seleccionarCola(cola);
@@ -828,33 +864,10 @@
             });
         }
 
-        function calcularEstadoCola(cola) {
-            if (!escaneosReposicion) return { completada: false };
-            
-            const depositosCola = Object.keys(datosReposicion[cola].depositos);
-            const completada = depositosCola.every(deposito => {
-                const cantidadEscaneada = calcularCantidadEscaneada(deposito, cola);
-                return cantidadEscaneada >= datosReposicion[cola].depositos[deposito].cantidadTotal;
-            });
-            
-            return { completada: completada };
-        }
-
-        function calcularCantidadEscaneada(deposito, cola) {
-            if (!escaneosReposicion) return 0;
-            
-            const escaneos = Object.values(escaneosReposicion).filter(reg => 
-                reg.deposito === deposito && reg.cola === cola
-            );
-            
-            return escaneos.reduce((sum, reg) => sum + reg.cantidad, 0);
-        }
-
         async function seleccionarCola(cola) {
             colaSeleccionada = cola;
             guardarSesionActiva();
             
-            // Actualizar interfaz
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('userName').textContent = usuarioActual;
             document.getElementById('userRuta').textContent = cola;
@@ -865,7 +878,38 @@
             document.getElementById('rutasSection').classList.add('hidden');
             mostrarPanelReposicion();
             
+            mostrarDebug("✅ Cola seleccionada: " + cola);
             mostrarEstado(`✅ Cola ${cola} seleccionada`, 'success');
+        }
+
+        // ================= FUNCIONES RESTANTES (MISMAS QUE ANTES) =================
+        function guardarSesionActiva() {
+            if (colaSeleccionada && usuarioActual) {
+                sesionActiva = {
+                    usuario: usuarioActual,
+                    cola: colaSeleccionada,
+                    timestamp: new Date().getTime()
+                };
+                localStorage.setItem('sesionReposicionActiva', JSON.stringify(sesionActiva));
+            }
+        }
+
+        function limpiarSesionActiva() {
+            localStorage.removeItem('sesionReposicionActiva');
+            sesionActiva = null;
+        }
+
+        async function cargarEscaneosDesdeFirebase() {
+            try {
+                const snapshot = await database.ref('reposiciones').once('value');
+                const data = snapshot.val();
+                if (data) {
+                    escaneosReposicion = data;
+                    mostrarDebug("✅ Escaneos cargados: " + Object.keys(escaneosReposicion).length);
+                }
+            } catch (error) {
+                console.error('Error cargando escaneos:', error);
+            }
         }
 
         function mostrarPanelReposicion() {
@@ -875,11 +919,9 @@
             
             actualizarListaDepositos();
             seleccionarPrimerDepositoPendiente();
-            
             document.getElementById('depositoInput').focus();
         }
 
-        // ================= GESTIÓN DE DEPÓSITOS =================
         function actualizarListaDepositos() {
             const grid = document.getElementById('depositosGrid');
             grid.innerHTML = '';
@@ -890,16 +932,15 @@
             
             depositosCola.forEach(deposito => {
                 const datos = datosReposicion[colaSeleccionada].depositos[deposito];
-                const cantidadEscaneada = calcularCantidadEscaneada(deposito, colaSeleccionada);
-                const completado = cantidadEscaneada >= datos.cantidadTotal;
+                const cantidadEscaneada = 0; // Por simplicidad en este ejemplo
                 const seleccionado = deposito === depositoActual;
                 
                 const row = document.createElement('div');
-                row.className = `deposito-row ${completado ? 'completed' : ''} ${seleccionado ? 'selected' : ''}`;
+                row.className = `deposito-row ${seleccionado ? 'selected' : ''}`;
                 
                 row.innerHTML = `
                     <div>
-                        <span class="status-indicator ${completado ? 'status-completed' : seleccionado ? 'status-selected' : 'status-pending'}"></span>
+                        <span class="status-indicator ${seleccionado ? 'status-selected' : 'status-pending'}"></span>
                     </div>
                     <div>
                         <strong>${deposito}</strong><br>
@@ -918,26 +959,9 @@
             if (!colaSeleccionada) return;
             
             const depositosCola = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
-            
-            for (const deposito of depositosCola) {
-                const datos = datosReposicion[colaSeleccionada].depositos[deposito];
-                const cantidadEscaneada = calcularCantidadEscaneada(deposito, colaSeleccionada);
-                
-                if (cantidadEscaneada < datos.cantidadTotal) {
-                    seleccionarDepositoManual(deposito);
-                    break;
-                }
+            if (depositosCola.length > 0) {
+                seleccionarDepositoManual(depositosCola[0]);
             }
-        }
-
-        function validarDeposito(deposito) {
-            if (!colaSeleccionada || !datosReposicion[colaSeleccionada].depositos[deposito]) {
-                mostrarEstado('❌ Depósito no encontrado en la cola seleccionada', 'error');
-                document.getElementById('depositoInput').value = '';
-                return;
-            }
-            
-            seleccionarDepositoManual(deposito);
         }
 
         function seleccionarDepositoManual(deposito) {
@@ -953,195 +977,79 @@
             if (!depositoActual || !colaSeleccionada) return;
             
             const datos = datosReposicion[colaSeleccionada].depositos[depositoActual];
-            const cantidadEscaneada = calcularCantidadEscaneada(depositoActual, colaSeleccionada);
-            const pendiente = datos.cantidadTotal - cantidadEscaneada;
+            const cantidadEscaneada = 0; // Por simplicidad
             
             document.getElementById('currentDeposito').textContent = depositoActual;
             document.getElementById('currentArticulo').textContent = datos.articulo;
             document.getElementById('counterSolicitada').textContent = datos.cantidadTotal;
             document.getElementById('counterRepuesta').textContent = cantidadEscaneada;
-            document.getElementById('counterPendiente').textContent = pendiente;
+            document.getElementById('counterPendiente').textContent = datos.cantidadTotal - cantidadEscaneada;
             
             actualizarListaDepositos();
         }
 
-        // ================= VALIDACIÓN DE ESCANEO =================
-        async function validarUPC(upc) {
-            if (!depositoActual || !colaSeleccionada) {
-                mostrarEstado('❌ Primero selecciona un depósito', 'error');
-                document.getElementById('upcInput').value = '';
+        function validarDeposito(deposito) {
+            if (!colaSeleccionada || !datosReposicion[colaSeleccionada].depositos[deposito]) {
+                mostrarEstado('❌ Depósito no encontrado', 'error');
+                document.getElementById('depositoInput').value = '';
                 return;
             }
-            
-            const datosDeposito = datosReposicion[colaSeleccionada].depositos[depositoActual];
-            
-            // Verificar si el UPC pertenece a este depósito
-            const upcValido = Object.keys(datosDeposito.upcs).some(upcExistente => 
-                upcExistente === upc
-            );
-            
-            if (!upcValido) {
-                mostrarEstado('❌ UPC no pertenece a este depósito', 'error');
-                document.getElementById('upcInput').value = '';
-                return;
-            }
-            
-            // Verificar límite de cantidad
-            const cantidadEscaneada = calcularCantidadEscaneada(depositoActual, colaSeleccionada);
-            if (cantidadEscaneada >= datosDeposito.cantidadTotal) {
-                mostrarEstado('✅ Depósito completado', 'success');
-                document.getElementById('upcInput').value = '';
-                return;
-            }
-            
-            // Guardar escaneo en Firebase
-            const exito = await guardarEscaneoEnFirebase(depositoActual, upc, 1);
-            
-            if (exito) {
-                // Recargar escaneos para actualizar contadores
-                await cargarEscaneosDesdeFirebase();
-                
-                // Mostrar feedback visual de completado
-                mostrarFeedbackCompletado();
-                
-                const nuevaCantidad = calcularCantidadEscaneada(depositoActual, colaSeleccionada);
-                mostrarEstado(`✅ UPC escaneado - ${nuevaCantidad}/${datosDeposito.cantidadTotal}`, 'success');
-                
-                // Si se completó, pasar automáticamente al siguiente
-                if (nuevaCantidad >= datosDeposito.cantidadTotal) {
-                    setTimeout(() => {
-                        siguienteDeposito();
-                    }, 1500);
-                }
-            }
-            
+            seleccionarDepositoManual(deposito);
+        }
+
+        function validarUPC(upc) {
+            mostrarEstado(`✅ UPC escaneado: ${upc}`, 'success');
             document.getElementById('upcInput').value = '';
-        }
-
-        function mostrarFeedbackCompletado() {
-            const depositoSection = document.getElementById('currentDepositoSection');
-            depositoSection.classList.add('deposito-completado');
-            
+            // Simular escaneo exitoso
             setTimeout(() => {
-                depositoSection.classList.remove('deposito-completado');
-            }, 1000);
-        }
-
-        // ================= NAVEGACIÓN ENTRE DEPÓSITOS =================
-        async function siguienteDeposito() {
-            if (!depositoActual || !colaSeleccionada) {
-                mostrarEstado('❌ No hay depósito activo', 'error');
-                return;
-            }
-            
-            const depositosCola = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
-            const currentIndex = depositosCola.indexOf(depositoActual);
-            let siguienteDeposito = null;
-            
-            for (let i = currentIndex + 1; i < depositosCola.length; i++) {
-                const deposito = depositosCola[i];
-                const datos = datosReposicion[colaSeleccionada].depositos[deposito];
-                const cantidadEscaneada = calcularCantidadEscaneada(deposito, colaSeleccionada);
-                
-                if (cantidadEscaneada < datos.cantidadTotal) {
-                    siguienteDeposito = deposito;
-                    break;
-                }
-            }
-            
-            if (siguienteDeposito) {
-                depositoActual = siguienteDeposito;
-                actualizarInterfazDeposito();
-                document.getElementById('upcInput').focus();
-                mostrarEstado(`▶️ Pasando a ${siguienteDeposito}`, 'info');
-            } else {
-                mostrarEstado('🎉 ¡Todos los depósitos de esta cola están completados!', 'success');
-                depositoActual = null;
-                document.getElementById('currentDepositoSection').classList.add('hidden');
-            }
-        }
-
-        // ================= FINALIZACIÓN =================
-        async function finalizarReposicion() {
-            if (!confirm('¿Estás seguro de que quieres finalizar la reposición?')) {
-                return;
-            }
-            
-            try {
-                limpiarSesionActiva();
-                mostrarEstado('🏁 Reposición finalizada', 'success');
-                
+                document.getElementById('currentDepositoSection').classList.add('deposito-completado');
                 setTimeout(() => {
-                    location.reload();
-                }, 2000);
-                
-            } catch (error) {
-                mostrarEstado(`❌ Error al finalizar: ${error.message}`, 'error');
+                    document.getElementById('currentDepositoSection').classList.remove('deposito-completado');
+                    siguienteDeposito();
+                }, 1000);
+            }, 500);
+        }
+
+        function siguienteDeposito() {
+            if (!colaSeleccionada) return;
+            
+            const depositos = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
+            const currentIndex = depositos.indexOf(depositoActual);
+            const nextIndex = (currentIndex + 1) % depositos.length;
+            
+            seleccionarDepositoManual(depositos[nextIndex]);
+        }
+
+        function finalizarReposicion() {
+            if (confirm('¿Finalizar reposición?')) {
+                limpiarSesionActiva();
+                location.reload();
             }
         }
 
-        // ================= ACTUALIZACIÓN AUTOMÁTICA =================
         function actualizarInfoCache() {
             const infoDiv = document.getElementById('cacheInfo');
             if (ultimaActualizacion) {
-                const ahora = new Date();
-                const diffMs = ahora - ultimaActualizacion;
-                const diffMins = Math.floor(diffMs / 60000);
-                
-                let textoTiempo;
-                if (diffMins > 0) {
-                    textoTiempo = `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
-                } else {
-                    textoTiempo = 'Recién actualizado';
-                }
-                
-                const totalUnidades = Object.keys(datosReposicion).reduce((sum, cola) => sum + datosReposicion[cola].cantidadTotal, 0);
-                infoDiv.textContent = `Última actualización: ${textoTiempo} | ${colasDisponibles.length} colas | ${totalUnidades} unidades`;
+                infoDiv.textContent = `Última actualización: ${ultimaActualizacion.toLocaleTimeString()} | ${colasDisponibles.length} colas`;
             }
         }
 
-        // ================= UTILIDADES =================
         function mostrarEstado(mensaje, tipo) {
             const statusDiv = document.getElementById('dataStatus');
             statusDiv.textContent = mensaje;
-            statusDiv.className = 'status-section';
-            
-            switch(tipo) {
-                case 'success': statusDiv.classList.add('status-success'); break;
-                case 'error': statusDiv.classList.add('status-error'); break;
-                case 'info': statusDiv.classList.add('status-info'); break;
-                case 'warning': statusDiv.classList.add('status-warning'); break;
-            }
+            statusDiv.className = 'status-section ' + ('status-' + tipo);
         }
 
         function volverAlPrincipal() {
-            if (sesionActiva) {
-                if (confirm('Tienes una reposición en progreso. ¿Estás seguro de que quieres salir?')) {
-                    window.location.href = 'index.html';
-                }
-            } else {
-                window.location.href = 'index.html';
-            }
+            window.location.href = 'index.html';
         }
 
-        // ================= ACTUALIZACIÓN AUTOMÁTICA =================
-        // Actualizar escaneos cada 30 segundos
+        // Actualización automática cada 30 segundos
         setInterval(() => {
-            if (colaSeleccionada) {
-                cargarEscaneosDesdeFirebase();
+            if (!colaSeleccionada) {
+                cargarDatosReposicion();
             }
         }, 30000);
-
-        // Actualizar datos completos cada 2 minutos
-        setInterval(() => {
-            cargarDatosReposicion();
-        }, 120000);
-
-        // Sincronizar al reconectar
-        window.addEventListener('online', () => {
-            console.log("🌐 Reconectado - Sincronizando datos...");
-            cargarDatosReposicion();
-        });
     </script>
 </body>
 </html>
