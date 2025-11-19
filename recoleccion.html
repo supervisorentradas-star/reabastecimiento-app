@@ -24,7 +24,9 @@
             padding: 15px;
         }
         .header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 1px solid #f0f0f0;
@@ -32,21 +34,12 @@
         h1 {
             color: #6600a1;
             font-size: 22px;
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
-        .connection-status {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .connection-item {
+        .header-controls {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            font-weight: bold;
+            gap: 10px;
         }
         .connection-indicator {
             width: 10px;
@@ -66,13 +59,11 @@
             background: #6600a1;
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
-            margin: 5px 0;
-            width: 100%;
             transition: all 0.3s;
         }
         .admin-button:hover {
@@ -86,28 +77,30 @@
         }
         .picking-info {
             background: #e8f4fc;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin: 10px 0;
+            margin: 8px 0;
             font-size: 14px;
         }
         .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            display: flex;
             gap: 8px;
             margin: 8px 0;
+            overflow-x: auto;
         }
         .info-item {
+            flex: 1;
             text-align: center;
-            padding: 8px;
+            padding: 6px;
             background: white;
             border-radius: 4px;
             border: 1px solid #ddd;
             font-size: 12px;
+            min-width: 80px;
         }
         .info-label {
             font-weight: bold;
-            font-size: 11px;
+            font-size: 10px;
             color: #666;
         }
         .info-value {
@@ -117,9 +110,9 @@
         }
         .deposito-info {
             background: white;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin: 10px 0;
+            margin: 8px 0;
             border: 2px solid #6600a1;
             transition: all 0.5s;
         }
@@ -128,23 +121,21 @@
             border-color: #28a745;
         }
         .deposito-row {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 5px;
-            font-size: 16px;
             text-align: center;
+            margin-bottom: 5px;
+            font-size: 14px;
             font-weight: bold;
         }
         .scan-area {
             background: #f8f9fa;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
-            margin: 12px 0;
+            margin: 10px 0;
             text-align: center;
         }
         input[type="text"] {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             margin: 8px 0;
             border: 2px solid #ddd;
             border-radius: 6px;
@@ -152,10 +143,14 @@
             text-align: center;
         }
         .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex;
             gap: 8px;
             margin-top: 10px;
+        }
+        .controls-grid .admin-button {
+            flex: 1;
+            padding: 10px 8px;
+            font-size: 12px;
         }
         .stats {
             display: flex;
@@ -166,7 +161,7 @@
         .stat-box {
             flex: 1;
             text-align: center;
-            padding: 10px;
+            padding: 8px;
             background: #e8f4fc;
             border-radius: 4px;
             font-size: 12px;
@@ -182,10 +177,10 @@
             background: #6600a1;
             color: white;
             border: none;
-            padding: 12px 8px;
+            padding: 10px 8px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
         }
         .route-button.completed {
@@ -222,12 +217,12 @@
             margin: 12px 0;
         }
         .item {
-            padding: 10px;
+            padding: 8px;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -262,7 +257,8 @@
             color: #666;
         }
         .footer {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
             margin-top: 15px;
             padding-top: 10px;
             border-top: 1px solid #f0f0f0;
@@ -271,44 +267,65 @@
             background: #6600a1;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 15px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            margin: 5px;
+            font-size: 12px;
+        }
+        .refresh-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
         }
         .section {
             margin-bottom: 15px;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             background: #fafafa;
         }
         .indicador-selector {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            display: flex;
             gap: 8px;
-            margin: 10px 0;
+            margin: 8px 0;
         }
         .indicador-button {
+            flex: 1;
             background: #6600a1;
             color: white;
             border: none;
-            padding: 12px 8px;
+            padding: 8px 5px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
         }
         .indicador-button.active {
             background: #27ae60;
             border: 2px solid #155724;
         }
+        .compact-info {
+            display: flex;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .compact-info .info-item {
+            flex: 1;
+            min-width: 0;
+        }
         @media (max-width: 480px) {
-            .info-grid, .controls-grid, .route-selector, .indicador-selector {
+            .route-selector, .controls-grid {
                 grid-template-columns: 1fr;
             }
             .stats {
+                flex-direction: column;
+            }
+            .indicador-selector {
                 flex-direction: column;
             }
         }
@@ -318,14 +335,12 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA MEJORADA -->
+        <!-- CABECERA MEJORADA Y COMPACTA -->
         <div class="header">
             <h1>RECOLECCIÓN SOKSO</h1>
-            <div class="connection-status">
-                <div class="connection-item">
-                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIRE</span>
-                </div>
+            <div class="header-controls">
+                <button onclick="cargarRutasDesdeFirebase()" class="admin-button">🔄 Cargar</button>
+                <div id="firebaseIndicator" class="connection-indicator checking"></div>
             </div>
         </div>
 
@@ -334,17 +349,15 @@
 
         <!-- SECCIÓN PRINCIPAL DE USUARIO -->
         <div class="section user-panel" id="userSection">
-            <!-- SELECTOR DE TIPO DE RECOLECCIÓN -->
+            <!-- SELECTOR DE TIPO DE RECOLECCIÓN EN HORIZONTAL -->
             <div class="indicador-selector">
                 <button class="indicador-button active" data-indicador="Regular">Regular</button>
                 <button class="indicador-button" data-indicador="Backorder">Backorder</button>
                 <button class="indicador-button" data-indicador="Unificado">Unificado</button>
             </div>
             
-            <button onclick="cargarRutasDesdeFirebase()" class="admin-button">🔄 Cargar Rutas</button>
-            
             <div class="picking-info" id="fileInfo">
-                Presiona "Cargar Rutas" para comenzar...
+                Presiona "Cargar" para comenzar...
             </div>
             <div id="rutasContainer" class="hidden">
                 <h3>Selecciona tu Ruta:</h3>
@@ -354,50 +367,49 @@
 
         <!-- SECCIÓN SELECCIÓN DE COLA -->
         <div class="section hidden" id="colaSection">
-            <h2>Selección de Cola</h2>
-            <div class="picking-info">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">RECOLECTOR</div>
-                        <div class="info-value" id="recolectorNombre">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">RUTA</div>
-                        <div class="info-value" id="rutaActual">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">TIPO</div>
-                        <div class="info-value" id="tipoRecoleccion">-</div>
-                    </div>
+            <h3>Selección de Cola</h3>
+            
+            <!-- INFORMACIÓN COMPACTA EN HORIZONTAL -->
+            <div class="compact-info">
+                <div class="info-item">
+                    <div class="info-label">RECOLECTOR</div>
+                    <div class="info-value" id="recolectorNombre">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">RUTA</div>
+                    <div class="info-value" id="rutaActual">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">TIPO</div>
+                    <div class="info-value" id="tipoRecoleccion">-</div>
                 </div>
             </div>
             
-            <h3>Selecciona una cola:</h3>
+            <h4>Selecciona una cola:</h4>
             <div class="route-selector" id="colaSelector"></div>
             
             <button onclick="volverSeleccionRuta()" class="admin-button warning">↩️ Volver</button>
         </div>
 
-        <!-- SECCIÓN PICKING MEJORADA -->
+        <!-- SECCIÓN PICKING OPTIMIZADA -->
         <div class="section hidden" id="pickingSection">
-            <div class="picking-info">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">RECOLECTOR</div>
-                        <div class="info-value" id="pickingRecolector">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">RUTA</div>
-                        <div class="info-value" id="pickingRuta">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">COLA</div>
-                        <div class="info-value" id="pickingCola">-</div>
-                    </div>
+            <!-- INFORMACIÓN COMPACTA EN HORIZONTAL -->
+            <div class="compact-info">
+                <div class="info-item">
+                    <div class="info-label">RECOLECTOR</div>
+                    <div class="info-value" id="pickingRecolector">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">RUTA</div>
+                    <div class="info-value" id="pickingRuta">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">COLA</div>
+                    <div class="info-value" id="pickingCola">-</div>
                 </div>
             </div>
             
-            <!-- ÁREA DE DEPÓSITO ACTUAL CON ANIMACIÓN -->
+            <!-- ÁREA DE DEPÓSITO ACTUAL OPTIMIZADA -->
             <div class="deposito-info" id="depositoActualArea">
                 <div class="deposito-row">
                     <span id="pickingDeposito">-</span>
@@ -405,7 +417,9 @@
                 <div class="deposito-row">
                     <span id="pickingDescripcion">-</span>
                 </div>
-                <div class="info-grid" style="margin-top: 8px;">
+                
+                <!-- INFORMACIÓN DE CANTIDAD EN HORIZONTAL -->
+                <div class="compact-info">
                     <div class="info-item">
                         <div class="info-label">CANTIDAD</div>
                         <div class="info-value" id="pickingCantidad">0</div>
@@ -419,16 +433,19 @@
                         <div class="info-value" id="pickingPendiente">0</div>
                     </div>
                 </div>
+                
                 <!-- CHECK ANIMADO -->
                 <div id="checkAnimation" style="text-align: center; margin-top: 10px; display: none;">
                     <span style="font-size: 24px; color: #28a745;">✅</span>
                 </div>
             </div>
             
-            <!-- ÁREA DE ESCANEO MEJORADA -->
+            <!-- ÁREA DE ESCANEO OPTIMIZADA -->
             <div class="scan-area">
-                <h3>ESCANEAR CÓDIGO UPC</h3>
+                <h4>ESCANEAR CÓDIGO UPC</h4>
                 <input type="text" id="upcInput" placeholder="Escanear código UPC" autocomplete="off">
+                
+                <!-- BOTONES DE CONTROL EN HORIZONTAL -->
                 <div class="controls-grid">
                     <button onclick="marcarComoNoEncontrado()" class="admin-button danger">❌ No Encontrado</button>
                     <button onclick="anteriorDeposito()" class="admin-button warning">⏮️ Atrás</button>
@@ -436,7 +453,11 @@
                 </div>
             </div>
             
-            <!-- ESTADÍSTICAS MEJORADAS -->
+            <!-- LISTA DE DEPÓSITOS -->
+            <h4>Lista de Depósitos (pulsa para seleccionar):</h4>
+            <div class="item-list" id="itemList"></div>
+            
+            <!-- ESTADÍSTICAS MEJORADAS (AHORA DEBAJO DE LA LISTA) -->
             <div class="stats">
                 <div class="stat-box">
                     <h4>TOTAL</h4>
@@ -451,14 +472,12 @@
                     <span id="pendingUnidadesPicking">0</span>
                 </div>
             </div>
-            
-            <!-- LISTA DE DEPÓSITOS MEJORADA -->
-            <h4>Lista de Depósitos (pulsa para seleccionar):</h4>
-            <div class="item-list" id="itemList"></div>
         </div>
 
+        <!-- FOOTER MEJORADO CON BOTÓN REFRESH -->
         <div class="footer">
-            <button onclick="volverAInterfazPrincipal()" class="back-button">🏠 Volver a Interfaz</button>
+            <button onclick="volverAInterfazPrincipal()" class="back-button">🏠 Volver</button>
+            <button onclick="refrescarDatos()" class="refresh-button">🔄 Refresh</button>
         </div>
     </div>
 
@@ -560,10 +579,6 @@
             connectedRef.on("value", function(snap) {
                 if (snap.val() === true) {
                     document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
-                    // Reconexión automática - recargar datos
-                    if (rutaActual && usuarioActual) {
-                        cargarDashboardRecoleccion();
-                    }
                 } else {
                     document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
                 }
@@ -658,6 +673,26 @@
             }
         }
 
+        // ================= VALIDACIÓN DE FECHA =================
+        function validarFechaDatos(fechaDatos) {
+            // Convertir fecha de datos (formato DD/MM/YYYY) a objeto Date
+            const partes = fechaDatos.split('/');
+            if (partes.length !== 3) return false;
+            
+            const fechaDatosObj = new Date(partes[2], partes[1] - 1, partes[0]);
+            
+            // Fecha actual
+            const fechaActual = new Date();
+            fechaActual.setHours(0, 0, 0, 0);
+            
+            // Comparar fechas
+            if (fechaDatosObj < fechaActual) {
+                return false; // Fecha pasada
+            }
+            
+            return true; // Fecha válida (hoy o futura)
+        }
+
         async function cargarRutasDesdeFirebase(silencioso = false) {
             try {
                 if (!silencioso) {
@@ -707,6 +742,7 @@
                 rutasMaestras = {};
                 totalUnidadesGlobal = 0;
                 fechaRecoleccion = '';
+                let fechaValida = true;
                 
                 console.log('Procesando datos desde:', fuente);
                 console.log('Tipo de recolección seleccionado:', tipoRecoleccionActual);
@@ -719,6 +755,15 @@
                 const primerRegistro = Object.values(datosFirebase)[0];
                 if (primerRegistro && primerRegistro.fecha) {
                     fechaRecoleccion = primerRegistro.fecha;
+                    
+                    // Validar fecha
+                    if (!validarFechaDatos(fechaRecoleccion)) {
+                        fechaValida = false;
+                        mostrarMensajeModal(
+                            '¡Cuidado!', 
+                            'Estás intentando trabajar con datos pasados. Reportalo a James Jimenez.'
+                        );
+                    }
                 }
                 
                 // Agrupar datos por depósito para el modo unificado
@@ -774,7 +819,7 @@
                     throw new Error('No se encontraron datos válidos en Firebase para el tipo seleccionado: ' + tipoRecoleccionActual);
                 }
                 
-                mostrarInfoRutas(fuente);
+                mostrarInfoRutas(fuente, fechaValida);
                 mostrarOpcionesRutas();
                 
             } catch (error) {
@@ -814,20 +859,21 @@
             }
         }
 
-        function mostrarInfoRutas(fuente) {
+        function mostrarInfoRutas(fuente, fechaValida) {
             const totalRutas = Object.keys(rutasMaestras).length;
             
             let fechaInfo = '';
             if (fechaRecoleccion) {
-                fechaInfo = `<strong>📅 Fecha: ${fechaRecoleccion}</strong><br>`;
+                const estadoFecha = fechaValida ? '✅' : '⚠️';
+                fechaInfo = `<strong>${estadoFecha} Fecha: ${fechaRecoleccion}</strong><br>`;
             }
             
             document.getElementById('fileInfo').innerHTML = 
                 `${fechaInfo}
-                 <strong>✅ Fuente: ${fuente}</strong><br>
+                 <strong>Fuente: ${fuente}</strong><br>
                  <strong>Tipo: ${tipoRecoleccionActual}</strong><br>
-                 <strong>📊 Rutas disponibles: ${totalRutas}</strong><br>
-                 <strong>📦 Total Unidades: ${totalUnidadesGlobal}</strong>`;
+                 <strong>Rutas: ${totalRutas}</strong><br>
+                 <strong>Unidades: ${totalUnidadesGlobal}</strong>`;
         }
 
         function mostrarOpcionesRutas() {
@@ -846,11 +892,6 @@
                 button.className = rutaCompletada ? 'route-button completed' : 'route-button';
                 button.textContent = `📍 ${ruta} (${totalUnidadesRuta})`;
                 button.onclick = () => seleccionarRuta(ruta);
-                
-                // NO deshabilitar botones - CORRECCIÓN DEL PROBLEMA
-                // if (rutaCompletada) {
-                //     button.disabled = true;
-                // }
                 
                 selector.appendChild(button);
             });
@@ -915,8 +956,6 @@
             document.getElementById('recolectorNombre').textContent = usuarioActual;
             document.getElementById('rutaActual').textContent = ruta;
             document.getElementById('tipoRecoleccion').textContent = tipoRecoleccionActual;
-            
-            const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
             
             await mostrarOpcionesColas();
         }
@@ -1464,6 +1503,15 @@
             }
         }
 
+        // ================= BOTÓN REFRESH =================
+        function refrescarDatos() {
+            if (rutaActual && usuarioActual) {
+                cargarDashboardRecoleccion();
+            } else {
+                cargarRutasDesdeFirebase();
+            }
+        }
+
         // ================= NAVEGACIÓN MEJORADA =================
         function volverAInterfazPrincipal() {
             // Verificar si hay escaneos pendientes sin guardar
@@ -1525,19 +1573,9 @@
             }
         }
 
-        // Sincronización automática cada 30 segundos
-        setInterval(() => {
-            if (rutaActual && usuarioActual) {
-                cargarDashboardRecoleccion();
-            }
-        }, 30000);
-
         // Sincronizar registros pendientes al cargar
         window.addEventListener('online', () => {
             sincronizarRegistrosPendientes();
-            if (rutaActual && usuarioActual) {
-                cargarDashboardRecoleccion();
-            }
         });
     </script>
 </body>

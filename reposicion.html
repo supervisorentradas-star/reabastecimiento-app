@@ -32,14 +32,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
             border-bottom: 1px solid #f0f0f0;
         }
         .header-left {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .header-center {
             flex: 1;
@@ -48,12 +48,7 @@
         .header-right {
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-        h1 {
-            color: #6600a1;
-            font-size: 20px;
-            margin: 0;
+            gap: 6px;
         }
         .connection-indicator {
             width: 10px;
@@ -73,20 +68,25 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-y: auto; /* Cambiado a auto para permitir scroll */
+            max-height: calc(100vh - 120px); /* Altura máxima para permitir scroll */
         }
         .load-section {
             margin-bottom: 8px;
         }
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 11px;
-            background: #6600a1;
+        .refresh-button {
+            padding: 6px;
+            font-size: 14px;
+            background: #27ae60;
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .status-section {
             margin: 4px 0;
@@ -159,12 +159,15 @@
             text-align: center;
             border: 1px solid #6600a1;
             font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
         .ruta-header {
             font-size: 14px;
             font-weight: bold;
             color: #6600a1;
-            margin-bottom: 4px;
         }
         .current-deposito {
             background: #f8f9fa;
@@ -332,6 +335,8 @@
         }
         .footer {
             margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #f0f0f0;
         }
         .back-button {
             background: #6600a1;
@@ -360,23 +365,23 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA REORGANIZADA -->
+        <!-- CABECERA REORGANIZADA Y COMPACTA -->
         <div class="header">
             <div class="header-left">
-                <button class="btn-small" onclick="cargarDatosReposicion()">🔄 Actualizar Datos</button>
+                <button class="refresh-button" onclick="cargarDatosReposicion()" title="Actualizar datos">🔄</button>
             </div>
             <div class="header-center">
-                <h1>REPOSICIÓN SOKSO</h1>
+                <!-- ELIMINADO EL TÍTULO "REPOSICIÓN SOKSO" -->
             </div>
             <div class="header-right">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
                 <div class="status-section status-info" id="dataStatus">
-                    Presiona "Actualizar Datos"
+                    Presiona "🔄"
                 </div>
             </div>
         </div>
 
-        <!-- SECCIÓN DE DATOS -->
+        <!-- SECCIÓN DE DATOS CON SCROLL HABILITADO -->
         <div class="data-section">
             <!-- INFORMACIÓN DE USUARIO -->
             <div id="userSection" class="user-section hidden">
@@ -391,9 +396,10 @@
                 </div>
             </div>
 
-            <!-- INFORMACIÓN DE RUTA ACTUAL -->
+            <!-- INFORMACIÓN DE RUTA ACTUAL MÁS COMPACTA -->
             <div class="ruta-info hidden" id="rutaInfoSection">
-                <div class="ruta-header" id="rutaActual">COLA: -</div>
+                <span style="color: #28a745;">✅</span>
+                <div class="ruta-header" id="rutaActual">P01</div>
             </div>
 
             <!-- DEPÓSITO ACTUAL -->
@@ -407,7 +413,7 @@
                         <div class="counter-value" id="counterSolicitada">0</div>
                     </div>
                     <div class="counter-box">
-                        <div class="counter-label">REPUESTA</div>
+                        <div class="counter-label">LEÍDO</div>
                         <div class="counter-value" id="counterRepuesta">0</div>
                     </div>
                     <div class="counter-box">
@@ -459,7 +465,7 @@
             </div>
         </div>
 
-        <!-- BOTÓN VOLVER AL PRINCIPAL -->
+        <!-- BOTÓN VOLVER AL PRINCIPAL (AHORA VISIBLE CON SCROLL) -->
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
                 ↩️ Volver a Interfaz
@@ -600,7 +606,7 @@
         // ================= CARGA DE DATOS DESDE FIREBASE =================
         async function cargarDatosReposicion() {
             try {
-                mostrarEstado('📥 Cargando desde Firebase...', 'info');
+                mostrarEstado('📥 Cargando...', 'info');
                 
                 // Cargar datos de reposición desde Firebase
                 const snapshot = await database.ref('reposicion_rutas').once('value');
@@ -612,7 +618,7 @@
                 
                 procesarDatosFirebase(datosFirebase);
                 guardarEnCache(datosFirebase);
-                mostrarEstado('✅ Datos cargados correctamente desde Firebase', 'success');
+                mostrarEstado('✅ Datos cargados', 'success');
                 
                 // Si hay sesión activa, cargar estado de Firebase
                 if (sesionActiva) {
@@ -759,6 +765,10 @@
                 actualizarListaColas();
                 if (rutaSeleccionada) {
                     actualizarListaDepositos();
+                    // CORRECCIÓN: Actualizar el contador de "LEÍDO" cuando se carga el estado
+                    if (depositoActual) {
+                        actualizarInterfazDeposito();
+                    }
                 }
                 
             } catch (error) {
@@ -912,7 +922,8 @@
             document.getElementById('userName').textContent = usuarioActual;
             document.getElementById('userRuta').textContent = cola;
             
-            document.getElementById('rutaActual').textContent = `COLA: ${cola}`;
+            // CORRECCIÓN: Mostrar solo el código de cola con check (ej: ✅ P01)
+            document.getElementById('rutaActual').textContent = cola;
             document.getElementById('rutaInfoSection').classList.remove('hidden');
             
             document.getElementById('rutasSection').classList.add('hidden');
@@ -1016,6 +1027,7 @@
             if (!depositoActual || !rutaSeleccionada) return;
             
             const datos = datosReposicion[rutaSeleccionada].depositos[depositoActual];
+            // CORRECCIÓN: Usar calcularCantidadEscaneada para obtener el valor actualizado
             const cantidadEscaneada = calcularCantidadEscaneada(depositoActual);
             const pendiente = datos.cantidadTotal - cantidadEscaneada;
             

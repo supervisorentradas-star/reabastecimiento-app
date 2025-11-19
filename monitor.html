@@ -124,7 +124,7 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
             gap: 10px;
             margin: 15px 0;
         }
@@ -214,7 +214,7 @@
             <div class="connection-status">
                 <div class="connection-item">
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIREBASE</span>
+                    <!-- QUITADA LA PALABRA "FIREBASE" -->
                 </div>
             </div>
         </div>
@@ -236,11 +236,21 @@
                     <div class="stat-value" id="countReposiciones">0</div>
                     <div class="stat-label">registros</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-label">SLOTING</div>
+                    <div class="stat-value" id="countSloting">0</div>
+                    <div class="stat-label">registros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">RUTAS & COLAS</div>
+                    <div class="stat-value" id="countRutas">0</div>
+                    <div class="stat-label">registros</div>
+                </div>
             </div>
             <div class="progress-bar">
                 <div class="progress-fill" id="storageProgress" style="width: 0%"></div>
             </div>
-            <div class="stat-label" id="storageText">Almacenamiento estimado: 0 MB / 1 GB</div>
+            <div class="stat-label" id="storageText">Almacenamiento estimado: 0 MB / 1 GB (0%)</div>
             
             <div class="buttons-horizontal">
                 <button onclick="actualizarEstadisticas()" class="btn-primary">🔄 Actualizar Estadísticas</button>
@@ -251,7 +261,7 @@
         <div class="admin-panel">
             <div class="action-section">
                 <h2 class="section-title">📥 DESCARGAR BACKUP COMPLETO</h2>
-                <p style="text-align: center;">Descarga todos los datos de recolección y reposición como archivo Excel</p>
+                <!-- QUITADA LA LÍNEA DE DESCRIPCIÓN -->
                 
                 <div class="buttons-horizontal">
                     <button class="btn-primary" onclick="descargarBackupExcel()">📊 Descargar Excel Completo</button>
@@ -266,11 +276,11 @@
 
             <div class="action-section">
                 <h2 class="section-title">🗑️ LIMPIAR DATOS FIREBASE</h2>
-                <p style="text-align: center;">⚠️ <strong>ADVERTENCIA:</strong> Esta acción elimina TODOS los datos históricos.</p>
-                <p style="text-align: center;">✅ <strong>RECOMENDACIÓN:</strong> Descarga el backup antes de limpiar</p>
+                <p style="text-align: center;">⚠️ <strong>ADVERTENCIA:</strong> Esta acción elimina solo los datos históricos de recolección y reposición.</p>
+                <p style="text-align: center;">✅ <strong>NO SE ELIMINARÁ:</strong> Sloting, Rutas & Colas</p>
                 
                 <div class="buttons-horizontal">
-                    <button class="btn-danger" onclick="limpiarDatosFirebase()">🗑️ Limpiar Todos los Datos</button>
+                    <button class="btn-danger" onclick="limpiarDatosFirebase()">🗑️ Limpiar Datos Históricos</button>
                 </div>
             </div>
         </div>
@@ -300,6 +310,8 @@
         let estadisticas = {
             recolecciones: 0,
             reposiciones: 0,
+            sloting: 0,
+            rutas: 0,
             almacenamientoMB: 0
         };
 
@@ -340,7 +352,22 @@
                 const datosReposicion = snapshotReposicion.val();
                 estadisticas.reposiciones = datosReposicion ? Object.keys(datosReposicion).length : 0;
                 
-                // Calcular almacenamiento estimado (aproximado)
+                // Obtener sloting
+                const snapshotSloting = await database.ref('sloting').once('value');
+                const datosSloting = snapshotSloting.val();
+                estadisticas.sloting = datosSloting ? Object.keys(datosSloting).length : 0;
+                
+                // Obtener rutas (suma de recoleccion_rutas y reposicion_rutas)
+                const snapshotRecoleccionRutas = await database.ref('recoleccion_rutas').once('value');
+                const snapshotReposicionRutas = await database.ref('reposicion_rutas').once('value');
+                const datosRecoleccionRutas = snapshotRecoleccionRutas.val();
+                const datosReposicionRutas = snapshotReposicionRutas.val();
+                
+                estadisticas.rutas = 0;
+                if (datosRecoleccionRutas) estadisticas.rutas += Object.keys(datosRecoleccionRutas).length;
+                if (datosReposicionRutas) estadisticas.rutas += Object.keys(datosReposicionRutas).length;
+                
+                // Calcular almacenamiento estimado (incluyendo todas las bases de datos)
                 estadisticas.almacenamientoMB = await calcularAlmacenamientoEstimado();
                 
                 // Actualizar interfaz
@@ -374,6 +401,30 @@
                     tamañoTotal += new Blob([jsonString]).size;
                 }
                 
+                // Calcular sloting
+                const snapshotSlot = await database.ref('sloting').once('value');
+                const slotData = snapshotSlot.val();
+                if (slotData) {
+                    const jsonString = JSON.stringify(slotData);
+                    tamañoTotal += new Blob([jsonString]).size;
+                }
+                
+                // Calcular recoleccion_rutas
+                const snapshotRecRutas = await database.ref('recoleccion_rutas').once('value');
+                const recRutasData = snapshotRecRutas.val();
+                if (recRutasData) {
+                    const jsonString = JSON.stringify(recRutasData);
+                    tamañoTotal += new Blob([jsonString]).size;
+                }
+                
+                // Calcular reposicion_rutas
+                const snapshotRepRutas = await database.ref('reposicion_rutas').once('value');
+                const repRutasData = snapshotRepRutas.val();
+                if (repRutasData) {
+                    const jsonString = JSON.stringify(repRutasData);
+                    tamañoTotal += new Blob([jsonString]).size;
+                }
+                
                 // Convertir a MB
                 return Math.round((tamañoTotal / (1024 * 1024)) * 100) / 100;
                 
@@ -387,6 +438,8 @@
             // Actualizar contadores
             document.getElementById('countRecolecciones').textContent = estadisticas.recolecciones;
             document.getElementById('countReposiciones').textContent = estadisticas.reposiciones;
+            document.getElementById('countSloting').textContent = estadisticas.sloting;
+            document.getElementById('countRutas').textContent = estadisticas.rutas;
             
             // Actualizar barra de progreso (1 GB = 1024 MB)
             const porcentaje = Math.min((estadisticas.almacenamientoMB / 1024) * 100, 100);
@@ -415,9 +468,15 @@
                 // Obtener todos los datos
                 const snapshotRecoleccion = await database.ref('recolecciones').once('value');
                 const snapshotReposicion = await database.ref('reposiciones').once('value');
+                const snapshotSloting = await database.ref('sloting').once('value');
+                const snapshotRecoleccionRutas = await database.ref('recoleccion_rutas').once('value');
+                const snapshotReposicionRutas = await database.ref('reposicion_rutas').once('value');
                 
                 const datosRecoleccion = snapshotRecoleccion.val();
                 const datosReposicion = snapshotReposicion.val();
+                const datosSloting = snapshotSloting.val();
+                const datosRecoleccionRutas = snapshotRecoleccionRutas.val();
+                const datosReposicionRutas = snapshotReposicionRutas.val();
                 
                 // Crear libro de Excel
                 const wb = XLSX.utils.book_new();
@@ -436,6 +495,27 @@
                     XLSX.utils.book_append_sheet(wb, wsReposicion, "Reposiciones");
                 }
                 
+                // Procesar sloting
+                if (datosSloting) {
+                    const slotingArray = Object.values(datosSloting);
+                    const wsSloting = XLSX.utils.json_to_sheet(slotingArray);
+                    XLSX.utils.book_append_sheet(wb, wsSloting, "Sloting");
+                }
+                
+                // Procesar rutas de recolección
+                if (datosRecoleccionRutas) {
+                    const recoleccionRutasArray = Object.values(datosRecoleccionRutas);
+                    const wsRecoleccionRutas = XLSX.utils.json_to_sheet(recoleccionRutasArray);
+                    XLSX.utils.book_append_sheet(wb, wsRecoleccionRutas, "Rutas Recolección");
+                }
+                
+                // Procesar rutas de reposición
+                if (datosReposicionRutas) {
+                    const reposicionRutasArray = Object.values(datosReposicionRutas);
+                    const wsReposicionRutas = XLSX.utils.json_to_sheet(reposicionRutasArray);
+                    XLSX.utils.book_append_sheet(wb, wsReposicionRutas, "Rutas Reposición");
+                }
+                
                 // Agregar hoja de resumen
                 const resumenData = [{
                     "Tipo de Datos": "Recolecciones",
@@ -444,9 +524,21 @@
                     "Tipo de Datos": "Reposiciones",
                     "Total Registros": datosReposicion ? Object.keys(datosReposicion).length : 0
                 }, {
+                    "Tipo de Datos": "Sloting",
+                    "Total Registros": datosSloting ? Object.keys(datosSloting).length : 0
+                }, {
+                    "Tipo de Datos": "Rutas Recolección",
+                    "Total Registros": datosRecoleccionRutas ? Object.keys(datosRecoleccionRutas).length : 0
+                }, {
+                    "Tipo de Datos": "Rutas Reposición",
+                    "Total Registros": datosReposicionRutas ? Object.keys(datosReposicionRutas).length : 0
+                }, {
                     "Tipo de Datos": "TOTAL",
                     "Total Registros": (datosRecoleccion ? Object.keys(datosRecoleccion).length : 0) + 
-                                      (datosReposicion ? Object.keys(datosReposicion).length : 0)
+                                      (datosReposicion ? Object.keys(datosReposicion).length : 0) +
+                                      (datosSloting ? Object.keys(datosSloting).length : 0) +
+                                      (datosRecoleccionRutas ? Object.keys(datosRecoleccionRutas).length : 0) +
+                                      (datosReposicionRutas ? Object.keys(datosReposicionRutas).length : 0)
                 }];
                 
                 const wsResumen = XLSX.utils.json_to_sheet(resumenData);
@@ -461,7 +553,10 @@
                 // Actualizar información del archivo
                 document.getElementById('fileInfo').innerHTML = 
                     `✅ <strong>Backup Excel descargado:</strong> ${nombreArchivo}<br>
-                     <small>Recolecciones: ${datosRecoleccion ? Object.keys(datosRecoleccion).length : 0} | Reposiciones: ${datosReposicion ? Object.keys(datosReposicion).length : 0}</small>`;
+                     <small>Recolecciones: ${datosRecoleccion ? Object.keys(datosRecoleccion).length : 0} | 
+                     Reposiciones: ${datosReposicion ? Object.keys(datosReposicion).length : 0} | 
+                     Sloting: ${datosSloting ? Object.keys(datosSloting).length : 0} | 
+                     Rutas: ${(datosRecoleccionRutas ? Object.keys(datosRecoleccionRutas).length : 0) + (datosReposicionRutas ? Object.keys(datosReposicionRutas).length : 0)}</small>`;
                 
                 mostrarMensaje('✅ Backup Excel descargado correctamente', true);
                 
@@ -542,20 +637,19 @@
         // ================= LIMPIAR DATOS =================
         async function limpiarDatosFirebase() {
             // Confirmación EXTRA segura
-            const confirmacion1 = confirm('⚠️ ¿ESTÁS ABSOLUTAMENTE SEGURO DE ELIMINAR TODOS LOS DATOS?\n\nEsta acción NO se puede deshacer.');
+            const confirmacion1 = confirm('⚠️ ¿ESTÁS ABSOLUTAMENTE SEGURO DE ELIMINAR LOS DATOS HISTÓRICOS?\n\nEsta acción NO se puede deshacer.');
             if (!confirmacion1) return;
             
-            const confirmacion2 = confirm('🔴 CONFIRMACIÓN FINAL:\n\n¿Realmente quieres ELIMINAR TODOS los datos de recolección y reposición?\n\n✅ Asegúrate de haber descargado el backup antes de continuar.');
+            const confirmacion2 = confirm('🔴 CONFIRMACIÓN FINAL:\n\n¿Realmente quieres ELIMINAR los datos de recolección y reposición?\n\n✅ NO se eliminarán: Sloting, Rutas & Colas\n✅ Asegúrate de haber descargado el backup antes de continuar.');
             if (!confirmacion2) return;
             
             try {
-                mostrarMensaje('🗑️ Eliminando datos... Esto puede tomar unos segundos.', true);
+                mostrarMensaje('🗑️ Eliminando datos históricos... Esto puede tomar unos segundos.', true);
                 
-                // Eliminar recolecciones
+                // Eliminar solo recolecciones y reposiciones (según las reglas de Firebase)
                 await database.ref('recolecciones').remove();
                 console.log('✅ Recolecciones eliminadas');
                 
-                // Eliminar reposiciones
                 await database.ref('reposiciones').remove();
                 console.log('✅ Reposiciones eliminadas');
                 
@@ -563,13 +657,15 @@
                 await database.ref('estado_reposicion').remove();
                 console.log('✅ Estado de reposición eliminado');
                 
+                // NO eliminar: sloting, recoleccion_rutas, reposicion_rutas
+                
                 // Esperar un momento para que se complete
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 
                 // Actualizar estadísticas
                 await actualizarEstadisticas();
                 
-                mostrarMensaje('✅ TODOS los datos han sido eliminados correctamente', true);
+                mostrarMensaje('✅ Datos históricos eliminados correctamente', true);
                 
             } catch (error) {
                 console.error('Error eliminando datos:', error);

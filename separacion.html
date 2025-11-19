@@ -23,7 +23,7 @@
             margin: 0 auto;
             background: white;
             border-radius: 8px;
-            padding: 15px;
+            padding: 12px;
             height: calc(100vh - 20px);
             display: flex;
             flex-direction: column;
@@ -32,14 +32,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
             border-bottom: 1px solid #f0f0f0;
         }
         .header-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .header-center {
             flex: 1;
@@ -48,11 +48,11 @@
         .header-right {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         h1 {
             color: #6600a1;
-            font-size: 22px;
+            font-size: 18px; /* Reducido de 22px */
             margin: 0;
         }
         .connection-indicator {
@@ -73,14 +73,15 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-y: auto; /* Cambiado para permitir scroll */
+            max-height: calc(100vh - 160px); /* Altura máxima para permitir scroll */
         }
         .load-section {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .btn-small {
-            padding: 8px 15px;
-            font-size: 12px;
+            padding: 6px 10px; /* Reducido padding */
+            font-size: 11px; /* Reducido tamaño de fuente */
             background: #6600a1;
             color: white;
             border: none;
@@ -210,6 +211,8 @@
         }
         .footer {
             margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f0f0f0;
         }
         .back-button {
             background: #6600a1;
@@ -231,10 +234,10 @@
 </head>
 <body>
     <div class="container">
-        <!-- CABECERA REORGANIZADA -->
+        <!-- CABECERA REORGANIZADA Y COMPACTA -->
         <div class="header">
             <div class="header-left">
-                <button class="btn-small" onclick="cargarDatosDesdeFirebase()">📥 Cargar Sloting</button>
+                <button class="btn-small" onclick="cargarDatosDesdeFirebase()">Sloting</button>
             </div>
             <div class="header-center">
                 <h1>SEPARACIÓN SOKSO</h1>
@@ -242,12 +245,12 @@
             <div class="header-right">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
                 <div class="status-section status-info" id="dataStatus">
-                    Presiona "Cargar Datos"
+                    Presiona "Sloting"
                 </div>
             </div>
         </div>
 
-        <!-- SECCIÓN DE DATOS -->
+        <!-- SECCIÓN DE DATOS CON SCROLL HABILITADO -->
         <div class="data-section">
             <!-- SECCIÓN DE ESCANEO -->
             <div class="scan-section">
@@ -293,7 +296,7 @@
             </div>
         </div>
 
-        <!-- BOTÓN VOLVER AL PRINCIPAL -->
+        <!-- BOTÓN VOLVER AL PRINCIPAL (AHORA VISIBLE) -->
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
                 ↩️ Volver a Interfaz
