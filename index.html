@@ -98,8 +98,10 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            min-height: 45px;
-            flex: 1;
+            min-height: 32px;   /* Altura mínima */
+            max-height: 38px;   /* Altura máxima */
+            height: 35px;       /* Altura preferida */
+            flex: 0 0 auto;     /* No grow, no shrink, tamaño base automático */
         }
         .module-button:hover {
             background: #55008a;

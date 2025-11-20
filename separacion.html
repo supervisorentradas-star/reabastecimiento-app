@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separación - REABASTECIMIENTO SOKSO</title>
+    <title>Separación - REABASTECIMIENTO</title>
     <style>
         * {
             box-sizing: border-box;
@@ -240,7 +240,7 @@
                 <button class="btn-small" onclick="cargarDatosDesdeFirebase()">Sloting</button>
             </div>
             <div class="header-center">
-                <h1>SEPARACIÓN SOKSO</h1>
+                <h1>SEPARACIÓN</h1>
             </div>
             <div class="header-right">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
@@ -471,7 +471,7 @@
             document.getElementById('resultArticulo').textContent = resultado.articulo;
             
             resultSection.classList.remove('hidden');
-            mostrarEstado('✅ Destino encontrado', 'success');
+            mostrarEstado('✅ Encontrado', 'success');
             
             // Auto-limpiar después de mostrar resultados
             setTimeout(() => {
@@ -537,7 +537,7 @@
             document.getElementById('upcInput').value = '';
             document.getElementById('resultSection').classList.add('hidden');
             document.getElementById('upcInput').focus();
-            mostrarEstado('Listo para escanear', 'info');
+            mostrarEstado('Puedes escanear', 'info');
         }
 
         function volverAlPrincipal() {

@@ -42,10 +42,17 @@
             align-items: center;
             gap: 6px;
         }
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .header-right {
             display: flex;
             align-items: center;
             gap: 6px;
+            font-weight: bold;
+            color: #6600a1;
         }
         .connection-indicator {
             width: 10px;
@@ -61,6 +68,20 @@
         .checking {
             background-color: #f39c12;
         }
+        .refresh-button {
+            padding: 6px;
+            font-size: 14px;
+            background: #6600a1;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         .data-section {
             flex: 1;
             display: flex;
@@ -68,20 +89,6 @@
             overflow-y: auto;
             max-height: calc(100vh - 140px);
             gap: 6px;
-        }
-        .refresh-button {
-            padding: 6px;
-            font-size: 14px;
-            background: #6600a1;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .status-section {
             margin: 4px 0;
@@ -139,24 +146,6 @@
         .ruta-item.completed {
             background: #d4edda;
             border-color: #28a745;
-        }
-        .ruta-info {
-            background: #e8f4fc;
-            padding: 8px;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            text-align: center;
-            border: 1px solid #6600a1;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .ruta-header {
-            font-size: 14px;
-            font-weight: bold;
-            color: #6600a1;
         }
         .current-deposito {
             background: #f8f9fa;
@@ -341,117 +330,145 @@
             width: 100%;
             font-weight: bold;
         }
-        .user-section {
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 6px;
-            margin-bottom: 6px;
+        .completion-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(40, 167, 69, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .completion-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .completion-message {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
             text-align: center;
             font-weight: bold;
-            color: #6600a1;
-            font-size: 12px;
+            color: #155724;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
-        .debug-info {
-            background: #fff3cd;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            color: #856404;
-            margin-top: 6px;
-            display: none;
+        .cola-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .cola-button {
+            padding: 12px;
+            border: 2px solid #6600a1;
+            border-radius: 6px;
+            background: white;
+            color: #6600a1;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .cola-button:hover {
+            background: #6600a1;
+            color: white;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
+    <!-- Overlay para completado -->
+    <div class="completion-overlay" id="completionOverlay">
+        <div class="completion-message">
+            ✅ COMPLETADO<br>
+            <span style="font-size: 14px;">Pasando al siguiente...</span>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <div class="header-left">
-                <button class="refresh-button" onclick="cargarDatosReposicion()" title="Actualizar datos">🔄</button>
+                <button class="refresh-button" onclick="cargarDatosReposicion()" title="Actualizar datos">↻</button>
             </div>
-            <div class="header-right">
+            <div class="header-center">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                <div class="status-section status-info" id="dataStatus">
-                    Presiona "🔄" para cargar datos
-                </div>
+            </div>
+            <div class="header-right" id="colaHeader">
+                SELECCIONAR COLA
             </div>
         </div>
 
         <div class="data-section">
-            <div id="userSection" class="user-section hidden">
-                Usuario: <span id="userName">-</span> | Cola: <span id="userRuta">-</span>
-            </div>
-
-            <div class="rutas-section hidden" id="rutasSection">
+            <!-- SECCIÓN DE COLAS (BOTONES) -->
+            <div class="rutas-section" id="rutasSection">
                 <h3 style="font-size: 14px; margin-bottom: 10px; text-align: center; color: #6600a1;">SELECCIONA UNA COLA PARA REPONER:</h3>
                 <div id="rutasContainer">
                     <!-- Las colas se cargarán aquí dinámicamente -->
                 </div>
             </div>
 
-            <!-- SECCIÓN DE DEBUG -->
-            <div class="debug-info" id="debugInfo">
-                <strong>INFO DEBUG:</strong> <span id="debugText">Esperando datos...</span>
-            </div>
-
-            <div class="ruta-info hidden" id="rutaInfoSection">
-                <span style="color: #28a745;">✅</span>
-                <div class="ruta-header" id="rutaActual">-</div>
-                <span style="color: #28a745;">TRABAJANDO</span>
-            </div>
-
-            <div class="current-deposito hidden" id="currentDepositoSection">
-                <div class="deposito-header" id="currentDeposito">-</div>
-                <div class="articulo-info" id="currentArticulo">-</div>
-                
-                <div class="counters">
-                    <div class="counter-box">
-                        <div class="counter-label">CANTIDAD</div>
-                        <div class="counter-value" id="counterSolicitada">0</div>
-                    </div>
-                    <div class="counter-box">
-                        <div class="counter-label">LEÍDA</div>
-                        <div class="counter-value" id="counterRepuesta">0</div>
-                    </div>
-                    <div class="counter-box">
-                        <div class="counter-label">PENDIENTE</div>
-                        <div class="counter-value" id="counterPendiente">0</div>
+            <!-- SECCIÓN DE REPOSICIÓN (OCULTA INICIALMENTE) -->
+            <div class="hidden" id="reposicionSection">
+                <div class="current-deposito" id="currentDepositoSection">
+                    <div class="deposito-header" id="currentDeposito">-</div>
+                    <div class="articulo-info" id="currentArticulo">-</div>
+                    
+                    <div class="counters">
+                        <div class="counter-box">
+                            <div class="counter-label">CANTIDAD</div>
+                            <div class="counter-value" id="counterSolicitada">0</div>
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">LEÍDA</div>
+                            <div class="counter-value" id="counterRepuesta">0</div>
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">PENDIENTE</div>
+                            <div class="counter-value" id="counterPendiente">0</div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="scan-section hidden" id="scanSection">
-                <h3>ESCANEAR DEPÓSITO</h3>
-                <input type="text" 
-                       id="depositoInput" 
-                       class="scan-input" 
-                       placeholder="Escanea el código del depósito" 
-                       autocomplete="off">
-                
-                <h3>ESCANEAR CÓDIGO UPC</h3>
-                <input type="text" 
-                       id="upcInput" 
-                       class="scan-input" 
-                       placeholder="Escanea el código UPC del producto" 
-                       autocomplete="off"
-                       disabled>
-                
-                <div class="controls">
-                    <button class="btn-warning" onclick="siguienteDeposito()">⏭️ SIGUIENTE</button>
-                    <button class="btn-success" onclick="finalizarReposicion()">🏁 FINALIZAR</button>
+                <div class="scan-section" id="scanSection">
+                    <h3>ESCANEAR DEPÓSITO</h3>
+                    <input type="text" 
+                           id="depositoInput" 
+                           class="scan-input" 
+                           placeholder="Escanea el código del depósito" 
+                           autocomplete="off">
+                    
+                    <h3>ESCANEAR CÓDIGO UPC</h3>
+                    <input type="text" 
+                           id="upcInput" 
+                           class="scan-input" 
+                           placeholder="Escanea el código UPC del producto" 
+                           autocomplete="off"
+                           disabled>
+                    
+                    <div class="controls">
+                        <button class="btn-warning" onclick="siguienteDeposito()">⏭️ SIG DEPÓSITO</button>
+                        <button class="btn-success" onclick="finalizarReposicion()">🏁 FINALIZAR</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="depositos-list hidden" id="depositosListSection">
-                <div class="deposito-header-row">
-                    <div></div>
-                    <div>DEPÓSITO FINAL - DESCRIPCIÓN</div>
-                    <div>TOTAL</div>
-                    <div>HECHO</div>
-                </div>
-                <div id="depositosGrid">
-                    <!-- Los depósitos se cargarán aquí dinámicamente -->
+                <div class="depositos-list" id="depositosListSection">
+                    <div class="deposito-header-row">
+                        <div></div>
+                        <div>LISTA DE DEPÓSITO - DESCRIPCIÓN</div>
+                        <div>TOTAL</div>
+                        <div>HECHO</div>
+                    </div>
+                    <div id="depositosGrid">
+                        <!-- Los depósitos se cargarán aquí dinámicamente -->
+                    </div>
                 </div>
             </div>
 
@@ -462,7 +479,7 @@
 
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
-                ↩️ Volver a Interfaz Principal
+                ↩️ Volver a Interfaz
             </button>
         </div>
     </div>
@@ -496,12 +513,8 @@
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
             console.log("🔧 INICIANDO MÓDULO DE REPOSICIÓN...");
-            mostrarDebug("Inicializando módulo...");
             inicializarFirebase();
             verificarSesionActiva();
-            
-            // Mostrar panel de debug
-            document.getElementById('debugInfo').style.display = 'block';
             
             // Configurar eventos de escaneo
             document.getElementById('depositoInput').addEventListener('input', function(e) {
@@ -524,12 +537,6 @@
             }, 1000);
         });
 
-        // ================= DEBUGGING MEJORADO =================
-        function mostrarDebug(mensaje) {
-            console.log("🐛 DEBUG:", mensaje);
-            document.getElementById('debugText').textContent = mensaje;
-        }
-
         // ================= CONEXIÓN FIREBASE =================
         function inicializarFirebase() {
             try {
@@ -537,15 +544,12 @@
                 connectedRef.on("value", function(snap) {
                     if (snap.val() === true) {
                         document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
-                        mostrarDebug("✅ Conectado a Firebase");
                     } else {
                         document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
-                        mostrarDebug("❌ Desconectado de Firebase");
                     }
                 });
             } catch (error) {
                 console.error("Error inicializando Firebase:", error);
-                mostrarDebug("❌ Error conectando a Firebase: " + error.message);
             }
         }
 
@@ -558,20 +562,16 @@
                 return;
             }
             
-            mostrarDebug("👤 Usuario: " + usuarioActual);
-            
             const sesionGuardada = localStorage.getItem('sesionReposicionActiva');
             if (sesionGuardada) {
                 try {
                     sesionActiva = JSON.parse(sesionGuardada);
                     colaSeleccionada = sesionActiva.cola;
-                    mostrarDebug("🔄 Recuperando sesión activa: " + colaSeleccionada);
                     
                     await cargarDatosReposicion();
                     await cargarEscaneosDesdeFirebase();
                     
                     mostrarPanelReposicion();
-                    mostrarEstado('🔄 Sesión recuperada. Continuando...', 'success');
                     
                 } catch (error) {
                     console.error('Error recuperando sesión:', error);
@@ -583,10 +583,7 @@
         // ================= CARGA DE DATOS MEJORADA =================
         async function cargarDatosReposicion() {
             try {
-                mostrarEstado('🔍 BUSCANDO DATOS EN FIREBASE...', 'info');
-                mostrarDebug("Buscando datos en Firebase...");
-                
-                // CARGAR DATOS DE RECOLECCIÓN CON LOS NUEVOS CAMPOS
+                // CARGAR DATOS DE RECOLECCIÓN
                 const recoleccionSnapshot = await database.ref('recolecciones').once('value');
                 const recoleccionData = recoleccionSnapshot.val();
                 
@@ -594,20 +591,14 @@
                     throw new Error('No se encontraron datos en recolecciones');
                 }
                 
-                mostrarDebug("✅ Datos de recolección encontrados: " + Object.keys(recoleccionData).length + " registros");
-                
                 // PROCESAR DATOS PARA REPOSICIÓN
                 await procesarDatosReposicion(recoleccionData);
                 
                 // CARGAR ESCANEOS EXISTENTES
                 await cargarEscaneosDesdeFirebase();
                 
-                mostrarEstado('✅ SISTEMA LISTO - ' + colasDisponibles.length + ' COLAS ENCONTRADAS', 'success');
-                
             } catch (error) {
                 console.error('❌ ERROR CRÍTICO:', error);
-                mostrarDebug("❌ ERROR: " + error.message);
-                mostrarEstado(`❌ ERROR: ${error.message}`, 'error');
             }
         }
 
@@ -615,12 +606,6 @@
         async function procesarDatosReposicion(recoleccionData) {
             datosReposicion = {};
             colasDisponibles = [];
-            
-            mostrarDebug("🔄 Procesando datos para reposición...");
-            
-            // CONTADORES PARA DEBUG
-            let registrosProcesados = 0;
-            let registrosConDestino = 0;
             
             // PROCESAR CADA REGISTRO DE RECOLECCIÓN
             Object.values(recoleccionData).forEach(registro => {
@@ -634,8 +619,6 @@
                     
                     // SOLO PROCESAR REGISTROS VÁLIDOS PARA REPOSICIÓN
                     if (depositoDestino && colaReposicion && cantidad > 0 && registro.accion === 'escaneado') {
-                        registrosProcesados++;
-                        registrosConDestino++;
                         
                         // CREAR ESTRUCTURA POR COLAS
                         if (!datosReposicion[colaReposicion]) {
@@ -668,8 +651,6 @@
                             articulo: descripcion,
                             cantidad: cantidad
                         };
-                    } else {
-                        registrosProcesados++;
                     }
                 } catch (error) {
                     console.error("Error procesando registro:", error);
@@ -681,11 +662,6 @@
             
             ultimaActualizacion = new Date();
             actualizarInfoCache();
-            
-            // REPORTE FINAL
-            mostrarDebug(`✅ PROCESADOS: ${registrosProcesados} registros, ${registrosConDestino} con destino, ${colasDisponibles.length} colas`);
-            console.log("📊 COLAS GENERADAS:", colasDisponibles);
-            console.log("📦 DETALLE POR COLA:", datosReposicion);
             
             mostrarSeleccionColas();
         }
@@ -722,6 +698,7 @@
         // ================= INTERFAZ DE COLAS =================
         function mostrarSeleccionColas() {
             document.getElementById('rutasSection').classList.remove('hidden');
+            document.getElementById('reposicionSection').classList.add('hidden');
             actualizarListaColas();
         }
 
@@ -745,10 +722,10 @@
                 const datosCola = datosReposicion[cola];
                 const div = document.createElement('div');
                 
-                div.className = `ruta-item`;
+                div.className = `cola-button`;
                 div.innerHTML = `
                     <strong>COLA ${cola}</strong><br>
-                    <span style="font-size: 11px; color: #666;">
+                    <span style="font-size: 11px;">
                         ${datosCola.cantidadTotal} unidades - ${Object.keys(datosCola.depositos).length} depósitos
                     </span>
                 `;
@@ -762,18 +739,12 @@
             colaSeleccionada = cola;
             guardarSesionActiva();
             
-            document.getElementById('userSection').classList.remove('hidden');
-            document.getElementById('userName').textContent = usuarioActual;
-            document.getElementById('userRuta').textContent = cola;
-            
-            document.getElementById('rutaActual').textContent = cola;
-            document.getElementById('rutaInfoSection').classList.remove('hidden');
+            document.getElementById('colaHeader').textContent = `${cola} TRABAJANDO`;
             
             document.getElementById('rutasSection').classList.add('hidden');
-            mostrarPanelReposicion();
+            document.getElementById('reposicionSection').classList.remove('hidden');
             
-            mostrarDebug("✅ Cola seleccionada: " + cola);
-            mostrarEstado(`✅ Cola ${cola} seleccionada`, 'success');
+            mostrarPanelReposicion();
         }
 
         // ================= FUNCIONES DE SESIÓN =================
@@ -799,7 +770,6 @@
                 const data = snapshot.val();
                 if (data) {
                     escaneosReposicion = data;
-                    mostrarDebug("✅ Escaneos cargados: " + Object.keys(escaneosReposicion).length);
                     
                     // ACTUALIZAR CANTIDADES ESCANEADAS EN LOS DATOS
                     Object.values(escaneosReposicion).forEach(escaneo => {
@@ -815,10 +785,6 @@
         }
 
         function mostrarPanelReposicion() {
-            document.getElementById('currentDepositoSection').classList.remove('hidden');
-            document.getElementById('scanSection').classList.remove('hidden');
-            document.getElementById('depositosListSection').classList.remove('hidden');
-            
             actualizarListaDepositos();
             seleccionarPrimerDepositoPendiente();
             document.getElementById('depositoInput').focus();
@@ -886,7 +852,6 @@
             document.getElementById('depositoInput').value = '';
             document.getElementById('upcInput').disabled = false;
             document.getElementById('upcInput').focus();
-            mostrarEstado(`✅ Depósito ${deposito} seleccionado`, 'success');
         }
 
         function actualizarInterfazDeposito() {
@@ -907,7 +872,6 @@
 
         function validarDeposito(deposito) {
             if (!colaSeleccionada || !datosReposicion[colaSeleccionada].depositos[deposito]) {
-                mostrarEstado('❌ Depósito no encontrado', 'error');
                 document.getElementById('depositoInput').value = '';
                 return;
             }
@@ -922,14 +886,12 @@
             
             // VERIFICAR SI YA SE COMPLETÓ
             if (cantidadEscaneada >= datos.cantidadTotal) {
-                mostrarEstado('❌ Este depósito ya está completado', 'error');
                 document.getElementById('upcInput').value = '';
                 return;
             }
             
             // VERIFICAR UPC (POR SIMPLICIDAD, ACEPTAMOS CUALQUIER UPC VÁLIDO)
             if (upc.length < 8) {
-                mostrarEstado('❌ Código UPC inválido', 'error');
                 document.getElementById('upcInput').value = '';
                 return;
             }
@@ -937,18 +899,25 @@
             // REGISTRAR ESCANEO
             await registrarEscaneoReposicion(upc);
             
-            mostrarEstado(`✅ UPC escaneado: ${upc}`, 'success');
             document.getElementById('upcInput').value = '';
             
             // EFECTO VISUAL DE COMPLETADO SI SE LLEGÓ AL TOTAL
             const nuevaCantidad = (datos.cantidadEscaneada || 0) + 1;
             if (nuevaCantidad >= datos.cantidadTotal) {
-                document.getElementById('currentDepositoSection').classList.add('deposito-completado');
+                mostrarCompletado();
                 setTimeout(() => {
-                    document.getElementById('currentDepositoSection').classList.remove('deposito-completado');
                     siguienteDeposito();
                 }, 1000);
             }
+        }
+
+        function mostrarCompletado() {
+            const overlay = document.getElementById('completionOverlay');
+            overlay.classList.add('show');
+            
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, 1000);
         }
 
         async function registrarEscaneoReposicion(upc) {
@@ -980,10 +949,8 @@
                 // ACTUALIZAR INTERFAZ
                 actualizarInterfazDeposito();
                 
-                mostrarDebug("✅ Escaneo registrado en Firebase");
             } catch (error) {
                 console.error('Error registrando escaneo:', error);
-                mostrarEstado('❌ Error al registrar escaneo', 'error');
             }
         }
 
@@ -1023,12 +990,6 @@
             if (ultimaActualizacion) {
                 infoDiv.textContent = `Última actualización: ${ultimaActualizacion.toLocaleTimeString()} | ${colasDisponibles.length} colas`;
             }
-        }
-
-        function mostrarEstado(mensaje, tipo) {
-            const statusDiv = document.getElementById('dataStatus');
-            statusDiv.textContent = mensaje;
-            statusDiv.className = 'status-section ' + ('status-' + tipo);
         }
 
         function volverAlPrincipal() {

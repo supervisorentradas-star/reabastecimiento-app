@@ -337,7 +337,7 @@
     <div class="container">
         <!-- CABECERA MEJORADA Y COMPACTA -->
         <div class="header">
-            <h1>RECOLECCIÓN SOKSO</h1>
+            <h1>RECOLECCIÓN</h1>
             <div class="header-controls">
                 <button onclick="cargarRutasDesdeFirebase()" class="admin-button">🔄 Cargar</button>
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
@@ -887,7 +887,6 @@
             
             document.getElementById('fileInfo').innerHTML = 
                 `${fechaInfo}
-                 <strong>Fuente: ${fuente}</strong><br>
                  <strong>Tipo: ${tipoRecoleccionActual}</strong><br>
                  <strong>Rutas: ${totalRutas}</strong><br>
                  <strong>Unidades: ${totalUnidadesGlobal}</strong>`;
