@@ -586,54 +586,20 @@
                 mostrarEstado('🔍 BUSCANDO DATOS EN FIREBASE...', 'info');
                 mostrarDebug("Buscando datos en Firebase...");
                 
-                // 1. INTENTAR DIFERENTES RUTAS DE RECOLECCIÓN
-                let recoleccionData = null;
-                let recoleccionSource = '';
-                
-                // Intentar en 'recolecciones' primero
-                try {
-                    mostrarDebug("Buscando en 'recolecciones'...");
-                    const recoleccionSnapshot = await database.ref('recolecciones').once('value');
-                    recoleccionData = recoleccionSnapshot.val();
-                    recoleccionSource = 'recolecciones';
-                } catch (error) {
-                    mostrarDebug("❌ No se encontró 'recolecciones': " + error.message);
-                }
-                
-                // Si no hay datos, intentar en 'recoleccion_rutas'
-                if (!recoleccionData) {
-                    try {
-                        mostrarDebug("Buscando en 'recoleccion_rutas'...");
-                        const recoleccionRutasSnapshot = await database.ref('recoleccion_rutas').once('value');
-                        recoleccionData = recoleccionRutasSnapshot.val();
-                        recoleccionSource = 'recoleccion_rutas';
-                    } catch (error) {
-                        mostrarDebug("❌ No se encontró 'recoleccion_rutas': " + error.message);
-                    }
-                }
+                // CARGAR DATOS DE RECOLECCIÓN CON LOS NUEVOS CAMPOS
+                const recoleccionSnapshot = await database.ref('recolecciones').once('value');
+                const recoleccionData = recoleccionSnapshot.val();
                 
                 if (!recoleccionData) {
-                    throw new Error('No se encontraron datos en recolecciones ni recoleccion_rutas');
+                    throw new Error('No se encontraron datos en recolecciones');
                 }
                 
-                mostrarDebug("✅ Datos de recolección encontrados en: " + recoleccionSource);
-                mostrarDebug("📊 Registros encontrados: " + Object.keys(recoleccionData).length);
+                mostrarDebug("✅ Datos de recolección encontrados: " + Object.keys(recoleccionData).length + " registros");
                 
-                // 2. CARGAR DATOS DE SLOTING
-                mostrarDebug("Buscando datos de sloting...");
-                const slotingSnapshot = await database.ref('sloting').once('value');
-                const slotingData = slotingSnapshot.val();
+                // PROCESAR DATOS PARA REPOSICIÓN
+                await procesarDatosReposicion(recoleccionData);
                 
-                if (!slotingData) {
-                    throw new Error('No se encontraron datos en sloting');
-                }
-                
-                mostrarDebug("✅ Datos de sloting encontrados: " + Object.keys(slotingData).length + " registros");
-                
-                // 3. PROCESAR DATOS CON MÚLTIPLES ESTRUCTURAS POSIBLES
-                await procesarDatosFlexible(recoleccionData, slotingData, recoleccionSource);
-                
-                // 4. CARGAR ESCANEOS EXISTENTES
+                // CARGAR ESCANEOS EXISTENTES
                 await cargarEscaneosDesdeFirebase();
                 
                 mostrarEstado('✅ SISTEMA LISTO - ' + colasDisponibles.length + ' COLAS ENCONTRADAS', 'success');
@@ -642,93 +608,71 @@
                 console.error('❌ ERROR CRÍTICO:', error);
                 mostrarDebug("❌ ERROR: " + error.message);
                 mostrarEstado(`❌ ERROR: ${error.message}`, 'error');
-                
-                // Mostrar datos de ejemplo para debugging
-                mostrarDatosEjemplo();
             }
         }
 
-        // ================= PROCESAMIENTO FLEXIBLE DE DATOS =================
-        async function procesarDatosFlexible(recoleccionData, slotingData, fuente) {
+        // ================= PROCESAMIENTO DE DATOS PARA REPOSICIÓN =================
+        async function procesarDatosReposicion(recoleccionData) {
             datosReposicion = {};
             colasDisponibles = [];
             
-            mostrarDebug("🔄 Procesando datos desde: " + fuente);
+            mostrarDebug("🔄 Procesando datos para reposición...");
             
-            // CREAR MAPA DE SLOTING CON MÚLTIPLES FORMATOS POSIBLES
-            const mapaSloting = {};
-            Object.values(slotingData).forEach(item => {
-                // Intentar diferentes nombres de campo
-                const upc = item.CODIGO_UPC || item.upc || item.codigo || item.codigo_upc;
-                const depositoFinal = item.DEPOSITO_FINAL || item.deposito_final || item.deposito || item.ubicacion;
-                
-                if (upc && depositoFinal) {
-                    mapaSloting[upc] = depositoFinal;
-                }
-            });
-            
-            mostrarDebug("🗺️ Mapa de sloting: " + Object.keys(mapaSloting).length + " UPCs mapeados");
-            
-            // PROCESAR RECOLECCIÓN CON MÚLTIPLES ESTRUCTURAS
+            // CONTADORES PARA DEBUG
             let registrosProcesados = 0;
-            let registrosConDeposito = 0;
+            let registrosConDestino = 0;
             
+            // PROCESAR CADA REGISTRO DE RECOLECCIÓN
             Object.values(recoleccionData).forEach(registro => {
                 try {
-                    // DETECTAR ESTRUCTURA DEL REGISTRO
-                    const accion = registro.accion || registro.estado || registro.tipo;
-                    const upc = registro.upc || registro.UPC || registro.codigo || registro.codigo_upc || registro.CODIGO_UPC;
-                    const cantidad = parseInt(registro.recolectado || registro.cantidad || registro.CANTIDAD || registro.cantidad_recolectada || 0);
-                    const descripcion = registro.descripcion || registro.articulo || registro.ARTICULO || registro.producto || 'Sin descripción';
+                    // VERIFICAR QUE TENGA LOS CAMPOS NECESARIOS
+                    const depositoDestino = registro.deposito_destino;
+                    const colaReposicion = registro.cola_reposicion;
+                    const cantidad = parseInt(registro.recolectado) || 0;
+                    const descripcion = registro.descripcion;
+                    const upc = registro.upc;
                     
-                    // Solo procesar registros válidos de escaneo
-                    const esEscaneado = !accion || accion === 'escaneado' || accion === 'Escaneado';
-                    
-                    if (upc && cantidad > 0 && esEscaneado) {
+                    // SOLO PROCESAR REGISTROS VÁLIDOS PARA REPOSICIÓN
+                    if (depositoDestino && colaReposicion && cantidad > 0 && registro.accion === 'escaneado') {
                         registrosProcesados++;
+                        registrosConDestino++;
                         
-                        // BUSCAR EN SLOTING
-                        const depositoFinal = mapaSloting[upc];
+                        // CREAR ESTRUCTURA POR COLAS
+                        if (!datosReposicion[colaReposicion]) {
+                            datosReposicion[colaReposicion] = {
+                                depositos: {},
+                                cantidadTotal: 0,
+                                nombre: `Cola ${colaReposicion}`
+                            };
+                            if (!colasDisponibles.includes(colaReposicion)) {
+                                colasDisponibles.push(colaReposicion);
+                            }
+                        }
                         
-                        if (depositoFinal && depositoFinal !== '0' && depositoFinal !== '') {
-                            registrosConDeposito++;
-                            
-                            // EXTRAER COLA (P03-007-A → "P03")
-                            const cola = extraerCola(depositoFinal);
-                            
-                            if (!datosReposicion[cola]) {
-                                datosReposicion[cola] = {
-                                    depositos: {},
-                                    cantidadTotal: 0,
-                                    nombre: `Cola ${cola}`
-                                };
-                                if (!colasDisponibles.includes(cola)) {
-                                    colasDisponibles.push(cola);
-                                }
-                            }
-                            
-                            // AGREGAR AL DEPÓSITO
-                            if (!datosReposicion[cola].depositos[depositoFinal]) {
-                                datosReposicion[cola].depositos[depositoFinal] = {
-                                    upcs: {},
-                                    cantidadTotal: 0,
-                                    articulo: descripcion
-                                };
-                            }
-                            
-                            // SUMAR CANTIDAD
-                            datosReposicion[cola].depositos[depositoFinal].cantidadTotal += cantidad;
-                            datosReposicion[cola].cantidadTotal += cantidad;
-                            
-                            // REGISTRAR UPC
-                            datosReposicion[cola].depositos[depositoFinal].upcs[upc] = {
+                        // AGREGAR AL DEPÓSITO DESTINO
+                        if (!datosReposicion[colaReposicion].depositos[depositoDestino]) {
+                            datosReposicion[colaReposicion].depositos[depositoDestino] = {
+                                upcs: {},
+                                cantidadTotal: 0,
                                 articulo: descripcion,
-                                cantidad: cantidad
+                                cantidadEscaneada: 0
                             };
                         }
+                        
+                        // SUMAR CANTIDAD
+                        datosReposicion[colaReposicion].depositos[depositoDestino].cantidadTotal += cantidad;
+                        datosReposicion[colaReposicion].cantidadTotal += cantidad;
+                        
+                        // REGISTRAR UPC
+                        datosReposicion[colaReposicion].depositos[depositoDestino].upcs[upc] = {
+                            articulo: descripcion,
+                            cantidad: cantidad
+                        };
+                    } else {
+                        registrosProcesados++;
                     }
                 } catch (error) {
-                    console.error("Error procesando registro:", registro, error);
+                    console.error("Error procesando registro:", error);
                 }
             });
             
@@ -739,7 +683,7 @@
             actualizarInfoCache();
             
             // REPORTE FINAL
-            mostrarDebug(`✅ PROCESADOS: ${registrosProcesados} registros, ${registrosConDeposito} con depósito, ${colasDisponibles.length} colas`);
+            mostrarDebug(`✅ PROCESADOS: ${registrosProcesados} registros, ${registrosConDestino} con destino, ${colasDisponibles.length} colas`);
             console.log("📊 COLAS GENERADAS:", colasDisponibles);
             console.log("📦 DETALLE POR COLA:", datosReposicion);
             
@@ -747,84 +691,32 @@
         }
 
         // ================= FUNCIONES DE APOYO =================
-        function extraerCola(deposito) {
-            const match = deposito.match(/^([A-Z]?\d+)/);
-            return match ? match[1] : deposito;
-        }
-
         function ordenarColas(a, b) {
+            // Ordenar colas: P01, P02, P03, etc.
             const numA = parseInt(a.replace(/\D/g, '')) || 0;
             const numB = parseInt(b.replace(/\D/g, '')) || 0;
             return numA - numB;
         }
 
         function ordenarDepositos(a, b) {
+            // Ordenar depósitos: P01-001-A, P01-002-A, P02-001-B, etc.
             const partesA = a.split('-');
             const partesB = b.split('-');
             
-            const colaA = parseInt(partesA[0].replace('P', '')) || 0;
-            const colaB = parseInt(partesB[0].replace('P', '')) || 0;
-            if (colaA !== colaB) return colaA - colaB;
+            // Comparar cola (P01, P02, etc.)
+            const colaA = partesA[0];
+            const colaB = partesB[0];
+            if (colaA !== colaB) return colaA.localeCompare(colaB);
             
-            const columnaA = parseInt(partesA[1]) || 0;
-            const columnaB = parseInt(partesB[1]) || 0;
-            if (columnaA !== columnaB) return columnaA - columnaB;
+            // Comparar número (001, 002, etc.)
+            const numA = parseInt(partesA[1]) || 0;
+            const numB = parseInt(partesB[1]) || 0;
+            if (numA !== numB) return numA - numB;
             
+            // Comparar nivel (A, B, C, etc.)
             const nivelA = partesA[2] || '';
             const nivelB = partesB[2] || '';
             return nivelA.localeCompare(nivelB);
-        }
-
-        // ================= MODO DEMOSTRACIÓN (SI NO HAY DATOS) =================
-        function mostrarDatosEjemplo() {
-            mostrarDebug("🔄 CARGANDO DATOS DE EJEMPLO...");
-            
-            // Datos de ejemplo basados en tu estructura
-            datosReposicion = {
-                "P01": {
-                    depositos: {
-                        "P01-148-A": {
-                            upcs: {"2050003190992": {articulo: "SKS-ADO_249-NEGR-39", cantidad: 2}},
-                            cantidadTotal: 2,
-                            articulo: "SKS-ADO_249-NEGR-39"
-                        }
-                    },
-                    cantidadTotal: 2,
-                    nombre: "Cola P01"
-                },
-                "P02": {
-                    depositos: {
-                        "P02-013-B": {
-                            upcs: {"2050003019125": {articulo: "URB-LINK_061-BLAN-40", cantidad: 2}},
-                            cantidadTotal: 2,
-                            articulo: "URB-LINK_061-BLAN-40"
-                        }
-                    },
-                    cantidadTotal: 2,
-                    nombre: "Cola P02"
-                },
-                "P03": {
-                    depositos: {
-                        "P03-007-A": {
-                            upcs: {"2050003033541": {articulo: "ROU-TOFEM_027-NGBL-35", cantidad: 2}},
-                            cantidadTotal: 2,
-                            articulo: "ROU-TOFEM_027-NGBL-35"
-                        },
-                        "P03-016-B": {
-                            upcs: {"2050003023665": {articulo: "URB-OFER_H07-NEGR-43", cantidad: 3}},
-                            cantidadTotal: 3,
-                            articulo: "URB-OFER_H07-NEGR-43"
-                        }
-                    },
-                    cantidadTotal: 5,
-                    nombre: "Cola P03"
-                }
-            };
-            
-            colasDisponibles = ["P01", "P02", "P03"];
-            mostrarDebug("✅ DATOS DE EJEMPLO CARGADOS - 3 COLAS DISPONIBLES");
-            mostrarSeleccionColas();
-            mostrarEstado('⚠️ MODO DEMOSTRACIÓN - Datos de ejemplo', 'warning');
         }
 
         // ================= INTERFAZ DE COLAS =================
@@ -841,7 +733,9 @@
                 container.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #7f8c8d;">
                         <p>No hay colas activas para reponer</p>
-                        <p style="font-size: 10px; margin-top: 8px;">Los datos se cargan automáticamente cuando hay recolección</p>
+                        <p style="font-size: 10px; margin-top: 8px;">
+                            Los datos se cargan automáticamente cuando hay recolección procesada
+                        </p>
                     </div>
                 `;
                 return;
@@ -882,7 +776,7 @@
             mostrarEstado(`✅ Cola ${cola} seleccionada`, 'success');
         }
 
-        // ================= FUNCIONES RESTANTES (MISMAS QUE ANTES) =================
+        // ================= FUNCIONES DE SESIÓN =================
         function guardarSesionActiva() {
             if (colaSeleccionada && usuarioActual) {
                 sesionActiva = {
@@ -906,6 +800,14 @@
                 if (data) {
                     escaneosReposicion = data;
                     mostrarDebug("✅ Escaneos cargados: " + Object.keys(escaneosReposicion).length);
+                    
+                    // ACTUALIZAR CANTIDADES ESCANEADAS EN LOS DATOS
+                    Object.values(escaneosReposicion).forEach(escaneo => {
+                        if (escaneo.cola && escaneo.deposito && datosReposicion[escaneo.cola] && datosReposicion[escaneo.cola].depositos[escaneo.deposito]) {
+                            datosReposicion[escaneo.cola].depositos[escaneo.deposito].cantidadEscaneada = 
+                                (datosReposicion[escaneo.cola].depositos[escaneo.deposito].cantidadEscaneada || 0) + 1;
+                        }
+                    });
                 }
             } catch (error) {
                 console.error('Error cargando escaneos:', error);
@@ -932,15 +834,16 @@
             
             depositosCola.forEach(deposito => {
                 const datos = datosReposicion[colaSeleccionada].depositos[deposito];
-                const cantidadEscaneada = 0; // Por simplicidad en este ejemplo
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
                 const seleccionado = deposito === depositoActual;
+                const completado = cantidadEscaneada >= datos.cantidadTotal;
                 
                 const row = document.createElement('div');
-                row.className = `deposito-row ${seleccionado ? 'selected' : ''}`;
+                row.className = `deposito-row ${seleccionado ? 'selected' : ''} ${completado ? 'completed' : ''}`;
                 
                 row.innerHTML = `
                     <div>
-                        <span class="status-indicator ${seleccionado ? 'status-selected' : 'status-pending'}"></span>
+                        <span class="status-indicator ${completado ? 'status-completed' : (seleccionado ? 'status-selected' : 'status-pending')}"></span>
                     </div>
                     <div>
                         <strong>${deposito}</strong><br>
@@ -959,6 +862,19 @@
             if (!colaSeleccionada) return;
             
             const depositosCola = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
+            
+            // Buscar el primer depósito no completado
+            for (let deposito of depositosCola) {
+                const datos = datosReposicion[colaSeleccionada].depositos[deposito];
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
+                
+                if (cantidadEscaneada < datos.cantidadTotal) {
+                    seleccionarDepositoManual(deposito);
+                    return;
+                }
+            }
+            
+            // Si todos están completados, seleccionar el primero
             if (depositosCola.length > 0) {
                 seleccionarDepositoManual(depositosCola[0]);
             }
@@ -977,13 +893,14 @@
             if (!depositoActual || !colaSeleccionada) return;
             
             const datos = datosReposicion[colaSeleccionada].depositos[depositoActual];
-            const cantidadEscaneada = 0; // Por simplicidad
+            const cantidadEscaneada = datos.cantidadEscaneada || 0;
+            const pendiente = datos.cantidadTotal - cantidadEscaneada;
             
             document.getElementById('currentDeposito').textContent = depositoActual;
             document.getElementById('currentArticulo').textContent = datos.articulo;
             document.getElementById('counterSolicitada').textContent = datos.cantidadTotal;
             document.getElementById('counterRepuesta').textContent = cantidadEscaneada;
-            document.getElementById('counterPendiente').textContent = datos.cantidadTotal - cantidadEscaneada;
+            document.getElementById('counterPendiente').textContent = pendiente;
             
             actualizarListaDepositos();
         }
@@ -997,17 +914,77 @@
             seleccionarDepositoManual(deposito);
         }
 
-        function validarUPC(upc) {
+        async function validarUPC(upc) {
+            if (!depositoActual || !colaSeleccionada) return;
+            
+            const datos = datosReposicion[colaSeleccionada].depositos[depositoActual];
+            const cantidadEscaneada = datos.cantidadEscaneada || 0;
+            
+            // VERIFICAR SI YA SE COMPLETÓ
+            if (cantidadEscaneada >= datos.cantidadTotal) {
+                mostrarEstado('❌ Este depósito ya está completado', 'error');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // VERIFICAR UPC (POR SIMPLICIDAD, ACEPTAMOS CUALQUIER UPC VÁLIDO)
+            if (upc.length < 8) {
+                mostrarEstado('❌ Código UPC inválido', 'error');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // REGISTRAR ESCANEO
+            await registrarEscaneoReposicion(upc);
+            
             mostrarEstado(`✅ UPC escaneado: ${upc}`, 'success');
             document.getElementById('upcInput').value = '';
-            // Simular escaneo exitoso
-            setTimeout(() => {
+            
+            // EFECTO VISUAL DE COMPLETADO SI SE LLEGÓ AL TOTAL
+            const nuevaCantidad = (datos.cantidadEscaneada || 0) + 1;
+            if (nuevaCantidad >= datos.cantidadTotal) {
                 document.getElementById('currentDepositoSection').classList.add('deposito-completado');
                 setTimeout(() => {
                     document.getElementById('currentDepositoSection').classList.remove('deposito-completado');
                     siguienteDeposito();
                 }, 1000);
-            }, 500);
+            }
+        }
+
+        async function registrarEscaneoReposicion(upc) {
+            if (!depositoActual || !colaSeleccionada) return;
+            
+            const fechaHora = new Date();
+            const registro = {
+                usuario: usuarioActual,
+                cola: colaSeleccionada,
+                deposito: depositoActual,
+                upc: upc,
+                descripcion: datosReposicion[colaSeleccionada].depositos[depositoActual].articulo,
+                cantidad: 1,
+                fecha: fechaHora.toLocaleDateString(),
+                hora: fechaHora.toLocaleTimeString(),
+                timestamp: fechaHora.getTime()
+            };
+            
+            try {
+                const registroKey = database.ref().child('reposiciones').push().key;
+                await database.ref(`reposiciones/${registroKey}`).set(registro);
+                
+                // ACTUALIZAR LOCALMENTE
+                if (!datosReposicion[colaSeleccionada].depositos[depositoActual].cantidadEscaneada) {
+                    datosReposicion[colaSeleccionada].depositos[depositoActual].cantidadEscaneada = 0;
+                }
+                datosReposicion[colaSeleccionada].depositos[depositoActual].cantidadEscaneada += 1;
+                
+                // ACTUALIZAR INTERFAZ
+                actualizarInterfazDeposito();
+                
+                mostrarDebug("✅ Escaneo registrado en Firebase");
+            } catch (error) {
+                console.error('Error registrando escaneo:', error);
+                mostrarEstado('❌ Error al registrar escaneo', 'error');
+            }
         }
 
         function siguienteDeposito() {
@@ -1015,13 +992,27 @@
             
             const depositos = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
             const currentIndex = depositos.indexOf(depositoActual);
-            const nextIndex = (currentIndex + 1) % depositos.length;
             
-            seleccionarDepositoManual(depositos[nextIndex]);
+            // BUSCAR SIGUIENTE DEPÓSITO PENDIENTE
+            for (let i = currentIndex + 1; i < depositos.length; i++) {
+                const deposito = depositos[i];
+                const datos = datosReposicion[colaSeleccionada].depositos[deposito];
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
+                
+                if (cantidadEscaneada < datos.cantidadTotal) {
+                    seleccionarDepositoManual(deposito);
+                    return;
+                }
+            }
+            
+            // SI NO HAY MÁS PENDIENTES, VOLVER AL PRIMERO
+            if (depositos.length > 0) {
+                seleccionarDepositoManual(depositos[0]);
+            }
         }
 
         function finalizarReposicion() {
-            if (confirm('¿Finalizar reposición?')) {
+            if (confirm('¿Finalizar reposición de la cola ' + colaSeleccionada + '?')) {
                 limpiarSesionActiva();
                 location.reload();
             }

@@ -777,6 +777,10 @@
                     const indicador = registro.indicador || 'Regular';
                     const fecha = registro.fecha || '';
                     
+                    // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
+                    const deposito_destino = registro.deposito_destino || '';
+                    const cola_reposicion = registro.cola_reposicion || '';
+                    
                     // Solo procesar si coincide con el tipo seleccionado
                     if (tipoRecoleccionActual === 'Unificado' || indicador === tipoRecoleccionActual) {
                         
@@ -790,7 +794,10 @@
                                     descripcion,
                                     cantidad: 0,
                                     indicador: 'Unificado',
-                                    fecha
+                                    fecha,
+                                    // 🆕 AGREGAR NUEVOS CAMPOS
+                                    deposito_destino,
+                                    cola_reposicion
                                 };
                             }
                             datosAgrupados[clave].cantidad += cantidad;
@@ -802,7 +809,10 @@
                                 descripcion,
                                 cantidad,
                                 indicador,
-                                fecha
+                                fecha,
+                                // 🆕 AGREGAR NUEVOS CAMPOS
+                                deposito_destino,
+                                cola_reposicion
                             });
                         }
                     }
@@ -834,6 +844,10 @@
             const cantidad = parseInt(registro.cantidad) || 0;
             const indicador = registro.indicador;
             
+            // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
+            const deposito_destino = registro.deposito_destino || '';
+            const cola_reposicion = registro.cola_reposicion || '';
+            
             if (deposito && upc) {
                 // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
                 const rutaMatch = deposito.match(/^[A-Z](\d+)/);
@@ -852,7 +866,10 @@
                     indicador,
                     recolectado: 0,
                     no_encontrado: 0,
-                    completado: false
+                    completado: false,
+                    // 🆕 AGREGAR NUEVOS CAMPOS A LA ESTRUCTURA
+                    deposito_destino,
+                    cola_reposicion
                 });
                 
                 totalUnidadesGlobal += cantidad;
@@ -1271,7 +1288,7 @@
             document.getElementById('pickingRecolectado').textContent = nuevoTotal;
             document.getElementById('pickingPendiente').textContent = nuevoPendiente;
             
-            // Guardar registro en Firebase
+            // 🆕 GUARDAR REGISTRO EN FIREBASE CON LOS NUEVOS CAMPOS
             const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
@@ -1287,7 +1304,10 @@
                 fecha: fechaHora.toLocaleDateString(),
                 hora: fechaHora.toLocaleTimeString(),
                 timestamp: fechaHora.getTime(),
-                tipoRecoleccion: tipoRecoleccionActual
+                tipoRecoleccion: tipoRecoleccionActual,
+                // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
+                deposito_destino: item.deposito_destino || '',
+                cola_reposicion: item.cola_reposicion || ''
             };
             
             await guardarRegistroEnFirebase(registro);
@@ -1361,7 +1381,7 @@
             // Guardar sesión activa
             guardarSesionActiva();
             
-            // Guardar registro en Firebase
+            // 🆕 GUARDAR REGISTRO EN FIREBASE CON LOS NUEVOS CAMPOS
             const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
@@ -1377,7 +1397,10 @@
                 fecha: fechaHora.toLocaleDateString(),
                 hora: fechaHora.toLocaleTimeString(),
                 timestamp: fechaHora.getTime(),
-                tipoRecoleccion: tipoRecoleccionActual
+                tipoRecoleccion: tipoRecoleccionActual,
+                // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
+                deposito_destino: item.deposito_destino || '',
+                cola_reposicion: item.cola_reposicion || ''
             };
             
             await guardarRegistroEnFirebase(registro);

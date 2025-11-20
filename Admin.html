@@ -431,7 +431,7 @@
         <!-- CONTROLES ADMIN - PANEL RUTAS & COLAS -->
         <div id="adminRutasPanel" class="admin-controls hidden">
             <button class="admin-button success" onclick="solicitarSubirRutas('recoleccion')">📤 Subir Recolección</button>
-            <button class="admin-button success" onclick="solicitarSubirRutas('reposicion')">📤 Subir Reposición</button>
+            <!-- Quitamos el botón de reposición -->
             <button class="admin-button warning" onclick="verificarRutasActuales()">🔍 Ver Rutas Actuales</button>
         </div>
 
@@ -495,27 +495,7 @@
                 </table>
             </div>
             
-            <div class="file-info" style="margin-top: 20px;">
-                <strong>Estado de Reposición:</strong> <span id="reposicionStatus">No hay datos cargados</span><br>
-                <strong>Última actualización:</strong> <span id="reposicionLastUpdate">-</span><br>
-                <strong>Total de registros:</strong> <span id="reposicionTotalRecords">0</span>
-            </div>
-            
-            <div id="reposicionPreview" style="margin-top: 15px; display: none;">
-                <h3>Vista Previa de Reposición</h3>
-                <table class="dashboard-table">
-                    <thead>
-                        <tr>
-                            <th>DEPOSITO</th>
-                            <th>CODIGO UPC</th>
-                            <th>ARTICULO</th>
-                            <th>CANTIDAD</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reposicionPreviewBody">
-                    </tbody>
-                </table>
-            </div>
+            <!-- Quitamos la sección de reposición -->
         </div>
 
         <!-- PANEL DE SLOTING -->
@@ -547,35 +527,41 @@
         <div id="reportsPanel" class="section">
             <h2>Generar Reportes</h2>
             
-            <div class="report-filters">
-                <div class="filter-item">
-                    <label for="fechaInicioRecoleccion">Fecha Inicio:</label>
-                    <input type="date" id="fechaInicioRecoleccion">
+            <!-- Reporte de Recolección -->
+            <div id="reporteRecoleccion">
+                <div class="report-filters">
+                    <div class="filter-item">
+                        <label for="fechaInicioRecoleccion">Fecha Inicio:</label>
+                        <input type="date" id="fechaInicioRecoleccion">
+                    </div>
+                    <div class="filter-item">
+                        <label for="fechaFinRecoleccion">Fecha Fin:</label>
+                        <input type="date" id="fechaFinRecoleccion">
+                    </div>
                 </div>
-                <div class="filter-item">
-                    <label for="fechaFinRecoleccion">Fecha Fin:</label>
-                    <input type="date" id="fechaFinRecoleccion">
-                </div>
-            </div>
-            
-            <button class="admin-button" onclick="descargarReporteRecoleccion()" style="width:100%;margin-bottom:15px">
-                📊 Descargar Reporte Recolección
-            </button>
-
-            <div class="report-filters">
-                <div class="filter-item">
-                    <label for="fechaInicioReposicion">Fecha Inicio:</label>
-                    <input type="date" id="fechaInicioReposicion">
-                </div>
-                <div class="filter-item">
-                    <label for="fechaFinReposicion">Fecha Fin:</label>
-                    <input type="date" id="fechaFinReposicion">
-                </div>
+                
+                <button class="admin-button" onclick="descargarReporteRecoleccion()" style="width:100%;margin-bottom:15px">
+                    📊 Descargar Reporte Recolección
+                </button>
             </div>
 
-            <button class="admin-button" onclick="descargarReporteReposicion()" style="width:100%">
-                📋 Descargar Reporte Reposición
-            </button>
+            <!-- Reporte de Reposición -->
+            <div id="reporteReposicion">
+                <div class="report-filters">
+                    <div class="filter-item">
+                        <label for="fechaInicioReposicion">Fecha Inicio:</label>
+                        <input type="date" id="fechaInicioReposicion">
+                    </div>
+                    <div class="filter-item">
+                        <label for="fechaFinReposicion">Fecha Fin:</label>
+                        <input type="date" id="fechaFinReposicion">
+                    </div>
+                </div>
+
+                <button class="admin-button" onclick="descargarReporteReposicion()" style="width:100%">
+                    📋 Descargar Reporte Reposición
+                </button>
+            </div>
         </div>
 
         <div class="footer">
@@ -753,9 +739,15 @@
             if (modulo === 'sloting') {
                 document.getElementById('adminSlotingPanel').classList.remove('hidden');
                 document.getElementById('slotingPanel').classList.remove('hidden');
+                // Ocultar reportes
+                document.getElementById('reporteRecoleccion').style.display = 'none';
+                document.getElementById('reporteReposicion').style.display = 'none';
             } else if (modulo === 'rutas') {
                 document.getElementById('adminRutasPanel').classList.remove('hidden');
                 document.getElementById('rutasPanel').classList.remove('hidden');
+                // Ocultar reportes
+                document.getElementById('reporteRecoleccion').style.display = 'none';
+                document.getElementById('reporteReposicion').style.display = 'none';
             } else {
                 document.getElementById('adminMainPanel').classList.remove('hidden');
                 document.getElementById('routesPanel').classList.remove('hidden');
@@ -764,6 +756,15 @@
                 // Actualizar título del panel
                 document.getElementById('panelTitulo').textContent = 
                     `Estado de Rutas - ${modulo === 'recoleccion' ? 'Recolección' : 'Reposición'}`;
+                
+                // Mostrar/ocultar reportes según el módulo
+                if (modulo === 'recoleccion') {
+                    document.getElementById('reporteRecoleccion').style.display = 'block';
+                    document.getElementById('reporteReposicion').style.display = 'none';
+                } else if (modulo === 'reposicion') {
+                    document.getElementById('reporteRecoleccion').style.display = 'none';
+                    document.getElementById('reporteReposicion').style.display = 'block';
+                }
                 
                 // Recargar datos del módulo seleccionado
                 cargarDashboard();
@@ -779,10 +780,11 @@
                 document.getElementById('rutasModalTitle').textContent = 'Subir Rutas de Recolección';
                 document.getElementById('rutasModalDescription').textContent = 'Selecciona el archivo CSV con los datos de recolección:';
                 document.getElementById('rutasColumnasEsperadas').innerHTML = 
-                    '- Columnas: DEPOSITO, CODIGO UPC, ARTICULO, CANTIDAD, INDICADOR, FECHA<br>' +
+                    '- Columnas: DEPOSITO, CODIGO UPC, ARTICULO, CANTIDAD, INDICADOR, FECHA, DEPOSITO DESTINO, COLA<br>' +
                     '- Separador: tabulación<br>' +
                     '- Codificación: UTF-8';
             } else {
+                // No debería ocurrir porque quitamos el botón de reposición, pero por si acaso
                 document.getElementById('rutasModalTitle').textContent = 'Subir Rutas de Reposición';
                 document.getElementById('rutasModalDescription').textContent = 'Selecciona el archivo CSV con los datos de reposición:';
                 document.getElementById('rutasColumnasEsperadas').innerHTML = 
@@ -875,6 +877,9 @@
                         // Subir datos combinados
                         await database.ref(rutaFirebase).set(datosCombinados);
                     }
+
+                    // Guardar la fecha de última actualización
+                    await database.ref(`estado/${rutaFirebase}_lastUpdate`).set(new Date().toISOString());
                     
                     document.getElementById('uploadProgressFill').style.width = '100%';
                     document.getElementById('uploadStatus').textContent = '✅ Datos subidos correctamente';
@@ -918,9 +923,9 @@
             // Verificar encabezados
             const encabezados = primeraLinea.split(separador).map(h => h.trim().replace(/^"|"$/g, ''));
             
-            const encabezadosEsperados = ['DEPOSITO', 'CODIGO UPC', 'ARTICULO', 'CANTIDAD', 'INDICADOR', 'FECHA'];
+            const encabezadosEsperados = ['DEPOSITO', 'CODIGO UPC', 'ARTICULO', 'CANTIDAD', 'INDICADOR', 'FECHA', 'DEPOSITO DESTINO', 'COLA'];
             if (encabezados.length < 5) {
-                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: DEPOSITO, CODIGO UPC, ARTICULO, CANTIDAD, INDICADOR, FECHA');
+                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: DEPOSITO, CODIGO UPC, ARTICULO, CANTIDAD, INDICADOR, FECHA, DEPOSITO DESTINO, COLA');
             }
             
             // Procesar datos
@@ -937,6 +942,9 @@
                     const articulo = partes[2];
                     const cantidad = parseInt(partes[3]) || 0;
                     const indicador = partes[4] || 'Regular';
+                    const fecha = partes[5] || new Date().toLocaleDateString();
+                    const deposito_destino = partes[6] || ''; // Nueva columna
+                    const cola_reposicion = partes[7] || ''; // Nueva columna
                     
                     if (deposito && upc) {
                         // Crear ID único para el registro
@@ -948,7 +956,9 @@
                             articulo: articulo,
                             cantidad: cantidad,
                             indicador: indicador,
-                            fecha: partes[5] || new Date().toLocaleDateString()
+                            fecha: fecha,
+                            deposito_destino: deposito_destino,
+                            cola_reposicion: cola_reposicion
                         };
                         registrosProcesados++;
                     }
@@ -1024,13 +1034,17 @@
                 const snapshotRecoleccion = await database.ref('recoleccion_rutas').once('value');
                 recoleccionData = snapshotRecoleccion.val() || {};
                 
+                // Cargar última actualización de recolección
+                const lastUpdateRecoleccion = await database.ref('estado/recoleccion_rutas_lastUpdate').once('value');
+                const lastUpdateRecoleccionDate = lastUpdateRecoleccion.val() ? new Date(lastUpdateRecoleccion.val()).toLocaleString() : '-';
+
                 // Actualizar información en la UI
                 document.getElementById('recoleccionTotalRecords').textContent = Object.keys(recoleccionData).length;
+                document.getElementById('recoleccionLastUpdate').textContent = lastUpdateRecoleccionDate;
                 
                 if (Object.keys(recoleccionData).length > 0) {
                     document.getElementById('recoleccionStatus').textContent = 'Datos cargados';
                     document.getElementById('recoleccionStatus').style.color = '#27ae60';
-                    document.getElementById('recoleccionLastUpdate').textContent = new Date().toLocaleString();
                     
                     // Mostrar vista previa
                     mostrarVistaPreviaRecoleccion();
@@ -1040,7 +1054,7 @@
                     document.getElementById('recoleccionPreview').style.display = 'none';
                 }
                 
-                // Cargar datos de reposición
+                // Cargar datos de reposición (aunque ya no se suban, puede haber datos históricos)
                 const snapshotReposicion = await database.ref('reposicion_rutas').once('value');
                 reposicionData = snapshotReposicion.val() || {};
                 
@@ -1050,14 +1064,9 @@
                 if (Object.keys(reposicionData).length > 0) {
                     document.getElementById('reposicionStatus').textContent = 'Datos cargados';
                     document.getElementById('reposicionStatus').style.color = '#27ae60';
-                    document.getElementById('reposicionLastUpdate').textContent = new Date().toLocaleString();
-                    
-                    // Mostrar vista previa
-                    mostrarVistaPreviaReposicion();
                 } else {
                     document.getElementById('reposicionStatus').textContent = 'No hay datos cargados';
                     document.getElementById('reposicionStatus').style.color = '#e74c3c';
-                    document.getElementById('reposicionPreview').style.display = 'none';
                 }
                 
             } catch (error) {
@@ -1094,33 +1103,9 @@
             document.getElementById('recoleccionPreview').style.display = 'block';
         }
 
-        function mostrarVistaPreviaReposicion() {
-            const previewBody = document.getElementById('reposicionPreviewBody');
-            previewBody.innerHTML = '';
-            
-            const ids = Object.keys(reposicionData);
-            const registrosMostrar = Math.min(5, ids.length);
-            
-            for (let i = 0; i < registrosMostrar; i++) {
-                const id = ids[i];
-                const registro = reposicionData[id];
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${registro.deposito}</td>
-                    <td>${registro.upc}</td>
-                    <td>${registro.articulo}</td>
-                    <td>${registro.cantidad}</td>
-                `;
-                previewBody.appendChild(row);
-            }
-            
-            document.getElementById('reposicionPreview').style.display = 'block';
-        }
-
         function verificarRutasActuales() {
             cargarRutasDesdeFirebase();
-            mostrarMensaje(`Rutas actualizadas: Recolección (${Object.keys(recoleccionData).length}), Reposición (${Object.keys(reposicionData).length})`, true);
+            mostrarMensaje(`Rutas actualizadas: Recolección (${Object.keys(recoleccionData).length})`, true);
         }
 
         // ================= GESTIÓN DE SLOTING =================
@@ -1172,6 +1157,9 @@
                     
                     // Subir a Firebase
                     await database.ref('sloting').set(datosProcesados);
+
+                    // Guardar la fecha de última actualización
+                    await database.ref('estado/sloting_lastUpdate').set(new Date().toISOString());
                     
                     document.getElementById('slotingProgressFill').style.width = '100%';
                     document.getElementById('slotingUploadStatus').textContent = '✅ Sloting subido correctamente';
@@ -1219,7 +1207,7 @@
                 !encabezados[0].includes('UPC') || 
                 !encabezados[1].includes('ARTICULO') || 
                 !encabezados[2].includes('DEPOSITO')) {
-                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL');
+                throw new Error('Formato de archuto incorrecto. Se esperaban columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL');
             }
             
             // Procesar datos
@@ -1256,14 +1244,18 @@
             try {
                 const snapshot = await database.ref('sloting').once('value');
                 slotingData = snapshot.val() || {};
+
+                // Cargar última actualización del sloting
+                const lastUpdateSloting = await database.ref('estado/sloting_lastUpdate').once('value');
+                const lastUpdateSlotingDate = lastUpdateSloting.val() ? new Date(lastUpdateSloting.val()).toLocaleString() : '-';
                 
                 // Actualizar información en la UI
                 document.getElementById('slotingTotalRecords').textContent = Object.keys(slotingData).length;
+                document.getElementById('slotingLastUpdate').textContent = lastUpdateSlotingDate;
                 
                 if (Object.keys(slotingData).length > 0) {
                     document.getElementById('slotingStatus').textContent = 'Datos cargados';
                     document.getElementById('slotingStatus').style.color = '#27ae60';
-                    document.getElementById('slotingLastUpdate').textContent = new Date().toLocaleString();
                     
                     // Mostrar vista previa
                     mostrarVistaPreviaSloting();
@@ -1613,7 +1605,7 @@
                 
                 const inicio = new Date(fechaInicio);
                 const fin = new Date(fechaFin);
-                fin.setHours(23, 59, 59, 999);
+                fin.setHours(23, 59, 59, 999); // Establecemos hasta el final del día
                 
                 const registrosFiltrados = registrosRecoleccion.filter(reg => {
                     const fechaReg = new Date(reg.timestamp);
@@ -1670,7 +1662,7 @@
                 
                 const inicio = new Date(fechaInicio);
                 const fin = new Date(fechaFin);
-                fin.setHours(23, 59, 59, 999);
+                fin.setHours(23, 59, 59, 999); // Establecemos hasta el final del día
                 
                 const registrosFiltrados = registrosReposicion.filter(reg => {
                     const fechaReg = new Date(reg.timestamp || Date.now());
