@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - REABASTECIMIENTO SOKSO</title>
+    <!-- Librería para exportar a Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -375,6 +377,28 @@
             background: #f0e6f5;
             color: #6600a1;
         }
+        .quick-date-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            justify-content: center;
+        }
+        .quick-date-button {
+            background: #e0e0e0;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .quick-date-button:hover {
+            background: #d0d0d0;
+        }
+        .quick-date-button.active {
+            background: #6600a1;
+            color: white;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -510,6 +534,16 @@
             
             <!-- Reporte de Recolección -->
             <div id="reporteRecoleccion">
+                <h3>📊 Reporte de Recolección</h3>
+                
+                <!-- Botones rápidos de fecha -->
+                <div class="quick-date-buttons">
+                    <button class="quick-date-button" onclick="establecerRangoHoy('recoleccion')">Hoy</button>
+                    <button class="quick-date-button" onclick="establecerRangoAyer('recoleccion')">Ayer</button>
+                    <button class="quick-date-button" onclick="establecerRangoEstaSemana('recoleccion')">Esta Semana</button>
+                    <button class="quick-date-button" onclick="establecerRangoEsteMes('recoleccion')">Este Mes</button>
+                </div>
+                
                 <div class="report-filters">
                     <div class="filter-item">
                         <label for="fechaInicioRecoleccion">Fecha Inicio:</label>
@@ -521,13 +555,23 @@
                     </div>
                 </div>
                 
-                <button class="admin-button" onclick="descargarReporteRecoleccion()" style="width:100%;margin-bottom:15px">
-                    📊 Descargar Reporte Recolección
+                <button class="admin-button success" onclick="descargarReporteRecoleccion()" style="width:100%;margin-bottom:15px">
+                    📊 Descargar Reporte Recolección (Excel)
                 </button>
             </div>
 
             <!-- Reporte de Reposición -->
             <div id="reporteReposicion">
+                <h3>📋 Reporte de Reposición</h3>
+                
+                <!-- Botones rápidos de fecha -->
+                <div class="quick-date-buttons">
+                    <button class="quick-date-button" onclick="establecerRangoHoy('reposicion')">Hoy</button>
+                    <button class="quick-date-button" onclick="establecerRangoAyer('reposicion')">Ayer</button>
+                    <button class="quick-date-button" onclick="establecerRangoEstaSemana('reposicion')">Esta Semana</button>
+                    <button class="quick-date-button" onclick="establecerRangoEsteMes('reposicion')">Este Mes</button>
+                </div>
+                
                 <div class="report-filters">
                     <div class="filter-item">
                         <label for="fechaInicioReposicion">Fecha Inicio:</label>
@@ -539,8 +583,8 @@
                     </div>
                 </div>
 
-                <button class="admin-button" onclick="descargarReporteReposicion()" style="width:100%">
-                    📋 Descargar Reporte Reposición
+                <button class="admin-button success" onclick="descargarReporteReposicion()" style="width:100%">
+                    📋 Descargar Reporte Reposición (Excel)
                 </button>
             </div>
         </div>
@@ -664,17 +708,81 @@
             inicializarFirebase();
             
             // Establecer fechas por defecto (hoy)
-            const hoy = new Date().toISOString().split('T')[0];
-            
-            document.getElementById('fechaInicioRecoleccion').value = hoy;
-            document.getElementById('fechaFinRecoleccion').value = hoy;
-            document.getElementById('fechaInicioReposicion').value = hoy;
-            document.getElementById('fechaFinReposicion').value = hoy;
+            establecerRangoHoy('recoleccion');
+            establecerRangoHoy('reposicion');
             
             cargarDashboard();
             cargarSlotingDesdeFirebase();
             cargarRutasDesdeFirebase();
         });
+
+        // ================= FUNCIONES DE FECHA MEJORADAS =================
+        function establecerRangoHoy(tipo) {
+            const hoy = new Date().toISOString().split('T')[0];
+            if (tipo === 'recoleccion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioRecoleccion').value = hoy;
+                document.getElementById('fechaFinRecoleccion').value = hoy;
+            }
+            if (tipo === 'reposicion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioReposicion').value = hoy;
+                document.getElementById('fechaFinReposicion').value = hoy;
+            }
+            mostrarMensaje('Rango establecido para hoy', true);
+        }
+
+        function establecerRangoAyer(tipo) {
+            const ayer = new Date();
+            ayer.setDate(ayer.getDate() - 1);
+            const fechaAyer = ayer.toISOString().split('T')[0];
+            
+            if (tipo === 'recoleccion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioRecoleccion').value = fechaAyer;
+                document.getElementById('fechaFinRecoleccion').value = fechaAyer;
+            }
+            if (tipo === 'reposicion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioReposicion').value = fechaAyer;
+                document.getElementById('fechaFinReposicion').value = fechaAyer;
+            }
+            mostrarMensaje('Rango establecido para ayer', true);
+        }
+
+        function establecerRangoEstaSemana(tipo) {
+            const hoy = new Date();
+            const inicioSemana = new Date(hoy);
+            inicioSemana.setDate(hoy.getDate() - hoy.getDay()); // Domingo de esta semana
+            
+            const fechaInicio = inicioSemana.toISOString().split('T')[0];
+            const fechaFin = hoy.toISOString().split('T')[0];
+            
+            if (tipo === 'recoleccion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioRecoleccion').value = fechaInicio;
+                document.getElementById('fechaFinRecoleccion').value = fechaFin;
+            }
+            if (tipo === 'reposicion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioReposicion').value = fechaInicio;
+                document.getElementById('fechaFinReposicion').value = fechaFin;
+            }
+            mostrarMensaje('Rango establecido para esta semana', true);
+        }
+
+        function establecerRangoEsteMes(tipo) {
+            const hoy = new Date();
+            const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            
+            const fechaInicio = inicioMes.toISOString().split('T')[0];
+            const fechaFin = finMes.toISOString().split('T')[0];
+            
+            if (tipo === 'recoleccion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioRecoleccion').value = fechaInicio;
+                document.getElementById('fechaFinRecoleccion').value = fechaFin;
+            }
+            if (tipo === 'reposicion' || tipo === 'ambos') {
+                document.getElementById('fechaInicioReposicion').value = fechaInicio;
+                document.getElementById('fechaFinReposicion').value = fechaFin;
+            }
+            mostrarMensaje('Rango establecido para este mes', true);
+        }
 
         // ================= CONEXIÓN FIREBASE =================
         function inicializarFirebase() {
@@ -1612,7 +1720,7 @@
             }
         }
 
-        // ================= FUNCIONES DE REPORTES =================
+        // ================= FUNCIONES DE REPORTES MEJORADAS =================
         async function descargarReporteRecoleccion() {
             try {
                 const fechaInicio = document.getElementById('fechaInicioRecoleccion').value;
@@ -1625,9 +1733,12 @@
                 
                 mostrarMensaje('Generando reporte de recolección...', true);
                 
+                // CORRECCIÓN: Ajustar fechas para cubrir todo el día
                 const inicio = new Date(fechaInicio);
+                inicio.setHours(0, 0, 0, 0); // Inicio del día
+                
                 const fin = new Date(fechaFin);
-                fin.setHours(23, 59, 59, 999); // Establecemos hasta el final del día
+                fin.setHours(23, 59, 59, 999); // Fin del día
                 
                 const registrosFiltrados = registrosRecoleccion.filter(reg => {
                     if (!reg.timestamp) return false;
@@ -1640,7 +1751,7 @@
                     return;
                 }
                 
-                generarCSVRecoleccion(registrosFiltrados, fechaInicio, fechaFin);
+                generarExcelRecoleccion(registrosFiltrados, fechaInicio, fechaFin);
                 
             } catch (error) {
                 console.error('Error generando reporte:', error);
@@ -1648,27 +1759,43 @@
             }
         }
 
-        function generarCSVRecoleccion(registros, fechaInicio, fechaFin) {
-            let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,UPC,DESCRIPCION,CANTIDAD_PLANIFICADA,CANTIDAD_RECOLECTADA,ACCION,FECHA,HORA,TIMESTAMP\n";
-            
-            registros.forEach(reg => {
-                const fecha = reg.fecha || (reg.timestamp ? new Date(reg.timestamp).toLocaleDateString() : '');
-                const hora = reg.hora || (reg.timestamp ? new Date(reg.timestamp).toLocaleTimeString() : '');
+        function generarExcelRecoleccion(registros, fechaInicio, fechaFin) {
+            try {
+                // Preparar los datos para Excel
+                const datosExcel = registros.map(reg => ({
+                    'USUARIO': reg.usuario || '',
+                    'RUTA': reg.ruta || '',
+                    'COLA': reg.cola || '',
+                    'DEPOSITO': reg.deposito || '',
+                    'UPC': reg.upc || '',
+                    'DESCRIPCION': reg.descripcion || '',
+                    'CANTIDAD_PLANIFICADA': reg.cantidad || 0,
+                    'CANTIDAD_RECOLECTADA': reg.recolectado || 0,
+                    'NO_ENCONTRADO': reg.no_encontrado || 0,
+                    'ACCION': reg.accion || '',
+                    'TIPO_RECOLECCION': reg.tipoRecoleccion || '',
+                    'DEPOSITO_DESTINO': reg.deposito_destino || '',
+                    'COLA_REPOSICION': reg.cola_reposicion || '',
+                    'FECHA': reg.fecha || '',
+                    'HORA': reg.hora || '',
+                    'TIMESTAMP': reg.timestamp || ''
+                }));
                 
-                csvContent += `"${reg.usuario || ''}","${reg.ruta || ''}","${reg.cola || ''}","${reg.deposito || ''}","${reg.upc || ''}","${reg.descripcion || ''}",${reg.cantidad || 0},${reg.recolectado || 0},"${reg.accion || ''}","${fecha}","${hora}",${reg.timestamp || ''}\n`;
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `reporte_recoleccion_${fechaInicio}_${fechaFin}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            mostrarMensaje(`✅ Reporte de recolección descargado (${registros.length} registros)`, true);
+                // Crear libro de Excel
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(datosExcel);
+                
+                // Añadir hoja al libro
+                XLSX.utils.book_append_sheet(wb, ws, "Reporte Recolección");
+                
+                // Generar y descargar archivo
+                XLSX.writeFile(wb, `reporte_recoleccion_${fechaInicio}_${fechaFin}.xlsx`);
+                
+                mostrarMensaje(`✅ Reporte de recolección descargado (${registros.length} registros)`, true);
+            } catch (error) {
+                console.error('Error generando Excel:', error);
+                mostrarMensaje('❌ Error al generar archivo Excel: ' + error.message, false);
+            }
         }
 
         async function descargarReporteReposicion() {
@@ -1683,12 +1810,16 @@
                 
                 mostrarMensaje('Generando reporte de reposición...', true);
                 
+                // CORRECCIÓN: Ajustar fechas para cubrir todo el día
                 const inicio = new Date(fechaInicio);
+                inicio.setHours(0, 0, 0, 0);
+                
                 const fin = new Date(fechaFin);
-                fin.setHours(23, 59, 59, 999); // Establecemos hasta el final del día
+                fin.setHours(23, 59, 59, 999);
                 
                 const registrosFiltrados = registrosReposicion.filter(reg => {
-                    const fechaReg = new Date(reg.timestamp || Date.now());
+                    if (!reg.timestamp) return false;
+                    const fechaReg = new Date(reg.timestamp);
                     return fechaReg >= inicio && fechaReg <= fin;
                 });
                 
@@ -1697,7 +1828,7 @@
                     return;
                 }
                 
-                generarCSVReposicion(registrosFiltrados, fechaInicio, fechaFin);
+                generarExcelReposicion(registrosFiltrados, fechaInicio, fechaFin);
                 
             } catch (error) {
                 console.error('Error generando reporte de reposición:', error);
@@ -1705,27 +1836,37 @@
             }
         }
 
-        function generarCSVReposicion(registros, fechaInicio, fechaFin) {
-            let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,UPC,DESCRIPCION,CANTIDAD,FECHA,HORA,TIMESTAMP\n";
-            
-            registros.forEach(reg => {
-                const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
-                const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
+        function generarExcelReposicion(registros, fechaInicio, fechaFin) {
+            try {
+                // Preparar los datos para Excel
+                const datosExcel = registros.map(reg => ({
+                    'USUARIO': reg.usuario || '',
+                    'RUTA': reg.ruta || '',
+                    'COLA': reg.cola || '',
+                    'DEPOSITO': reg.deposito || '',
+                    'UPC': reg.upc || '',
+                    'DESCRIPCION': reg.descripcion || '',
+                    'CANTIDAD': reg.cantidad || 0,
+                    'FECHA': reg.fecha || (reg.timestamp ? new Date(reg.timestamp).toLocaleDateString() : ''),
+                    'HORA': reg.hora || (reg.timestamp ? new Date(reg.timestamp).toLocaleTimeString() : ''),
+                    'TIMESTAMP': reg.timestamp || ''
+                }));
                 
-                csvContent += `"${reg.usuario || ''}","${reg.ruta || ''}","${reg.cola || ''}","${reg.deposito || ''}","${reg.upc || ''}","${reg.descripcion || ''}",${reg.cantidad || 0},"${fecha}","${hora}",${reg.timestamp || ''}\n`;
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `reporte_reposicion_${fechaInicio}_${fechaFin}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            mostrarMensaje(`✅ Reporte de reposición descargado (${registros.length} registros)`, true);
+                // Crear libro de Excel
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(datosExcel);
+                
+                // Añadir hoja al libro
+                XLSX.utils.book_append_sheet(wb, ws, "Reporte Reposición");
+                
+                // Generar y descargar archivo
+                XLSX.writeFile(wb, `reporte_reposicion_${fechaInicio}_${fechaFin}.xlsx`);
+                
+                mostrarMensaje(`✅ Reporte de reposición descargado (${registros.length} registros)`, true);
+            } catch (error) {
+                console.error('Error generando Excel:', error);
+                mostrarMensaje('❌ Error al generar archivo Excel: ' + error.message, false);
+            }
         }
 
         // ================= FUNCIONES GENERALES =================

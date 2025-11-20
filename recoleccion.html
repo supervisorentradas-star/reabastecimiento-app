@@ -514,6 +514,51 @@
         let tipoRecoleccionActual = 'Regular'; // Por defecto
         let fechaRecoleccion = '';
 
+        // ================= FUNCIONES DE FECHA MEJORADAS =================
+        function obtenerFechaActual() {
+            const hoy = new Date();
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const anio = hoy.getFullYear();
+            return `${dia}/${mes}/${anio}`;
+        }
+
+        function validarFechaDatos(fechaDatos) {
+            try {
+                const partes = fechaDatos.split('/');
+                if (partes.length !== 3) return false;
+                
+                // Crear fecha del archivo (formato DD/MM/YYYY)
+                const fechaArchivo = new Date(partes[2], partes[1] - 1, partes[0]);
+                
+                // Crear fecha actual (sin horas)
+                const fechaActual = new Date();
+                fechaActual.setHours(0, 0, 0, 0);
+                
+                // Comparar solo día, mes y año
+                const esMismaFecha = 
+                    fechaArchivo.getDate() === fechaActual.getDate() &&
+                    fechaArchivo.getMonth() === fechaActual.getMonth() &&
+                    fechaArchivo.getFullYear() === fechaActual.getFullYear();
+                
+                if (!esMismaFecha) {
+                    mostrarMensajeModal(
+                        '⚠️ FECHA INCORRECTA', 
+                        `El archivo cargado es del ${fechaDatos}, pero hoy es ${obtenerFechaActual()}. 
+                        \n\nDebes cargar un archivo con la fecha de hoy para trabajar. 
+                        \n\nReporta esto a James Jimenez si necesitas ayuda.`
+                    );
+                    return false;
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Error validando fecha:', error);
+                return false;
+            }
+        }
+
         // ================= INICIALIZACIÓN MEJORADA =================
         window.addEventListener('load', async function() {
             // Inicializar Firebase y verificar conexiones
@@ -673,26 +718,6 @@
             }
         }
 
-        // ================= VALIDACIÓN DE FECHA =================
-        function validarFechaDatos(fechaDatos) {
-            // Convertir fecha de datos (formato DD/MM/YYYY) a objeto Date
-            const partes = fechaDatos.split('/');
-            if (partes.length !== 3) return false;
-            
-            const fechaDatosObj = new Date(partes[2], partes[1] - 1, partes[0]);
-            
-            // Fecha actual
-            const fechaActual = new Date();
-            fechaActual.setHours(0, 0, 0, 0);
-            
-            // Comparar fechas
-            if (fechaDatosObj < fechaActual) {
-                return false; // Fecha pasada
-            }
-            
-            return true; // Fecha válida (hoy o futura)
-        }
-
         async function cargarRutasDesdeFirebase(silencioso = false) {
             try {
                 if (!silencioso) {
@@ -756,13 +781,12 @@
                 if (primerRegistro && primerRegistro.fecha) {
                     fechaRecoleccion = primerRegistro.fecha;
                     
-                    // Validar fecha
-                    if (!validarFechaDatos(fechaRecoleccion)) {
-                        fechaValida = false;
-                        mostrarMensajeModal(
-                            '¡Cuidado!', 
-                            'Estás intentando trabajar con datos pasados. Reportalo a James Jimenez.'
-                        );
+                    // 🆕 VALIDACIÓN MEJORADA DE FECHA
+                    fechaValida = validarFechaDatos(fechaRecoleccion);
+                    
+                    if (!fechaValida) {
+                        // No mostrar mensaje modal aquí porque ya se mostró en validarFechaDatos
+                        console.warn('Archivo con fecha anterior detectado:', fechaRecoleccion);
                     }
                 }
                 
@@ -881,8 +905,14 @@
             
             let fechaInfo = '';
             if (fechaRecoleccion) {
-                const estadoFecha = fechaValida ? '✅' : '⚠️';
+                // Validar nuevamente para mostrar el estado correcto
+                const fechaEsHoy = validarFechaDatos(fechaRecoleccion);
+                const estadoFecha = fechaEsHoy ? '✅' : '⚠️';
                 fechaInfo = `<strong>${estadoFecha} Fecha: ${fechaRecoleccion}</strong><br>`;
+                
+                if (!fechaEsHoy) {
+                    fechaInfo += `<small style="color: #e74c3c;">ARCHIVO DE FECHA ANTERIOR - NO VÁLIDO</small><br>`;
+                }
             }
             
             document.getElementById('fileInfo').innerHTML = 
@@ -915,10 +945,16 @@
             container.classList.remove('hidden');
         }
 
+        // ================= VERIFICACIÓN DE RUTAS COMPLETADAS CON FILTRO POR FECHA =================
         async function verificarRutaCompletada(ruta) {
             try {
-                // Obtener registros de Firebase para esta ruta
-                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
+                const fechaHoy = obtenerFechaActual();
+                
+                // Obtener registros de Firebase SOLO de hoy
+                const snapshot = await database.ref('recolecciones')
+                    .orderByChild('fecha')
+                    .equalTo(fechaHoy)
+                    .once('value');
                 const registros = snapshot.val();
                 
                 if (!registros) return false;
@@ -929,7 +965,9 @@
                     
                     // Buscar registros para este depósito
                     Object.values(registros).forEach(registro => {
-                        if (registro.deposito === item.deposito && registro.tipoRecoleccion === tipoRecoleccionActual) {
+                        if (registro.deposito === item.deposito && 
+                            registro.tipoRecoleccion === tipoRecoleccionActual &&
+                            registro.ruta === ruta) {
                             if (registro.accion === 'escaneado') {
                                 totalEjecutado += registro.recolectado;
                             } else if (registro.accion === 'no_encontrado') {
@@ -1011,6 +1049,53 @@
             colasDisponibles = Object.keys(itemsPorCola).filter(cola => itemsPorCola[cola].length > 0);
         }
 
+        // ================= VERIFICACIÓN DE ESTADO REAL CON FILTRO POR FECHA =================
+        async function verificarEstadoRealCola(ruta, cola) {
+            try {
+                const fechaHoy = obtenerFechaActual();
+                
+                // Obtener todos los registros de Firebase para esta ruta y fecha actual
+                const snapshot = await database.ref('recolecciones')
+                    .orderByChild('fecha')
+                    .equalTo(fechaHoy)
+                    .once('value');
+                const registros = snapshot.val();
+                
+                if (!registros) {
+                    return { completada: false, enProgreso: false };
+                }
+                
+                let totalRecolectado = 0;
+                let totalNoEncontrado = 0;
+                
+                Object.values(registros).forEach(registro => {
+                    if (registro.ruta === ruta && 
+                        registro.cola === cola && 
+                        registro.tipoRecoleccion === tipoRecoleccionActual) {
+                        if (registro.accion === 'escaneado') {
+                            totalRecolectado += registro.recolectado;
+                        } else if (registro.accion === 'no_encontrado') {
+                            totalNoEncontrado += registro.no_encontrado;
+                        }
+                    }
+                });
+                
+                // Calcular total planificado desde los datos locales
+                const itemsCola = itemsPorCola[cola];
+                const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
+                
+                // Verificar si está completada
+                const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
+                const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
+                
+                return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
+                
+            } catch (error) {
+                console.error('Error verificando estado real de cola:', error);
+                return { completada: false, enProgreso: false };
+            }
+        }
+
         async function mostrarOpcionesColas() {
             const selector = document.getElementById('colaSelector');
             selector.innerHTML = '';
@@ -1042,46 +1127,6 @@
                 }
                 
                 selector.appendChild(button);
-            }
-        }
-
-        // ================= VALIDACIÓN CRUZADA FIREBASE =================
-        async function verificarEstadoRealCola(ruta, cola) {
-            try {
-                // Obtener todos los registros de Firebase para esta ruta
-                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(ruta).once('value');
-                const registros = snapshot.val();
-                
-                if (!registros) {
-                    return { completada: false, enProgreso: false };
-                }
-                
-                let totalRecolectado = 0;
-                let totalNoEncontrado = 0;
-                
-                Object.values(registros).forEach(registro => {
-                    if (registro.cola === cola && registro.tipoRecoleccion === tipoRecoleccionActual) {
-                        if (registro.accion === 'escaneado') {
-                            totalRecolectado += registro.recolectado;
-                        } else if (registro.accion === 'no_encontrado') {
-                            totalNoEncontrado += registro.no_encontrado;
-                        }
-                    }
-                });
-                
-                // Calcular total planificado desde Firebase
-                const itemsCola = itemsPorCola[cola];
-                const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
-                
-                // Verificar si está completada
-                const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
-                const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
-                
-                return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
-                
-            } catch (error) {
-                console.error('Error verificando estado real de cola:', error);
-                return { completada: false, enProgreso: false };
             }
         }
 
@@ -1128,16 +1173,24 @@
             document.getElementById('upcInput').focus();
         }
 
+        // ================= CARGA DE PROGRESO ACTUAL CON FILTRO POR FECHA =================
         async function cargarProgresoActual() {
             try {
-                const snapshot = await database.ref('recolecciones').orderByChild('ruta').equalTo(rutaActual).once('value');
+                const fechaHoy = obtenerFechaActual();
+                
+                const snapshot = await database.ref('recolecciones')
+                    .orderByChild('fecha')
+                    .equalTo(fechaHoy)
+                    .once('value');
                 const registros = snapshot.val();
                 
                 if (!registros) return;
                 
                 // Actualizar itemsPorCola con los registros de Firebase
                 Object.values(registros).forEach(registro => {
-                    if (registro.cola === colaActual && registro.tipoRecoleccion === tipoRecoleccionActual) {
+                    if (registro.cola === colaActual && 
+                        registro.tipoRecoleccion === tipoRecoleccionActual &&
+                        registro.ruta === rutaActual) {
                         const itemIndex = itemsPorCola[colaActual].findIndex(item => item.deposito === registro.deposito);
                         if (itemIndex !== -1) {
                             if (registro.accion === 'escaneado') {
@@ -1300,7 +1353,7 @@
                 recolectado: item.recolectado,
                 no_encontrado: item.no_encontrado,
                 accion: 'escaneado',
-                fecha: fechaHora.toLocaleDateString(),
+                fecha: obtenerFechaActual(), // 🆕 SIEMPRE usar fecha actual
                 hora: fechaHora.toLocaleTimeString(),
                 timestamp: fechaHora.getTime(),
                 tipoRecoleccion: tipoRecoleccionActual,
@@ -1393,7 +1446,7 @@
                 recolectado: item.recolectado,
                 no_encontrado: item.no_encontrado,
                 accion: 'no_encontrado',
-                fecha: fechaHora.toLocaleDateString(),
+                fecha: obtenerFechaActual(), // 🆕 SIEMPRE usar fecha actual
                 hora: fechaHora.toLocaleTimeString(),
                 timestamp: fechaHora.getTime(),
                 tipoRecoleccion: tipoRecoleccionActual,
