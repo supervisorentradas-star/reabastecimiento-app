@@ -424,28 +424,18 @@
         <!-- CONTROLES ADMIN - PANEL PRINCIPAL -->
         <div id="adminMainPanel" class="admin-controls">
             <button class="admin-button" onclick="actualizarDesdeFirebase()">🔄 Actualizar desde Firebase</button>
-            <button class="admin-button warning" onclick="verificarConsistencia()">🔍 Verificar Consistencia</button>
             <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
         </div>
 
         <!-- CONTROLES ADMIN - PANEL RUTAS & COLAS -->
         <div id="adminRutasPanel" class="admin-controls hidden">
             <button class="admin-button success" onclick="solicitarSubirRutas('recoleccion')">📤 Subir Recolección</button>
-            <!-- Quitamos el botón de reposición -->
             <button class="admin-button warning" onclick="verificarRutasActuales()">🔍 Ver Rutas Actuales</button>
         </div>
 
         <!-- CONTROLES ADMIN - PANEL SLOTING -->
         <div id="adminSlotingPanel" class="admin-controls hidden">
             <button class="admin-button success" onclick="solicitarSubirSloting()">📤 Subir Sloting</button>
-            <button class="admin-button warning" onclick="verificarSlotingActual()">🔍 Ver Sloting Actual</button>
-            <button class="admin-button" onclick="descargarBackupSloting()">💾 Descargar Backup</button>
-        </div>
-
-        <!-- VERIFICACIÓN DE CONSISTENCIA -->
-        <div id="consistencyResults" class="consistency-check hidden">
-            <h3>Resultados de Verificación</h3>
-            <div id="consistencyContent"></div>
         </div>
 
         <!-- PANEL DE CONTROL - ESTADO DE RUTAS -->
@@ -453,15 +443,8 @@
             <h2 id="panelTitulo">Estado de Rutas - Recolección</h2>
             <div id="dashboardLoading" class="loading">Cargando estado de rutas...</div>
             <table class="dashboard-table" id="dashboardTable" style="display:none">
-                <thead>
-                    <tr>
-                        <th>Ruta</th>
-                        <th>Cola</th>
-                        <th>Estado</th>
-                        <th>Recolector</th>
-                        <th>Progreso</th>
-                        <th>Última Actualización</th>
-                    </tr>
+                <thead id="dashboardTableHead">
+                    <!-- Se llenará dinámicamente según el módulo -->
                 </thead>
                 <tbody id="dashboardTableBody">
                     <!-- Los datos se llenarán dinámicamente -->
@@ -494,8 +477,6 @@
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Quitamos la sección de reposición -->
         </div>
 
         <!-- PANEL DE SLOTING -->
@@ -682,15 +663,13 @@
         window.addEventListener('load', function() {
             inicializarFirebase();
             
-            // Establecer fechas por defecto (últimos 7 días)
-            const hoy = new Date();
-            const haceSieteDias = new Date();
-            haceSieteDias.setDate(hoy.getDate() - 7);
+            // Establecer fechas por defecto (hoy)
+            const hoy = new Date().toISOString().split('T')[0];
             
-            document.getElementById('fechaInicioRecoleccion').value = haceSieteDias.toISOString().split('T')[0];
-            document.getElementById('fechaFinRecoleccion').value = hoy.toISOString().split('T')[0];
-            document.getElementById('fechaInicioReposicion').value = haceSieteDias.toISOString().split('T')[0];
-            document.getElementById('fechaFinReposicion').value = hoy.toISOString().split('T')[0];
+            document.getElementById('fechaInicioRecoleccion').value = hoy;
+            document.getElementById('fechaFinRecoleccion').value = hoy;
+            document.getElementById('fechaInicioReposicion').value = hoy;
+            document.getElementById('fechaFinReposicion').value = hoy;
             
             cargarDashboard();
             cargarSlotingDesdeFirebase();
@@ -771,6 +750,37 @@
             }
         }
 
+        // ================= FUNCIONES DE AGRUPACIÓN POR COLAS =================
+        
+        // Función para obtener la cola de recolección a partir del depósito
+        function obtenerColaRecoleccion(deposito) {
+            if (!deposito) return 'OTROS';
+            
+            // Ejemplo: "A01-008-F0027" -> extraemos "F"
+            const partes = deposito.split('-');
+            if (partes.length < 3) return 'OTROS';
+            
+            const nivel = partes[2].charAt(0); // Tomamos la primera letra del tercer segmento
+            
+            // Agrupamos según las reglas proporcionadas
+            if (nivel === 'A' || nivel === 'B') return 'AB';
+            if (nivel === 'C' || nivel === 'D' || nivel === 'E') return 'CDE';
+            if (nivel === 'F') return 'F';
+            
+            return 'OTROS';
+        }
+        
+        // Función para obtener la cola de reposición a partir del deposito_destino
+        function obtenerColaReposicion(deposito_destino) {
+            if (!deposito_destino) return 'OTROS';
+            
+            // Ejemplo: "P01-005-A" -> extraemos "P01"
+            const partes = deposito_destino.split('-');
+            if (partes.length < 1) return 'OTROS';
+            
+            return partes[0]; // Retornamos la primera parte como cola
+        }
+
         // ================= GESTIÓN DE RUTAS & COLAS =================
         function solicitarSubirRutas(tipo) {
             tipoRutaActual = tipo;
@@ -784,7 +794,6 @@
                     '- Separador: tabulación<br>' +
                     '- Codificación: UTF-8';
             } else {
-                // No debería ocurrir porque quitamos el botón de reposición, pero por si acaso
                 document.getElementById('rutasModalTitle').textContent = 'Subir Rutas de Reposición';
                 document.getElementById('rutasModalDescription').textContent = 'Selecciona el archivo CSV con los datos de reposición:';
                 document.getElementById('rutasColumnasEsperadas').innerHTML = 
@@ -1054,27 +1063,10 @@
                     document.getElementById('recoleccionPreview').style.display = 'none';
                 }
                 
-                // Cargar datos de reposición (aunque ya no se suban, puede haber datos históricos)
-                const snapshotReposicion = await database.ref('reposicion_rutas').once('value');
-                reposicionData = snapshotReposicion.val() || {};
-                
-                // Actualizar información en la UI
-                document.getElementById('reposicionTotalRecords').textContent = Object.keys(reposicionData).length;
-                
-                if (Object.keys(reposicionData).length > 0) {
-                    document.getElementById('reposicionStatus').textContent = 'Datos cargados';
-                    document.getElementById('reposicionStatus').style.color = '#27ae60';
-                } else {
-                    document.getElementById('reposicionStatus').textContent = 'No hay datos cargados';
-                    document.getElementById('reposicionStatus').style.color = '#e74c3c';
-                }
-                
             } catch (error) {
                 console.error('Error cargando rutas:', error);
                 document.getElementById('recoleccionStatus').textContent = 'Error al cargar datos';
                 document.getElementById('recoleccionStatus').style.color = '#e74c3c';
-                document.getElementById('reposicionStatus').textContent = 'Error al cargar datos';
-                document.getElementById('reposicionStatus').style.color = '#e74c3c';
             }
         }
 
@@ -1207,7 +1199,7 @@
                 !encabezados[0].includes('UPC') || 
                 !encabezados[1].includes('ARTICULO') || 
                 !encabezados[2].includes('DEPOSITO')) {
-                throw new Error('Formato de archuto incorrecto. Se esperaban columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL');
+                throw new Error('Formato de archivo incorrecto. Se esperaban columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL');
             }
             
             // Procesar datos
@@ -1295,42 +1287,6 @@
             document.getElementById('slotingPreview').style.display = 'block';
         }
 
-        function verificarSlotingActual() {
-            if (Object.keys(slotingData).length === 0) {
-                mostrarMensaje('No hay datos de sloting cargados', false);
-                return;
-            }
-            
-            cargarSlotingDesdeFirebase();
-            mostrarMensaje(`Sloting cargado: ${Object.keys(slotingData).length} registros`, true);
-        }
-
-        function descargarBackupSloting() {
-            if (Object.keys(slotingData).length === 0) {
-                mostrarMensaje('No hay datos de sloting para descargar', false);
-                return;
-            }
-            
-            let csvContent = "CODIGO_UPC,ARTICULO,DEPOSITO FINAL\n";
-            
-            Object.keys(slotingData).forEach(upc => {
-                const registro = slotingData[upc];
-                csvContent += `"${upc}","${registro.articulo}","${registro.deposito}"\n`;
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `backup_sloting_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            mostrarMensaje(`✅ Backup descargado (${Object.keys(slotingData).length} registros)`, true);
-        }
-
         // ================= FUNCIONES PRINCIPALES DEL ADMINISTRADOR =================
         async function cargarDashboard() {
             try {
@@ -1359,6 +1315,20 @@
                         estadoDesdeFirebase = snapshot.val() || {};
                         console.log('Estado cargado desde Firebase:', estadoDesdeFirebase);
                         
+                        // Cargar rutas de recolección
+                        return database.ref('recoleccion_rutas').once('value');
+                    })
+                    .then(snapshot => {
+                        rutasRecoleccionDesdeFirebase = snapshot.val() || {};
+                        console.log('Rutas de recolección cargadas:', Object.keys(rutasRecoleccionDesdeFirebase).length);
+                        
+                        // Cargar rutas de reposición
+                        return database.ref('reposicion_rutas').once('value');
+                    })
+                    .then(snapshot => {
+                        rutasReposicionDesdeFirebase = snapshot.val() || {};
+                        console.log('Rutas de reposición cargadas:', Object.keys(rutasReposicionDesdeFirebase).length);
+                        
                         // Cargar registros de recolección
                         return database.ref('recolecciones').once('value');
                     })
@@ -1384,24 +1354,43 @@
         }
 
         function actualizarEstadisticas() {
+            // Obtener fecha actual para filtrar
+            const fechaActual = new Date().toISOString().split('T')[0];
+            
             let rutasActivas, rutasCompletadas, operariosUnicos, totalRegistros;
             
             if (moduloActual === 'recoleccion') {
-                rutasActivas = Object.keys(rutasRecoleccionDesdeFirebase).length;
-                rutasCompletadas = calcularRutasCompletadasRecoleccion();
-                operariosUnicos = new Set();
-                totalRegistros = registrosRecoleccion.length;
+                // Filtrar registros de recolección por fecha actual
+                const registrosHoy = registrosRecoleccion.filter(reg => {
+                    const fechaReg = reg.timestamp ? new Date(reg.timestamp).toISOString().split('T')[0] : null;
+                    return fechaReg === fechaActual;
+                });
                 
-                registrosRecoleccion.forEach(registro => {
+                // Agrupar por ruta y cola
+                const grupos = agruparRecoleccionPorRutaYCola(registrosHoy);
+                rutasActivas = Object.keys(grupos).length;
+                rutasCompletadas = calcularRutasCompletadasRecoleccion(grupos);
+                operariosUnicos = new Set();
+                totalRegistros = registrosHoy.length;
+                
+                registrosHoy.forEach(registro => {
                     if (registro.usuario) operariosUnicos.add(registro.usuario);
                 });
             } else {
-                rutasActivas = Object.keys(rutasReposicionDesdeFirebase).length;
-                rutasCompletadas = calcularRutasCompletadasReposicion();
-                operariosUnicos = new Set();
-                totalRegistros = registrosReposicion.length;
+                // Para reposición, usar datos de recolección del día actual
+                const registrosHoy = registrosRecoleccion.filter(reg => {
+                    const fechaReg = reg.timestamp ? new Date(reg.timestamp).toISOString().split('T')[0] : null;
+                    return fechaReg === fechaActual;
+                });
                 
-                registrosReposicion.forEach(registro => {
+                // Agrupar por cola de reposición
+                const grupos = agruparReposicionPorCola(registrosHoy);
+                rutasActivas = Object.keys(grupos).length;
+                rutasCompletadas = calcularRutasCompletadasReposicion(grupos);
+                operariosUnicos = new Set();
+                totalRegistros = registrosHoy.length;
+                
+                registrosHoy.forEach(registro => {
                     if (registro.usuario) operariosUnicos.add(registro.usuario);
                 });
             }
@@ -1413,156 +1402,195 @@
             document.getElementById('totalRegistros').textContent = totalRegistros;
         }
 
-        function calcularRutasCompletadasRecoleccion() {
+        // Función para agrupar registros de recolección por ruta y cola
+        function agruparRecoleccionPorRutaYCola(registros) {
+            const grupos = {};
+            
+            registros.forEach(registro => {
+                // Obtener ruta del depósito (primera parte antes del guión)
+                const ruta = registro.deposito ? registro.deposito.split('-')[0] : 'SIN_RUTA';
+                
+                // Obtener cola según las reglas de agrupación
+                const cola = obtenerColaRecoleccion(registro.deposito);
+                
+                const clave = `${ruta}-${cola}`;
+                
+                if (!grupos[clave]) {
+                    grupos[clave] = {
+                        ruta: ruta,
+                        cola: cola,
+                        total: 0,
+                        completado: 0,
+                        recolector: registro.usuario,
+                        ultimaActualizacion: registro.timestamp
+                    };
+                }
+                
+                // Sumar cantidad planificada
+                grupos[clave].total += registro.cantidad || 0;
+                
+                // Sumar cantidad recolectada
+                grupos[clave].completado += registro.recolectado || 0;
+                
+                // Actualizar recolector y fecha si es más reciente
+                if (registro.timestamp && (!grupos[clave].ultimaActualizacion || registro.timestamp > grupos[clave].ultimaActualizacion)) {
+                    grupos[clave].recolector = registro.usuario;
+                    grupos[clave].ultimaActualizacion = registro.timestamp;
+                }
+            });
+            
+            return grupos;
+        }
+
+        // Función para agrupar registros de reposición por cola
+        function agruparReposicionPorCola(registrosRecoleccion) {
+            const grupos = {};
+            
+            registrosRecoleccion.forEach(registro => {
+                // Obtener cola de reposición del deposito_destino
+                const cola = obtenerColaReposicion(registro.deposito_destino);
+                
+                if (!cola || cola === 'OTROS') return; // Saltar si no hay cola válida
+                
+                if (!grupos[cola]) {
+                    grupos[cola] = {
+                        cola: cola,
+                        total: 0,
+                        completado: 0,
+                        recolector: registro.usuario,
+                        ultimaActualizacion: registro.timestamp
+                    };
+                }
+                
+                // Para reposición, el total es la cantidad planificada de recolección
+                grupos[cola].total += registro.cantidad || 0;
+                
+                // El completado es lo que se ha recolectado (que activa la reposición)
+                grupos[cola].completado += registro.recolectado || 0;
+                
+                // Actualizar recolector y fecha si es más reciente
+                if (registro.timestamp && (!grupos[cola].ultimaActualizacion || registro.timestamp > grupos[cola].ultimaActualizacion)) {
+                    grupos[cola].recolector = registro.usuario;
+                    grupos[cola].ultimaActualizacion = registro.timestamp;
+                }
+            });
+            
+            return grupos;
+        }
+
+        function calcularRutasCompletadasRecoleccion(grupos) {
             let completadas = 0;
-            Object.keys(rutasRecoleccionDesdeFirebase).forEach(ruta => {
-                Object.keys(rutasRecoleccionDesdeFirebase[ruta]).forEach(cola => {
-                    const progreso = calcularProgresoRecoleccion(ruta, cola);
-                    if (progreso.porcentaje === 100) completadas++;
-                });
+            Object.values(grupos).forEach(grupo => {
+                const porcentaje = grupo.total > 0 ? Math.round((grupo.completado / grupo.total) * 100) : 0;
+                if (porcentaje === 100) completadas++;
             });
             return completadas;
         }
 
-        function calcularRutasCompletadasReposicion() {
+        function calcularRutasCompletadasReposicion(grupos) {
             let completadas = 0;
-            Object.keys(rutasReposicionDesdeFirebase).forEach(ruta => {
-                Object.keys(rutasReposicionDesdeFirebase[ruta]).forEach(cola => {
-                    const progreso = calcularProgresoReposicion(ruta, cola);
-                    if (progreso.porcentaje === 100) completadas++;
-                });
+            Object.values(grupos).forEach(grupo => {
+                const porcentaje = grupo.total > 0 ? Math.round((grupo.completado / grupo.total) * 100) : 0;
+                if (porcentaje === 100) completadas++;
             });
             return completadas;
         }
 
         function actualizarTablaEstadoRutas() {
             const tbody = document.getElementById('dashboardTableBody');
+            const thead = document.getElementById('dashboardTableHead');
             tbody.innerHTML = '';
             
-            let datos;
+            // Obtener fecha actual para filtrar
+            const fechaActual = new Date().toISOString().split('T')[0];
+            
+            let grupos;
             if (moduloActual === 'recoleccion') {
-                datos = rutasRecoleccionDesdeFirebase;
+                // Configurar encabezados para recolección
+                thead.innerHTML = `
+                    <tr>
+                        <th>Ruta</th>
+                        <th>Cola</th>
+                        <th>Estado</th>
+                        <th>Recolector</th>
+                        <th>Progreso</th>
+                        <th>Última Actualización</th>
+                    </tr>
+                `;
+                
+                // Filtrar registros de recolección por fecha actual y agrupar
+                const registrosHoy = registrosRecoleccion.filter(reg => {
+                    const fechaReg = reg.timestamp ? new Date(reg.timestamp).toISOString().split('T')[0] : null;
+                    return fechaReg === fechaActual;
+                });
+                
+                grupos = agruparRecoleccionPorRutaYCola(registrosHoy);
             } else {
-                datos = rutasReposicionDesdeFirebase;
+                // Configurar encabezados para reposición
+                thead.innerHTML = `
+                    <tr>
+                        <th>Cola</th>
+                        <th>Estado</th>
+                        <th>Recolector</th>
+                        <th>Progreso</th>
+                        <th>Última Actualización</th>
+                    </tr>
+                `;
+                
+                // Filtrar registros de recolección por fecha actual y agrupar para reposición
+                const registrosHoy = registrosRecoleccion.filter(reg => {
+                    const fechaReg = reg.timestamp ? new Date(reg.timestamp).toISOString().split('T')[0] : null;
+                    return fechaReg === fechaActual;
+                });
+                
+                grupos = agruparReposicionPorCola(registrosHoy);
             }
             
-            if (Object.keys(datos).length === 0) {
+            if (Object.keys(grupos).length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No hay datos disponibles para este módulo</td></tr>';
             } else {
-                Object.keys(datos).forEach(ruta => {
-                    Object.keys(datos[ruta]).forEach(cola => {
-                        let progreso, estadoClass, estadoText, recolector, ultimaActualizacion;
-                        
-                        if (moduloActual === 'recoleccion') {
-                            progreso = calcularProgresoRecoleccion(ruta, cola);
-                        } else {
-                            progreso = calcularProgresoReposicion(ruta, cola);
-                        }
-                        
-                        // Determinar estado
-                        if (progreso.porcentaje === 100) {
-                            estadoClass = 'status-completed';
-                            estadoText = 'COMPLETADA';
-                        } else if (progreso.porcentaje > 0) {
-                            estadoClass = 'status-in-progress';
-                            estadoText = 'EN PROGRESO';
-                        } else {
-                            estadoClass = 'status-pending';
-                            estadoText = 'PENDIENTE';
-                        }
-                        
-                        const row = document.createElement('tr');
+                Object.values(grupos).forEach(grupo => {
+                    const porcentaje = grupo.total > 0 ? Math.round((grupo.completado / grupo.total) * 100) : 0;
+                    let estadoClass, estadoText;
+                    
+                    // Determinar estado
+                    if (porcentaje === 100) {
+                        estadoClass = 'status-completed';
+                        estadoText = 'COMPLETADA';
+                    } else if (porcentaje > 0) {
+                        estadoClass = 'status-in-progress';
+                        estadoText = 'EN PROGRESO';
+                    } else {
+                        estadoClass = 'status-pending';
+                        estadoText = 'PENDIENTE';
+                    }
+                    
+                    const row = document.createElement('tr');
+                    
+                    if (moduloActual === 'recoleccion') {
                         row.innerHTML = `
-                            <td>${ruta}</td>
-                            <td>${cola}</td>
+                            <td>${grupo.ruta}</td>
+                            <td>${grupo.cola}</td>
                             <td class="${estadoClass}">${estadoText}</td>
-                            <td>${progreso.recolector || '-'}</td>
-                            <td>${progreso.completado}/${progreso.total} (${progreso.porcentaje}%)</td>
-                            <td>${progreso.ultimaActualizacion || '-'}</td>
+                            <td>${grupo.recolector || '-'}</td>
+                            <td>${grupo.completado}/${grupo.total} (${porcentaje}%)</td>
+                            <td>${grupo.ultimaActualizacion ? new Date(grupo.ultimaActualizacion).toLocaleString() : '-'}</td>
                         `;
-                        tbody.appendChild(row);
-                    });
+                    } else {
+                        row.innerHTML = `
+                            <td>${grupo.cola}</td>
+                            <td class="${estadoClass}">${estadoText}</td>
+                            <td>${grupo.recolector || '-'}</td>
+                            <td>${grupo.completado}/${grupo.total} (${porcentaje}%)</td>
+                            <td>${grupo.ultimaActualizacion ? new Date(grupo.ultimaActualizacion).toLocaleString() : '-'}</td>
+                        `;
+                    }
+                    tbody.appendChild(row);
                 });
             }
             
             document.getElementById('dashboardLoading').style.display = 'none';
             document.getElementById('dashboardTable').style.display = 'table';
-        }
-
-        function calcularProgresoRecoleccion(ruta, cola) {
-            const datosFirebase = rutasRecoleccionDesdeFirebase[ruta][cola];
-            const total = datosFirebase.totalUnidades;
-            let completado = 0;
-            let recolector = '';
-            let ultimaActualizacion = '';
-            
-            // Calcular progreso basado en registros de Firebase
-            datosFirebase.depositos.forEach(deposito => {
-                const registrosDeposito = registrosRecoleccion.filter(reg => 
-                    reg.deposito === deposito.deposito && reg.accion === 'escaneado'
-                );
-                
-                if (registrosDeposito.length > 0) {
-                    completado += Math.min(deposito.cantidad, registrosDeposito[0].recolectado || 0);
-                    
-                    // Obtener info del último recolector
-                    const ultimoRegistro = registrosDeposito[registrosDeposito.length - 1];
-                    if (ultimoRegistro.usuario && !recolector) {
-                        recolector = ultimoRegistro.usuario;
-                    }
-                    if (ultimoRegistro.timestamp && !ultimaActualizacion) {
-                        ultimaActualizacion = new Date(ultimoRegistro.timestamp).toLocaleString();
-                    }
-                }
-            });
-            
-            const porcentaje = total > 0 ? Math.round((completado / total) * 100) : 0;
-            
-            return {
-                completado,
-                total,
-                porcentaje,
-                recolector,
-                ultimaActualizacion
-            };
-        }
-
-        function calcularProgresoReposicion(ruta, cola) {
-            const datosFirebase = rutasReposicionDesdeFirebase[ruta][cola];
-            const total = datosFirebase.totalUnidades;
-            let completado = 0;
-            let recolector = '';
-            let ultimaActualizacion = '';
-            
-            // Calcular progreso basado en registros de Firebase
-            datosFirebase.depositos.forEach(deposito => {
-                const registrosDeposito = registrosReposicion.filter(reg => 
-                    reg.deposito === deposito.deposito
-                );
-                
-                if (registrosDeposito.length > 0) {
-                    completado += deposito.cantidad; // Asumimos que si hay registro, está completo
-                    
-                    // Obtener info del último recolector
-                    const ultimoRegistro = registrosDeposito[registrosDeposito.length - 1];
-                    if (ultimoRegistro.usuario && !recolector) {
-                        recolector = ultimoRegistro.usuario;
-                    }
-                    if (ultimoRegistro.timestamp && !ultimaActualizacion) {
-                        ultimaActualizacion = new Date(ultimoRegistro.timestamp).toLocaleString();
-                    }
-                }
-            });
-            
-            const porcentaje = total > 0 ? Math.round((completado / total) * 100) : 0;
-            
-            return {
-                completado,
-                total,
-                porcentaje,
-                recolector,
-                ultimaActualizacion
-            };
         }
 
         async function actualizarDesdeFirebase() {
@@ -1584,12 +1612,6 @@
             }
         }
 
-        function verificarConsistencia() {
-            // Por ahora, esta función verifica consistencia entre datos de Firebase
-            // En el futuro se puede expandir para verificar entre diferentes fuentes
-            mostrarMensaje('Verificación de consistencia completada', true);
-        }
-
         // ================= FUNCIONES DE REPORTES =================
         async function descargarReporteRecoleccion() {
             try {
@@ -1608,12 +1630,13 @@
                 fin.setHours(23, 59, 59, 999); // Establecemos hasta el final del día
                 
                 const registrosFiltrados = registrosRecoleccion.filter(reg => {
+                    if (!reg.timestamp) return false;
                     const fechaReg = new Date(reg.timestamp);
                     return fechaReg >= inicio && fechaReg <= fin;
                 });
                 
                 if (registrosFiltrados.length === 0) {
-                    mostrarMensaje('No hay registros en el rango de fechas seleccionado', false);
+                    mostrarMensaje('No hay registros de recolección en el rango de fechas seleccionado', false);
                     return;
                 }
                 
@@ -1629,8 +1652,8 @@
             let csvContent = "USUARIO,RUTA,COLA,DEPOSITO,UPC,DESCRIPCION,CANTIDAD_PLANIFICADA,CANTIDAD_RECOLECTADA,ACCION,FECHA,HORA,TIMESTAMP\n";
             
             registros.forEach(reg => {
-                const fecha = reg.fecha || new Date(reg.timestamp).toLocaleDateString();
-                const hora = reg.hora || new Date(reg.timestamp).toLocaleTimeString();
+                const fecha = reg.fecha || (reg.timestamp ? new Date(reg.timestamp).toLocaleDateString() : '');
+                const hora = reg.hora || (reg.timestamp ? new Date(reg.timestamp).toLocaleTimeString() : '');
                 
                 csvContent += `"${reg.usuario || ''}","${reg.ruta || ''}","${reg.cola || ''}","${reg.deposito || ''}","${reg.upc || ''}","${reg.descripcion || ''}",${reg.cantidad || 0},${reg.recolectado || 0},"${reg.accion || ''}","${fecha}","${hora}",${reg.timestamp || ''}\n`;
             });
