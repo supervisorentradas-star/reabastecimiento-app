@@ -511,8 +511,9 @@
         let totalUnidadesGlobal = 0;
         let tieneEscaneosPendientes = false;
         let sesionActiva = null;
-        let tipoRecoleccionActual = 'Regular'; // Por defecto
+        let tipoRecoleccionActual = 'Regular';
         let fechaRecoleccion = '';
+        let procesandoEscaneo = false; // 🔥 NUEVO: Prevenir duplicación
 
         // ================= FUNCIONES DE FECHA MEJORADAS =================
         function obtenerFechaActual() {
@@ -528,14 +529,10 @@
                 const partes = fechaDatos.split('/');
                 if (partes.length !== 3) return false;
                 
-                // Crear fecha del archivo (formato DD/MM/YYYY)
                 const fechaArchivo = new Date(partes[2], partes[1] - 1, partes[0]);
-                
-                // Crear fecha actual (sin horas)
                 const fechaActual = new Date();
                 fechaActual.setHours(0, 0, 0, 0);
                 
-                // Comparar solo día, mes y año
                 const esMismaFecha = 
                     fechaArchivo.getDate() === fechaActual.getDate() &&
                     fechaArchivo.getMonth() === fechaActual.getMonth() &&
@@ -561,30 +558,18 @@
 
         // ================= INICIALIZACIÓN MEJORADA =================
         window.addEventListener('load', async function() {
-            // Inicializar Firebase y verificar conexiones
             inicializarFirebase();
-            
-            // Cargar estado global desde Firebase
             await cargarEstadoGlobalDesdeFirebase();
             
-            // Recuperar usuario desde localStorage
             usuarioActual = localStorage.getItem('usuarioSokso');
             if (!usuarioActual) {
-                // Si no hay usuario, redirigir al inicio
                 window.location.href = 'index.html';
                 return;
             }
             
-            // Configurar selectores de tipo de recolección
             configurarSelectoresTipo();
-            
-            // Verificar y recuperar sesión activa
             await verificarSesionActiva();
-            
-            // Mostrar panel de usuario por defecto
             mostrarPanelUsuario();
-            
-            // Configurar event listeners mejorados
             configurarEventListeners();
         });
 
@@ -593,15 +578,11 @@
             const botones = document.querySelectorAll('.indicador-button');
             botones.forEach(boton => {
                 boton.addEventListener('click', function() {
-                    // Remover clase active de todos los botones
                     botones.forEach(btn => btn.classList.remove('active'));
-                    // Agregar clase active al botón clickeado
                     this.classList.add('active');
-                    // Actualizar tipo de recolección
                     tipoRecoleccionActual = this.getAttribute('data-indicador');
                     console.log('Tipo de recolección seleccionado:', tipoRecoleccionActual);
                     
-                    // Si ya hay rutas cargadas, recargar con el nuevo filtro
                     if (Object.keys(rutasMaestras).length > 0) {
                         mostrarOpcionesRutas();
                     }
@@ -641,12 +622,8 @@
                     depositoActualIndex = sesionActiva.depositoActualIndex || 0;
                     tipoRecoleccionActual = sesionActiva.tipoRecoleccion || 'Regular';
                     
-                    // Actualizar selector de tipo
                     actualizarSelectorTipo();
-                    
-                    // Cargar datos y continuar sesión
                     await cargarDashboardRecoleccion();
-                    
                     mostrarMensaje('🔄 Sesión recuperada. Continuando desde donde te quedaste.', true);
                 } catch (error) {
                     console.error('Error recuperando sesión:', error);
@@ -690,21 +667,18 @@
                 if (!rutaActual || !usuarioActual) return;
                 
                 mostrarMensaje('🔄 Actualizando datos...', true);
-                
-                // Cargar datos de Firebase
                 await cargarRutasDesdeFirebase(true);
                 
-                // Si hay cola actual, cargar picking
                 if (colaActual && itemsPorCola[colaActual]) {
                     document.getElementById('userSection').classList.add('hidden');
                     document.getElementById('colaSection').classList.add('hidden');
                     document.getElementById('pickingSection').classList.remove('hidden');
                     
-                    // Actualizar interfaz
                     document.getElementById('pickingRecolector').textContent = usuarioActual;
                     document.getElementById('pickingRuta').textContent = rutaActual;
                     document.getElementById('pickingCola').textContent = colaActual;
                     
+                    await cargarProgresoActual(); // 🔥 CORREGIDO: Cargar progreso antes de mostrar
                     mostrarDepositoActual();
                     actualizarEstadisticasPicking();
                     actualizarListaItems();
@@ -727,7 +701,6 @@
                 let datos = {};
                 let fuente = '';
                 
-                // Intentar desde Firebase
                 try {
                     console.log('📡 Conectando a Firebase...');
                     const snapshot = await database.ref('recoleccion_rutas').once('value');
@@ -780,14 +753,7 @@
                 const primerRegistro = Object.values(datosFirebase)[0];
                 if (primerRegistro && primerRegistro.fecha) {
                     fechaRecoleccion = primerRegistro.fecha;
-                    
-                    // 🆕 VALIDACIÓN MEJORADA DE FECHA
                     fechaValida = validarFechaDatos(fechaRecoleccion);
-                    
-                    if (!fechaValida) {
-                        // No mostrar mensaje modal aquí porque ya se mostró en validarFechaDatos
-                        console.warn('Archivo con fecha anterior detectado:', fechaRecoleccion);
-                    }
                 }
                 
                 // Agrupar datos por depósito para el modo unificado
@@ -797,19 +763,17 @@
                     const deposito = registro.deposito;
                     const upc = registro.upc;
                     const descripcion = registro.articulo;
-                    const cantidad = parseInt(registro.cantidad) || 0;
+                    // 🔥 CORREGIDO: Garantizar números enteros
+                    const cantidad = Math.floor(parseFloat(registro.cantidad)) || 0;
                     const indicador = registro.indicador || 'Regular';
                     const fecha = registro.fecha || '';
                     
-                    // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
                     const deposito_destino = registro.deposito_destino || '';
                     const cola_reposicion = registro.cola_reposicion || '';
                     
-                    // Solo procesar si coincide con el tipo seleccionado
                     if (tipoRecoleccionActual === 'Unificado' || indicador === tipoRecoleccionActual) {
                         
                         if (tipoRecoleccionActual === 'Unificado') {
-                            // En modo unificado, agrupar por depósito y sumar cantidades
                             const clave = `${deposito}_${upc}`;
                             if (!datosAgrupados[clave]) {
                                 datosAgrupados[clave] = {
@@ -819,14 +783,12 @@
                                     cantidad: 0,
                                     indicador: 'Unificado',
                                     fecha,
-                                    // 🆕 AGREGAR NUEVOS CAMPOS
                                     deposito_destino,
                                     cola_reposicion
                                 };
                             }
                             datosAgrupados[clave].cantidad += cantidad;
                         } else {
-                            // En modos Regular o Backorder, procesar normalmente
                             procesarRegistroRuta({
                                 deposito,
                                 upc,
@@ -834,7 +796,6 @@
                                 cantidad,
                                 indicador,
                                 fecha,
-                                // 🆕 AGREGAR NUEVOS CAMPOS
                                 deposito_destino,
                                 cola_reposicion
                             });
@@ -842,7 +803,6 @@
                     }
                 });
                 
-                // Procesar datos agrupados para modo unificado
                 if (tipoRecoleccionActual === 'Unificado') {
                     Object.values(datosAgrupados).forEach(registro => {
                         procesarRegistroRuta(registro);
@@ -865,15 +825,14 @@
             const deposito = registro.deposito;
             const upc = registro.upc;
             const descripcion = registro.descripcion;
-            const cantidad = parseInt(registro.cantidad) || 0;
+            // 🔥 CORREGIDO: Garantizar números enteros
+            const cantidad = Math.floor(parseFloat(registro.cantidad)) || 0;
             const indicador = registro.indicador;
             
-            // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
             const deposito_destino = registro.deposito_destino || '';
             const cola_reposicion = registro.cola_reposicion || '';
             
             if (deposito && upc) {
-                // Extraer ruta (primeros 2 caracteres del depósito después de la letra)
                 const rutaMatch = deposito.match(/^[A-Z](\d+)/);
                 let ruta = rutaMatch ? rutaMatch[1] : deposito.substring(0, 2);
                 ruta = 'Ruta ' + ruta;
@@ -888,10 +847,9 @@
                     descripcion,
                     cantidad,
                     indicador,
-                    recolectado: 0,
-                    no_encontrado: 0,
+                    recolectado: 0, // 🔥 INICIALIZAR EN 0
+                    no_encontrado: 0, // 🔥 INICIALIZAR EN 0
                     completado: false,
-                    // 🆕 AGREGAR NUEVOS CAMPOS A LA ESTRUCTURA
                     deposito_destino,
                     cola_reposicion
                 });
@@ -905,7 +863,6 @@
             
             let fechaInfo = '';
             if (fechaRecoleccion) {
-                // Validar nuevamente para mostrar el estado correcto
                 const fechaEsHoy = validarFechaDatos(fechaRecoleccion);
                 const estadoFecha = fechaEsHoy ? '✅' : '⚠️';
                 fechaInfo = `<strong>${estadoFecha} Fecha: ${fechaRecoleccion}</strong><br>`;
@@ -932,8 +889,7 @@
                 const totalUnidadesRuta = rutasMaestras[ruta].reduce((sum, item) => sum + item.cantidad, 0);
                 const button = document.createElement('button');
                 
-                // Verificar si la ruta está completada - CORREGIDO: No deshabilitar rutas
-                const rutaCompletada = false; // Cambiado a false para permitir selección
+                const rutaCompletada = false;
                 
                 button.className = rutaCompletada ? 'route-button completed' : 'route-button';
                 button.textContent = `📍 ${ruta} (${totalUnidadesRuta})`;
@@ -950,7 +906,6 @@
             try {
                 const fechaHoy = obtenerFechaActual();
                 
-                // Obtener registros de Firebase SOLO de hoy
                 const snapshot = await database.ref('recolecciones')
                     .orderByChild('fecha')
                     .equalTo(fechaHoy)
@@ -959,29 +914,27 @@
                 
                 if (!registros) return false;
                 
-                // Verificar cada depósito en la ruta
                 for (const item of rutasMaestras[ruta]) {
                     let totalEjecutado = 0;
                     
-                    // Buscar registros para este depósito
                     Object.values(registros).forEach(registro => {
                         if (registro.deposito === item.deposito && 
                             registro.tipoRecoleccion === tipoRecoleccionActual &&
                             registro.ruta === ruta) {
                             if (registro.accion === 'escaneado') {
-                                totalEjecutado += registro.recolectado;
+                                totalEjecutado += registro.cantidad_recolectada || 0; // 🔥 CORREGIDO: Usar campo correcto
                             } else if (registro.accion === 'no_encontrado') {
-                                totalEjecutado += registro.no_encontrado;
+                                totalEjecutado += registro.no_encontrado || 0;
                             }
                         }
                     });
                     
                     if (totalEjecutado < item.cantidad) {
-                        return false; // Hay depósitos pendientes
+                        return false;
                     }
                 }
                 
-                return true; // Todos los depósitos completados
+                return true;
                 
             } catch (error) {
                 console.error('Error verificando ruta completada:', error);
@@ -993,7 +946,6 @@
         async function seleccionarRuta(ruta) {
             rutaActual = ruta;
             
-            // Verificar si la ruta está completada - CORREGIDO: Permitir selección aunque esté completada
             const rutaCompletada = await verificarRutaCompletada(ruta);
             if (rutaCompletada) {
                 if (!confirm('✅ Esta ruta ya ha sido completada. ¿Deseas continuar de todos modos?')) {
@@ -1001,7 +953,6 @@
                 }
             }
             
-            // Agrupar por colas (A, B, CDE, F)
             agruparPorColas(ruta);
             
             document.getElementById('userSection').classList.add('hidden');
@@ -1018,7 +969,6 @@
             itemsPorCola = {};
             colasDisponibles = [];
             
-            // Inicializar las colas
             itemsPorCola['B'] = [];
             itemsPorCola['CDE'] = [];
             itemsPorCola['F'] = [];
@@ -1038,14 +988,12 @@
                 }
             });
             
-            // Ordenar cada cola según la nomenclatura
             Object.keys(itemsPorCola).forEach(cola => {
                 itemsPorCola[cola].sort((a, b) => {
                     return a.deposito.localeCompare(b.deposito);
                 });
             });
             
-            // Definir colas disponibles (solo las que tienen elementos)
             colasDisponibles = Object.keys(itemsPorCola).filter(cola => itemsPorCola[cola].length > 0);
         }
 
@@ -1054,7 +1002,6 @@
             try {
                 const fechaHoy = obtenerFechaActual();
                 
-                // Obtener todos los registros de Firebase para esta ruta y fecha actual
                 const snapshot = await database.ref('recolecciones')
                     .orderByChild('fecha')
                     .equalTo(fechaHoy)
@@ -1065,30 +1012,43 @@
                     return { completada: false, enProgreso: false };
                 }
                 
-                let totalRecolectado = 0;
-                let totalNoEncontrado = 0;
+                let todosCompletados = true;
+                let algunProgreso = false;
                 
-                Object.values(registros).forEach(registro => {
-                    if (registro.ruta === ruta && 
-                        registro.cola === cola && 
-                        registro.tipoRecoleccion === tipoRecoleccionActual) {
-                        if (registro.accion === 'escaneado') {
-                            totalRecolectado += registro.recolectado;
-                        } else if (registro.accion === 'no_encontrado') {
-                            totalNoEncontrado += registro.no_encontrado;
-                        }
-                    }
-                });
-                
-                // Calcular total planificado desde los datos locales
                 const itemsCola = itemsPorCola[cola];
-                const totalPlanificado = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
                 
-                // Verificar si está completada
-                const completada = (totalRecolectado + totalNoEncontrado) >= totalPlanificado;
-                const enProgreso = totalRecolectado > 0 || totalNoEncontrado > 0;
+                for (const item of itemsCola) {
+                    let totalRecolectado = 0;
+                    let totalNoEncontrado = 0;
+                    
+                    Object.values(registros).forEach(registro => {
+                        if (registro.deposito === item.deposito && 
+                            registro.cola === cola && 
+                            registro.ruta === ruta &&
+                            registro.tipoRecoleccion === tipoRecoleccionActual) {
+                            if (registro.accion === 'escaneado') {
+                                totalRecolectado += registro.cantidad_recolectada || 0; // 🔥 CORREGIDO: Campo correcto
+                            } else if (registro.accion === 'no_encontrado') {
+                                totalNoEncontrado += registro.no_encontrado || 0;
+                            }
+                        }
+                    });
+                    
+                    const totalEjecutado = totalRecolectado + totalNoEncontrado;
+                    
+                    if (totalEjecutado < item.cantidad) {
+                        todosCompletados = false;
+                    }
+                    
+                    if (totalEjecutado > 0) {
+                        algunProgreso = true;
+                    }
+                }
                 
-                return { completada, enProgreso, totalRecolectado, totalNoEncontrado };
+                return { 
+                    completada: todosCompletados, 
+                    enProgreso: algunProgreso 
+                };
                 
             } catch (error) {
                 console.error('Error verificando estado real de cola:', error);
@@ -1108,7 +1068,6 @@
             for (const cola of colasDisponibles) {
                 const button = document.createElement('button');
                 
-                // Verificar el estado REAL de la cola desde Firebase
                 const estadoReal = await verificarEstadoRealCola(rutaActual, cola);
                 const totalUnidadesCola = itemsPorCola[cola].reduce((sum, item) => sum + item.cantidad, 0);
                 
@@ -1137,13 +1096,10 @@
             itemsNoEncontrados = [];
             tieneEscaneosPendientes = false;
             
-            // Cargar progreso actual desde Firebase
             await cargarProgresoActual();
             
-            // Encontrar el primer depósito no completado
             depositoActualIndex = await encontrarPrimerDepositoPendiente();
             
-            // Verificar si la cola ya está completada
             const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
             
             if (depositoActualIndex === -1 || estadoReal.completada) {
@@ -1156,7 +1112,6 @@
                 return;
             }
             
-            // Guardar sesión activa
             guardarSesionActiva();
             
             document.getElementById('colaSection').classList.add('hidden');
@@ -1186,7 +1141,13 @@
                 
                 if (!registros) return;
                 
-                // Actualizar itemsPorCola con los registros de Firebase
+                // 🔥 CORREGIDO: Reiniciar contadores antes de cargar
+                itemsPorCola[colaActual].forEach(item => {
+                    item.recolectado = 0;
+                    item.no_encontrado = 0;
+                    item.completado = false;
+                });
+                
                 Object.values(registros).forEach(registro => {
                     if (registro.cola === colaActual && 
                         registro.tipoRecoleccion === tipoRecoleccionActual &&
@@ -1194,12 +1155,12 @@
                         const itemIndex = itemsPorCola[colaActual].findIndex(item => item.deposito === registro.deposito);
                         if (itemIndex !== -1) {
                             if (registro.accion === 'escaneado') {
-                                itemsPorCola[colaActual][itemIndex].recolectado = registro.recolectado;
+                                // 🔥 CORREGIDO: Acumular correctamente
+                                itemsPorCola[colaActual][itemIndex].recolectado += registro.cantidad_recolectada || 1;
                             } else if (registro.accion === 'no_encontrado') {
-                                itemsPorCola[colaActual][itemIndex].no_encontrado = registro.no_encontrado;
+                                itemsPorCola[colaActual][itemIndex].no_encontrado += registro.no_encontrado || 0;
                             }
                             
-                            // Verificar si está completado
                             const item = itemsPorCola[colaActual][itemIndex];
                             const totalEjecutado = item.recolectado + item.no_encontrado;
                             item.completado = totalEjecutado >= item.cantidad;
@@ -1221,7 +1182,7 @@
                     return i;
                 }
             }
-            return -1; // Todos completados
+            return -1;
         }
 
         function mostrarDepositoActual() {
@@ -1236,11 +1197,9 @@
                 document.getElementById('pickingRecolectado').textContent = totalEjecutado;
                 document.getElementById('pickingPendiente').textContent = pendiente;
                 
-                // Remover clase de completado si existe
                 document.getElementById('depositoActualArea').classList.remove('deposito-completado');
                 
             } else {
-                // Fin de la cola
                 finalizarRecoleccion();
             }
             
@@ -1291,15 +1250,7 @@
 
         // ================= VALIDACIÓN DE ESCANEO MEJORADA =================
         function configurarEventListeners() {
-            document.getElementById('upcInput').addEventListener('input', function(e) {
-                const upc = e.target.value.trim();
-                
-                if (upc.length > 0) {
-                    validarUPC(upc);
-                }
-            });
-            
-            // Enter key para escanear
+            // 🔥 CORREGIDO: Eliminar evento 'input' problemático
             document.getElementById('upcInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     const upc = e.target.value.trim();
@@ -1311,94 +1262,106 @@
         }
 
         async function validarUPC(upc) {
-            const item = itemsPorCola[colaActual][depositoActualIndex];
-            
-            if (item.upc !== upc) {
-                mostrarMensajeModal('Código Incorrecto', 'El código UPC escaneado no coincide con el producto actual.');
-                document.getElementById('upcInput').value = '';
+            // 🔥 CORREGIDO: Prevenir procesamiento múltiple
+            if (procesandoEscaneo) {
+                console.log('Escaneo en proceso, ignorando entrada duplicada');
                 return;
             }
             
-            const totalEjecutado = item.recolectado + item.no_encontrado;
-            if (totalEjecutado >= item.cantidad) {
-                mostrarMensajeModal('Cantidad Completa', 'Ya se ha recolectado la cantidad requerida para este producto.');
+            procesandoEscaneo = true;
+            
+            try {
+                const item = itemsPorCola[colaActual][depositoActualIndex];
+                
+                if (!item) {
+                    mostrarMensaje('No hay depósito activo', false);
+                    return;
+                }
+                
+                if (item.upc !== upc) {
+                    mostrarMensajeModal('Código Incorrecto', 'El código UPC escaneado no coincide con el producto actual.');
+                    document.getElementById('upcInput').value = '';
+                    return;
+                }
+                
+                const totalEjecutado = item.recolectado + item.no_encontrado;
+                if (totalEjecutado >= item.cantidad) {
+                    mostrarMensajeModal('Cantidad Completa', 'Ya se ha recolectado la cantidad requerida para este producto.');
+                    document.getElementById('upcInput').value = '';
+                    return;
+                }
+                
+                // 🔥 CORREGIDO: Incrementar solo 1 unidad por escaneo
+                item.recolectado += 1;
+                tieneEscaneosPendientes = true;
+                
+                guardarSesionActiva();
+                
+                const nuevoTotal = item.recolectado + item.no_encontrado;
+                const nuevoPendiente = item.cantidad - nuevoTotal;
+                
+                document.getElementById('pickingRecolectado').textContent = nuevoTotal;
+                document.getElementById('pickingPendiente').textContent = nuevoPendiente;
+                
+                // 🔥 CORREGIDO: Guardar con campos corregidos y números enteros
+                const fechaHora = new Date();
+                const registro = {
+                    usuario: usuarioActual,
+                    ruta: rutaActual,
+                    cola: colaActual,
+                    deposito: item.deposito,
+                    upc: item.upc,
+                    descripcion: item.descripcion,
+                    cantidad_planificada: Math.floor(item.cantidad), // 🔥 ENTERO
+                    cantidad_recolectada: Math.floor(item.recolectado), // 🔥 NUEVO CAMPO CORRECTO
+                    no_encontrado: Math.floor(item.no_encontrado), // 🔥 ENTERO
+                    accion: 'escaneado',
+                    fecha: obtenerFechaActual(),
+                    hora: fechaHora.toLocaleTimeString(),
+                    timestamp: fechaHora.getTime(),
+                    tipoRecoleccion: tipoRecoleccionActual,
+                    deposito_destino: item.deposito_destino || '',
+                    cola_reposicion: item.cola_reposicion || ''
+                };
+                
+                await guardarRegistroEnFirebase(registro);
+                
+                if (nuevoTotal >= item.cantidad) {
+                    item.completado = true;
+                    itemsCompletados.push(item);
+                    
+                    mostrarCheckAnimado();
+                    
+                    setTimeout(() => {
+                        encontrarSiguienteDeposito();
+                    }, 2000);
+                }
+                
                 document.getElementById('upcInput').value = '';
-                return;
-            }
-            
-            // UPC correcto, incrementar contador
-            item.recolectado++;
-            tieneEscaneosPendientes = true;
-            
-            // Guardar sesión activa
-            guardarSesionActiva();
-            
-            // Actualizar interfaz
-            const nuevoTotal = item.recolectado + item.no_encontrado;
-            const nuevoPendiente = item.cantidad - nuevoTotal;
-            
-            document.getElementById('pickingRecolectado').textContent = nuevoTotal;
-            document.getElementById('pickingPendiente').textContent = nuevoPendiente;
-            
-            // 🆕 GUARDAR REGISTRO EN FIREBASE CON LOS NUEVOS CAMPOS
-            const fechaHora = new Date();
-            const registro = {
-                usuario: usuarioActual,
-                ruta: rutaActual,
-                cola: colaActual,
-                deposito: item.deposito,
-                upc: item.upc,
-                descripcion: item.descripcion,
-                cantidad_planificada: item.cantidad,
-                recolectado: item.recolectado,
-                no_encontrado: item.no_encontrado,
-                accion: 'escaneado',
-                fecha: obtenerFechaActual(), // 🆕 SIEMPRE usar fecha actual
-                hora: fechaHora.toLocaleTimeString(),
-                timestamp: fechaHora.getTime(),
-                tipoRecoleccion: tipoRecoleccionActual,
-                // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
-                deposito_destino: item.deposito_destino || '',
-                cola_reposicion: item.cola_reposicion || ''
-            };
-            
-            await guardarRegistroEnFirebase(registro);
-            
-            // Verificar si se completó la cantidad
-            if (nuevoTotal >= item.cantidad) {
-                item.completado = true;
-                itemsCompletados.push(item);
+                actualizarEstadisticasPicking();
+                actualizarListaItems();
                 
-                // Mostrar check animado
-                mostrarCheckAnimado();
-                
-                setTimeout(() => {
-                    // Buscar siguiente depósito pendiente
-                    encontrarSiguienteDeposito();
-                }, 2000);
+            } catch (error) {
+                console.error('Error en validarUPC:', error);
+                mostrarMensaje('Error al procesar escaneo: ' + error.message, false);
+            } finally {
+                procesandoEscaneo = false; // 🔥 CORREGIDO: Liberar bloqueo
             }
-            
-            document.getElementById('upcInput').value = '';
-            actualizarEstadisticasPicking();
-            actualizarListaItems();
         }
 
         function mostrarCheckAnimado() {
             const checkElement = document.getElementById('checkAnimation');
             const depositoArea = document.getElementById('depositoActualArea');
             
-            // Mostrar check
             checkElement.style.display = 'block';
             depositoArea.classList.add('deposito-completado');
             
-            // Ocultar después de 2 segundos
             setTimeout(() => {
                 checkElement.style.display = 'none';
             }, 2000);
         }
 
         async function encontrarSiguienteDeposito() {
-            // Buscar desde la posición actual +1
             for (let i = depositoActualIndex + 1; i < itemsPorCola[colaActual].length; i++) {
                 const item = itemsPorCola[colaActual][i];
                 const totalEjecutado = item.recolectado + item.no_encontrado;
@@ -1411,7 +1374,6 @@
                 }
             }
             
-            // Si no hay más depósitos pendientes, finalizar
             finalizarRecoleccion();
         }
 
@@ -1425,15 +1387,14 @@
                 return;
             }
             
-            const cantidadNoEncontrada = pendiente; // Marcar todo lo pendiente como no encontrado
+            // 🔥 CORREGIDO: Marcar solo lo pendiente como no encontrado
+            const cantidadNoEncontrada = pendiente;
             
             item.no_encontrado += cantidadNoEncontrada;
             tieneEscaneosPendientes = true;
             
-            // Guardar sesión activa
             guardarSesionActiva();
             
-            // 🆕 GUARDAR REGISTRO EN FIREBASE CON LOS NUEVOS CAMPOS
             const fechaHora = new Date();
             const registro = {
                 usuario: usuarioActual,
@@ -1442,28 +1403,25 @@
                 deposito: item.deposito,
                 upc: item.upc,
                 descripcion: item.descripcion,
-                cantidad_planificada: item.cantidad,
-                recolectado: item.recolectado,
-                no_encontrado: item.no_encontrado,
+                cantidad_planificada: Math.floor(item.cantidad), // 🔥 ENTERO
+                cantidad_recolectada: Math.floor(item.recolectado), // 🔥 NUEVO CAMPO
+                no_encontrado: Math.floor(item.no_encontrado), // 🔥 ENTERO
                 accion: 'no_encontrado',
-                fecha: obtenerFechaActual(), // 🆕 SIEMPRE usar fecha actual
+                fecha: obtenerFechaActual(),
                 hora: fechaHora.toLocaleTimeString(),
                 timestamp: fechaHora.getTime(),
                 tipoRecoleccion: tipoRecoleccionActual,
-                // 🆕 NUEVOS CAMPOS PARA REPOSICIÓN
                 deposito_destino: item.deposito_destino || '',
                 cola_reposicion: item.cola_reposicion || ''
             };
             
             await guardarRegistroEnFirebase(registro);
             
-            // Marcar como completado
             item.completado = true;
             itemsNoEncontrados.push({...item, cantidadNoEncontrada});
             
             mostrarMensaje(`⚠️ ${cantidadNoEncontrada} unidad(es) marcada(s) como no encontrada(s) en ${item.deposito}`, true);
             
-            // Pasar al siguiente depósito
             setTimeout(() => {
                 encontrarSiguienteDeposito();
             }, 1000);
@@ -1493,15 +1451,16 @@
             try {
                 console.log('Enviando registro a Firebase:', registro);
                 
-                // Generar una clave única para el registro
-                const registroKey = database.ref().child('recolecciones').push().key;
+                // 🔥 CORREGIDO: Usar estructura más robusta para múltiples usuarios
+                const timestamp = new Date().getTime();
+                const usuarioSeguro = registro.usuario.replace(/[.#$\/\[\]]/g, '_');
+                const registroKey = `${usuarioSeguro}_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
                 
                 await database.ref(`recolecciones/${registroKey}`).set(registro);
                 console.log('Registro guardado en Firebase:', registro);
                 
             } catch (error) {
                 console.error('Error guardando registro en Firebase:', error);
-                // Guardar en localStorage para sincronizar después
                 guardarRegistroLocal(registro);
                 throw error;
             }
@@ -1529,7 +1488,6 @@
                     await guardarRegistroEnFirebase(registro);
                 }
                 
-                // Limpiar registros sincronizados
                 localStorage.removeItem('registrosPendientes');
                 console.log('Registros pendientes sincronizados correctamente');
                 
@@ -1555,16 +1513,18 @@
             }
             
             if (confirm(mensaje)) {
-                // Sincronizar cualquier registro pendiente
                 await sincronizarRegistrosPendientes();
                 
-                // Limpiar sesión activa
-                limpiarSesionActiva();
+                // 🔥 CORREGIDO: Solo limpiar sesión si realmente se completó
+                const estadoReal = await verificarEstadoRealCola(rutaActual, colaActual);
+                if (estadoReal.completada) {
+                    limpiarSesionActiva();
+                }
+                
                 tieneEscaneosPendientes = false;
                 
                 mostrarMensaje(`📊 Recolección finalizada: ${completadasUnidades}/${totalUnidades} unidades`, true);
                 
-                // Redirigir automáticamente
                 setTimeout(() => {
                     document.getElementById('pickingSection').classList.add('hidden');
                     
@@ -1589,7 +1549,6 @@
 
         // ================= NAVEGACIÓN MEJORADA =================
         function volverAInterfazPrincipal() {
-            // Verificar si hay escaneos pendientes sin guardar
             if (tieneEscaneosPendientes) {
                 if (confirm('Tienes escaneos pendientes de guardar. ¿Deseas finalizar la recolección antes de salir?')) {
                     finalizarRecoleccion();
@@ -1597,7 +1556,6 @@
                 return;
             }
             
-            // Limpiar sesión si no hay trabajo en progreso
             if (!rutaActual || !colaActual) {
                 limpiarSesionActiva();
             }

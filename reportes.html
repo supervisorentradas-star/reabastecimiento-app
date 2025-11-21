@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reportes - SOKSO</title>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <title>Reposición - REABASTECIMIENTO SOKSO</title>
     <style>
+        /* Estilos se mantienen igual */
         * {
             box-sizing: border-box;
             font-family: Arial, sans-serif;
@@ -14,38 +14,50 @@
         }
         body {
             background-color: white;
-            padding: 10px;
+            padding: 8px;
             color: black;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
         .container {
             max-width: 100%;
             margin: 0 auto;
             background: white;
-            border-radius: 8px;
-            padding: 10px;
-            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #f0f0f0;
         }
-        h1 {
-            color: #6600a1;
-            font-size: 18px;
-        }
-        .connection-info {
+        .header-left {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+        }
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            color: #6600a1;
         }
         .connection-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
         .connected {
@@ -57,207 +69,580 @@
         .checking {
             background-color: #f39c12;
         }
-        .user-display {
+        .refresh-button {
+            padding: 6px;
+            font-size: 14px;
+            background: #6600a1;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .data-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+            gap: 6px;
+        }
+        .status-section {
+            margin: 4px 0;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .rutas-section {
+            margin-bottom: 6px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .ruta-item {
+            padding: 10px;
+            margin: 4px 0;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
             font-size: 12px;
+            text-align: center;
+        }
+        .ruta-item:hover {
+            border-color: #6600a1;
+            transform: translateY(-2px);
+        }
+        .ruta-item.selected {
+            background: #6600a1;
+            color: white;
+            border-color: #55008a;
+        }
+        .ruta-item.completed {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        .current-deposito {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+        .deposito-completado {
+            background: #d4edda !important;
+            border-color: #28a745 !important;
+            animation: pulse-green 1s;
+        }
+        @keyframes pulse-green {
+            0% { background: #d4edda; }
+            50% { background: #c3e6cb; }
+            100% { background: #d4edda; }
+        }
+        .deposito-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #6600a1;
+            margin-bottom: 6px;
+        }
+        .articulo-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+        .counters {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .counter-box {
+            background: white;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .counter-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        .counter-value {
+            font-size: 14px;
             font-weight: bold;
             color: #6600a1;
         }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding: 10px;
+        .scan-section {
             background: #f8f9fa;
+            padding: 10px;
             border-radius: 6px;
+            margin-bottom: 6px;
+            text-align: center;
+            border: 1px dashed #bdc3c7;
         }
-        .process-buttons {
-            display: flex;
+        .scan-section h3 {
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #6600a1;
+        }
+        .scan-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 12px;
+            border: 2px solid #6600a1;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 6px;
+            background: white;
+        }
+        .scan-input.error {
+            border-color: #e74c3c;
+            background-color: #fdf2f2;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
+            margin-top: 8px;
         }
-        .date-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-        }
-        .btn {
-            padding: 8px 15px;
+        button {
+            padding: 10px;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: bold;
+            cursor: pointer;
             transition: all 0.3s;
         }
-        .btn-primary {
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .depositos-list {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+        }
+        .deposito-row {
+            display: grid;
+            grid-template-columns: 20px 1fr 80px 50px 50px;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #ecf0f1;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 11px;
+        }
+        .deposito-row:hover {
+            background: #f8f9fa;
+        }
+        .deposito-row.selected {
             background: #6600a1;
             color: white;
         }
-        .btn-primary:hover {
-            background: #55008a;
+        .deposito-row.completed {
+            background: #d4edda;
+            color: #155724;
         }
-        .btn-secondary {
-            background: #008000;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #006600;
-        }
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        .btn-success:hover {
-            background: #218838;
-        }
-        .btn-active {
-            background: #0056b3;
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
-        }
-        .search-container {
-            display: flex;
-            align-items: center;
+        .deposito-header-row {
+            display: grid;
+            grid-template-columns: 20px 1fr 80px 50px 50px;
             gap: 8px;
-            margin-bottom: 15px;
-        }
-        .search-input {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .search-label {
-            font-weight: bold;
-            color: #6600a1;
-            white-space: nowrap;
-        }
-        .data-container {
-            overflow-x: auto;
-            margin-bottom: 15px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-        th, td {
             padding: 8px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #f2f2f2;
+            background: #6600a1;
+            color: white;
             font-weight: bold;
-            color: #6600a1;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 10px;
         }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-pending {
+            background: #f39c12;
+        }
+        .status-completed {
+            background: #27ae60;
+        }
+        .status-selected {
+            background: #6600a1;
+        }
+        .hidden {
+            display: none;
+        }
+        .cache-info {
+            font-size: 9px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: 6px;
         }
         .footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            padding-top: 10px;
+            margin-top: 6px;
+            padding-top: 6px;
             border-top: 1px solid #f0f0f0;
         }
         .back-button {
             background: #6600a1;
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 10px 16px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 12px;
+            width: 100%;
             font-weight: bold;
         }
-        .status-message {
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
+        .completion-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(40, 167, 69, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .completion-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .completion-message {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
             text-align: center;
             font-weight: bold;
-            display: none;
-        }
-        .success-message {
-            background: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .cola-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .cola-button {
+            padding: 12px;
+            border: 2px solid #6600a1;
+            border-radius: 6px;
+            background: white;
+            color: #6600a1;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .cola-button:hover {
+            background: #6600a1;
+            color: white;
+        }
+        .cola-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            color: #6c757d;
+            border-color: #6c757d;
+        }
+        .message-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 80%;
+        }
+        .fin-cola-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .fin-cola-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .fin-cola-message {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #155724;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         .error-message {
             background: #f8d7da;
             color: #721c24;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 4px 0;
+            text-align: center;
+            font-size: 12px;
             border: 1px solid #f5c6cb;
         }
-        .loading {
+        .warning-message {
+            background: #fff3cd;
+            color: #856404;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 4px 0;
             text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #666;
+            font-size: 12px;
+            border: 1px solid #ffeaa7;
         }
-        .no-data {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #999;
+        .sync-indicator {
+            font-size: 10px;
+            color: #f39c12;
+            margin-left: 5px;
+        }
+        .sync-indicator.syncing {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .upc-info {
+            font-size: 10px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        .data-table th,
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #6600a1;
+            color: white;
+            font-weight: bold;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
     </style>
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
+    <!-- Overlay para completado -->
+    <div class="completion-overlay" id="completionOverlay">
+        <div class="completion-message">
+            ✅ COMPLETADO<br>
+            <span style="font-size: 14px;">Pasando al siguiente...</span>
+        </div>
+    </div>
+
+    <!-- Overlay para fin de cola -->
+    <div class="fin-cola-overlay" id="finColaOverlay">
+        <div class="fin-cola-message">
+            🏁 FIN DE LA COLA<br>
+            <span style="font-size: 14px;">No hay más depósitos por reponer</span>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
-            <h1>REPORTES SOKSO</h1>
-            <div class="connection-info">
-                <div class="user-display">Usuario: <span id="currentUserDisplay"></span></div>
+            <div class="header-left">
+                <button class="refresh-button" onclick="cargarDatosReposicion()" title="Actualizar datos">↻</button>
+            </div>
+            <div class="header-center">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                <span id="syncIndicator" class="sync-indicator"></span>
+            </div>
+            <div class="header-right" id="colaHeader">
+                SELECCIONAR COLA
             </div>
         </div>
 
-        <div id="statusMessage" class="status-message"></div>
+        <div class="data-section">
+            <!-- Mensajes de error/éxito -->
+            <div id="messageContainer"></div>
 
-        <div class="controls">
-            <div class="process-buttons">
-                <button id="btnRecoleccion" class="btn btn-primary btn-active" onclick="seleccionarProceso('recoleccion')">RECOLECCIÓN</button>
-                <button id="btnReposicion" class="btn btn-primary" onclick="seleccionarProceso('reposicion')">REPOSICIÓN</button>
-                <button id="btnDevoluciones" class="btn btn-primary" onclick="seleccionarProceso('devoluciones')">DEVOLUCIONES</button>
+            <!-- SECCIÓN DE COLAS (BOTONES) -->
+            <div class="rutas-section" id="rutasSection">
+                <h3 style="font-size: 14px; margin-bottom: 10px; text-align: center; color: #6600a1;">SELECCIONA UNA COLA PARA REPONER:</h3>
+                <div id="rutasContainer">
+                    <!-- Las colas se cargarán aquí dinámicamente -->
+                </div>
             </div>
-            
-            <div class="date-buttons">
-                <button id="btnAyer" class="btn btn-secondary" onclick="seleccionarFecha('ayer')">AYER</button>
-                <button id="btnHoy" class="btn btn-secondary btn-active" onclick="seleccionarFecha('hoy')">HOY</button>
-            </div>
-            
-            <div class="action-buttons">
-                <button class="btn btn-success" onclick="copiarTabla()">COPY ALL</button>
-            </div>
-        </div>
 
-        <div class="search-container">
-            <span class="search-label">Buscar:</span>
-            <input type="text" id="searchInput" class="search-input" placeholder="Buscar en todos los campos...">
-        </div>
+            <!-- SECCIÓN DE REPOSICIÓN (OCULTA INICIALMENTE) -->
+            <div class="hidden" id="reposicionSection">
+                <div class="current-deposito" id="currentDepositoSection">
+                    <div class="deposito-header" id="currentDeposito">-</div>
+                    <div class="articulo-info" id="currentArticulo">-</div>
+                    <div class="upc-info" id="currentUPC">-</div>
+                    
+                    <div class="counters">
+                        <div class="counter-box">
+                            <div class="counter-label">CANTIDAD</div>
+                            <div class="counter-value" id="counterSolicitada">0</div>
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">LEÍDA</div>
+                            <div class="counter-value" id="counterRepuesta">0</div>
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">PENDIENTE</div>
+                            <div class="counter-value" id="counterPendiente">0</div>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="data-container">
-            <table id="dataTable" class="display" style="width:100%">
-                <!-- La tabla se llenará dinámicamente con JavaScript -->
-            </table>
+                <div class="scan-section" id="scanSection">
+                    <h3>ESCANEAR DEPÓSITO</h3>
+                    <input type="text" 
+                           id="depositoInput" 
+                           class="scan-input" 
+                           placeholder="Escanea el código del depósito" 
+                           autocomplete="off">
+                    
+                    <h3>ESCANEAR CÓDIGO UPC</h3>
+                    <input type="text" 
+                           id="upcInput" 
+                           class="scan-input" 
+                           placeholder="Escanea el código UPC del producto" 
+                           autocomplete="off"
+                           disabled>
+                    
+                    <div class="controls">
+                        <button class="btn-warning" onclick="siguienteDeposito()">⏭️ SIG DEPÓSITO</button>
+                        <button class="btn-success" onclick="finalizarReposicion()">🏁 FINALIZAR</button>
+                    </div>
+                </div>
+
+                <div class="depositos-list" id="depositosListSection">
+                    <div class="deposito-header-row">
+                        <div></div>
+                        <div>DEPÓSITO - ARTÍCULO</div>
+                        <div>UPC</div>
+                        <div>TOTAL</div>
+                        <div>HECHO</div>
+                    </div>
+                    <div id="depositosGrid">
+                        <!-- Los depósitos se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- TABLA DE DATOS PARA EXPORTACIÓN -->
+                <div style="margin-top: 15px; display: none;" id="tablaDatosSection">
+                    <h3 style="font-size: 12px; color: #6600a1; margin-bottom: 8px;">DATOS PARA EXPORTACIÓN</h3>
+                    <table class="data-table" id="tablaDatos">
+                        <thead>
+                            <tr>
+                                <th>USUARIO</th>
+                                <th>RUTA</th>
+                                <th>COLA</th>
+                                <th>DEPOSITO</th>
+                                <th>UPC</th>
+                                <th>DESCRIPCION</th>
+                                <th>CANTIDAD_PLANIFICADA</th>
+                                <th>CANTIDAD_RECOLECTADA</th>
+                                <th>NO_ENCONTRADO</th>
+                                <th>ACCION</th>
+                                <th>TIPO_RECOLECCION</th>
+                                <th>DEPOSITO_DESTINO</th>
+                                <th>FECHA</th>
+                                <th>HORA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaDatosBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="cache-info" id="cacheInfo">
+                Última actualización: No disponible
+            </div>
         </div>
 
         <div class="footer">
-            <button class="back-button" onclick="volverAlMenu()">⬅ Volver al Menú</button>
-            <div class="credit">By. James. J</div>
+            <button class="back-button" onclick="volverAlPrincipal()">
+                ↩️ Volver a Interfaz
+            </button>
         </div>
     </div>
 
     <script>
-        // Configuración de Firebase
+        // ================= CONFIGURACIÓN =================
         const firebaseConfig = {
             apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
             authDomain: "reabastecimiento-d71a1.firebaseapp.com",
@@ -268,307 +653,921 @@
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
 
-        // Inicializar Firebase
+        // ================= INICIALIZAR FIREBASE =================
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Variables globales
-        let usuarioActual = "";
-        let procesoSeleccionado = "recoleccion";
-        let fechaSeleccionada = "hoy";
-        let dataTable = null;
-        let datosActuales = [];
+        // ================= VARIABLES GLOBALES =================
+        let datosReposicion = {};
+        let colasDisponibles = [];
+        let itemActual = null;
+        let usuarioActual = null;
+        let colaSeleccionada = null;
+        let escaneosReposicion = {};
+        let ultimaActualizacion = null;
+        let sesionActiva = null;
+        let escaneosPendientes = [];
+        let colaEnUsoRef = null;
+        let estaSincronizando = false;
+        let colasEnUso = {};
 
-        // Inicializar la página
-        window.addEventListener('load', function() {
-            // Obtener usuario actual
-            usuarioActual = localStorage.getItem('usuarioSokso') || "Usuario";
-            document.getElementById('currentUserDisplay').textContent = usuarioActual;
-            
-            // Inicializar conexión a Firebase
-            verificarConexionFirebase();
-            
-            // Cargar datos iniciales
-            cargarDatos();
-            
-            // Configurar búsqueda en tiempo real
-            document.getElementById('searchInput').addEventListener('input', function() {
-                if (dataTable) {
-                    dataTable.search(this.value).draw();
-                }
-            });
-        });
-
-        // Verificar conexión a Firebase
-        function verificarConexionFirebase() {
-            const connectedRef = database.ref(".info/connected");
-            connectedRef.on("value", function(snap) {
-                if (snap.val() === true) {
-                    document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
-                } else {
-                    document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
-                }
-            });
-        }
-
-        // Seleccionar proceso (Recolección, Reposición o Devoluciones)
-        function seleccionarProceso(proceso) {
-            // Quitar clase activa de todos los botones
-            document.getElementById('btnRecoleccion').classList.remove('btn-active');
-            document.getElementById('btnReposicion').classList.remove('btn-active');
-            document.getElementById('btnDevoluciones').classList.remove('btn-active');
-            
-            // Agregar clase activa al botón seleccionado
-            document.getElementById('btn' + proceso.charAt(0).toUpperCase() + proceso.slice(1)).classList.add('btn-active');
-            
-            // Actualizar proceso seleccionado
-            procesoSeleccionado = proceso;
-            
-            // Recargar datos
-            cargarDatos();
-        }
-
-        // Seleccionar fecha (Ayer o Hoy)
-        function seleccionarFecha(fecha) {
-            // Quitar clase activa de todos los botones
-            document.getElementById('btnAyer').classList.remove('btn-active');
-            document.getElementById('btnHoy').classList.remove('btn-active');
-            
-            // Agregar clase activa al botón seleccionado
-            document.getElementById('btn' + fecha.charAt(0).toUpperCase() + fecha.slice(1)).classList.add('btn-active');
-            
-            // Actualizar fecha seleccionada
-            fechaSeleccionada = fecha;
-            
-            // Recargar datos
-            cargarDatos();
-        }
-
-        // Obtener el rango de fechas según la selección
-        function obtenerRangoFechas() {
-            const hoy = new Date();
-            let inicio, fin;
-            
-            if (fechaSeleccionada === 'hoy') {
-                inicio = new Date(hoy);
-                inicio.setHours(0, 0, 0, 0);
-                fin = new Date(hoy);
-                fin.setHours(23, 59, 59, 999);
-            } else { // ayer
-                const ayer = new Date(hoy);
-                ayer.setDate(hoy.getDate() - 1);
-                inicio = new Date(ayer);
-                inicio.setHours(0, 0, 0, 0);
-                fin = new Date(ayer);
-                fin.setHours(23, 59, 59, 999);
-            }
-            
-            return { inicio, fin };
-        }
-
-        // Formatear fecha para mostrar
-        function formatearFechaParaMostrar(date) {
-            const dia = String(date.getDate()).padStart(2, '0');
-            const mes = String(date.getMonth() + 1).padStart(2, '0');
-            const año = date.getFullYear();
+        // ================= FUNCIONES DE FECHA =================
+        function obtenerFechaActual() {
+            const ahora = new Date();
+            const dia = String(ahora.getDate()).padStart(2, '0');
+            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+            const año = ahora.getFullYear();
             return `${dia}/${mes}/${año}`;
         }
 
-        // Convertir fecha de string a objeto Date
-        function parsearFecha(fechaStr) {
-            if (!fechaStr) return null;
+        function convertirFechaFirebase(fechaFirebase) {
+            if (!fechaFirebase) return null;
             
-            // Asumimos formato DD/MM/YYYY
-            const partes = fechaStr.split('/');
-            if (partes.length === 3) {
-                const dia = parseInt(partes[0], 10);
-                const mes = parseInt(partes[1], 10) - 1; // Meses en JS son 0-indexados
-                const año = parseInt(partes[2], 10);
-                
-                // Si el año tiene solo 2 dígitos, asumimos siglo 20 o 21
-                const añoCompleto = año < 100 ? (año < 50 ? 2000 + año : 1900 + año) : año;
-                
-                return new Date(añoCompleto, mes, dia);
+            // Si ya está en formato dd/mm/yyyy, devolverlo directamente
+            if (typeof fechaFirebase === 'string' && fechaFirebase.includes('/')) {
+                return fechaFirebase;
             }
+            
+            // Si es un timestamp de Firebase
+            if (typeof fechaFirebase === 'number' || typeof fechaFirebase === 'string') {
+                const fecha = new Date(parseInt(fechaFirebase));
+                if (!isNaN(fecha.getTime())) {
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const año = fecha.getFullYear();
+                    return `${dia}/${mes}/${año}`;
+                }
+            }
+            
             return null;
         }
 
-        // Cargar datos desde Firebase según el proceso y fecha seleccionados
-        function cargarDatos() {
-            mostrarMensaje('Cargando datos...', true);
+        // ================= INICIALIZACIÓN =================
+        window.addEventListener('load', function() {
+            console.log("🔧 INICIANDO MÓDULO DE REPOSICIÓN...");
+            inicializarFirebase();
+            verificarSesionActiva();
             
-            const { inicio, fin } = obtenerRangoFechas();
-            const fechaInicioFormateada = formatearFechaParaMostrar(inicio);
-            const fechaFinFormateada = formatearFechaParaMostrar(fin);
+            // Cargar escaneos pendientes guardados localmente
+            escaneosPendientes = JSON.parse(localStorage.getItem('escaneosPendientes') || '[]');
             
-            let refPath = '';
-            let columnas = [];
+            // Configurar eventos de escaneo
+            document.getElementById('depositoInput').addEventListener('input', function(e) {
+                const deposito = e.target.value.trim();
+                if (deposito) {
+                    validarDeposito(deposito);
+                }
+            });
+
+            document.getElementById('upcInput').addEventListener('input', function(e) {
+                const upc = e.target.value.trim();
+                if (upc.length >= 8) {
+                    validarUPC(upc);
+                }
+            });
+
+            // Cargar datos automáticamente
+            setTimeout(() => {
+                cargarDatosReposicion();
+            }, 1000);
+
+            // Intentar sincronizar escaneos pendientes cada 10 segundos
+            setInterval(sincronizarEscaneosPendientes, 10000);
             
-            // Definir la ruta de Firebase y las columnas según el proceso seleccionado
-            switch(procesoSeleccionado) {
-                case 'recoleccion':
-                    refPath = 'recolecciones';
-                    columnas = [
-                        { title: 'USUARIO', data: 'usuario', defaultContent: '' },
-                        { title: 'RUTA', data: 'ruta', defaultContent: '' },
-                        { title: 'COLA', data: 'cola', defaultContent: '' },
-                        { title: 'DEPOSITO', data: 'deposito', defaultContent: '' },
-                        { title: 'UPC', data: 'upc', defaultContent: '' },
-                        { title: 'DESCRIPCION', data: 'descripcion', defaultContent: '' },
-                        { title: 'CANTIDAD_PLANIFICADA', data: 'cantidad_planificada', defaultContent: '' },
-                        { title: 'CANTIDAD_RECOLECTADA', data: 'cantidad_recolectada', defaultContent: '' },
-                        { title: 'NO_ENCONTRADO', data: 'no_encontrado', defaultContent: '' },
-                        { title: 'ACCION', data: 'accion', defaultContent: '' },
-                        { title: 'TIPO_RECOLECCION', data: 'tipo_recoleccion', defaultContent: '' },
-                        { title: 'DEPOSITO_DESTINO', data: 'deposito_destino', defaultContent: '' },
-                        { title: 'FECHA', data: 'fecha', defaultContent: '' },
-                        { title: 'HORA', data: 'hora', defaultContent: '' }
-                    ];
-                    break;
-                case 'reposicion':
-                    refPath = 'reposiciones';
-                    columnas = [
-                        { title: 'USUARIO', data: 'usuario', defaultContent: '' },
-                        { title: 'RUTA', data: 'ruta', defaultContent: '' },
-                        { title: 'COLA', data: 'cola', defaultContent: '' },
-                        { title: 'DEPOSITO', data: 'deposito', defaultContent: '' },
-                        { title: 'UPC', data: 'upc', defaultContent: '' },
-                        { title: 'DESCRIPCION', data: 'descripcion', defaultContent: '' },
-                        { title: 'CANTIDAD', data: 'cantidad', defaultContent: '' },
-                        { title: 'FECHA', data: 'fecha', defaultContent: '' },
-                        { title: 'HORA', data: 'hora', defaultContent: '' }
-                    ];
-                    break;
-                case 'devoluciones':
-                    refPath = 'devoluciones';
-                    columnas = [
-                        { title: 'USUARIO', data: 'usuario', defaultContent: '' },
-                        { title: 'RUTA', data: 'ruta', defaultContent: '' },
-                        { title: 'COLA', data: 'cola', defaultContent: '' },
-                        { title: 'DEPOSITO', data: 'deposito', defaultContent: '' },
-                        { title: 'UPC', data: 'upc', defaultContent: '' },
-                        { title: 'DESCRIPCION', data: 'descripcion', defaultContent: '' },
-                        { title: 'CANTIDAD', data: 'cantidad', defaultContent: '' },
-                        { title: 'FECHA', data: 'fecha', defaultContent: '' },
-                        { title: 'HORA', data: 'hora', defaultContent: '' }
-                    ];
-                    break;
-            }
-            
-            // Obtener datos de Firebase
-            const ref = database.ref(refPath);
-            ref.once('value')
-                .then(snapshot => {
-                    const datos = [];
-                    snapshot.forEach(childSnapshot => {
-                        const dato = childSnapshot.val();
-                        // Filtrar por fecha
-                        if (dato.fecha) {
-                            const fechaDato = parsearFecha(dato.fecha);
-                            if (fechaDato && fechaDato >= inicio && fechaDato <= fin) {
-                                datos.push(dato);
-                            }
-                        }
-                    });
-                    
-                    datosActuales = datos;
-                    
-                    // Inicializar o actualizar DataTable
-                    if (dataTable) {
-                        dataTable.destroy();
-                    }
-                    
-                    dataTable = $('#dataTable').DataTable({
-                        data: datos,
-                        columns: columnas,
-                        pageLength: 50,
-                        lengthMenu: [10, 25, 50, 100],
-                        language: {
-                            search: "Buscar:",
-                            lengthMenu: "Mostrar _MENU_ registros",
-                            info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-                            infoEmpty: "Mostrando 0 a 0 de 0 registros",
-                            infoFiltered: "(filtrado de _MAX_ registros totales)",
-                            paginate: {
-                                first: "Primero",
-                                last: "Último",
-                                next: "Siguiente",
-                                previous: "Anterior"
-                            }
-                        },
-                        dom: 'lrtip' // Eliminar el buscador propio de DataTables ya que tenemos el nuestro
-                    });
-                    
-                    if (datos.length === 0) {
-                        mostrarMensaje('No se encontraron datos para los filtros seleccionados', false);
+            // Verificar si hay colas en uso pero abandonadas (sin actividad en 5 minutos)
+            setInterval(limpiarColasAbandonadas, 30000);
+        });
+
+        // ================= CONEXIÓN FIREBASE =================
+        function inicializarFirebase() {
+            try {
+                const connectedRef = database.ref(".info/connected");
+                connectedRef.on("value", function(snap) {
+                    if (snap.val() === true) {
+                        document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
+                        // Cuando se conecte, intentar sincronizar pendientes
+                        sincronizarEscaneosPendientes();
                     } else {
-                        mostrarMensaje(`Se cargaron ${datos.length} registros (${fechaInicioFormateada})`, true);
+                        document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
                     }
-                })
-                .catch(error => {
-                    console.error('Error al cargar datos:', error);
-                    mostrarMensaje('Error al cargar datos: ' + error.message, false);
                 });
+
+                // Escuchar cambios en colas en uso
+                database.ref('colasEnUso').on('value', (snapshot) => {
+                    colasEnUso = snapshot.val() || {};
+                    actualizarListaColas();
+                });
+
+            } catch (error) {
+                console.error("Error inicializando Firebase:", error);
+            }
         }
 
-        // Copiar toda la tabla al portapapeles
-        function copiarTabla() {
-            if (datosActuales.length === 0) {
-                mostrarMensaje('No hay datos para copiar', false);
+        // ================= GESTIÓN DE SESIÓN =================
+        async function verificarSesionActiva() {
+            usuarioActual = localStorage.getItem('usuarioSokso');
+            
+            if (!usuarioActual) {
+                window.location.href = 'index.html';
                 return;
             }
             
-            let textoCopiar = '';
-            
-            // Obtener encabezados
-            const headers = dataTable.columns().header().toArray();
-            const headerTexts = headers.map(header => header.textContent);
-            textoCopiar += headerTexts.join('\t') + '\n';
-            
-            // Obtener datos
-            dataTable.rows({ search: 'applied' }).data().each(function(row) {
-                const rowData = [];
-                for (let key in row) {
-                    if (row.hasOwnProperty(key)) {
-                        rowData.push(row[key] || '');
+            const sesionGuardada = localStorage.getItem('sesionReposicionActiva');
+            if (sesionGuardada) {
+                try {
+                    sesionActiva = JSON.parse(sesionGuardada);
+                    colaSeleccionada = sesionActiva.cola;
+                    
+                    await cargarDatosReposicion();
+                    await cargarEscaneosDesdeFirebase();
+                    
+                    // Verificar si la cola sigue disponible y no está siendo trabajada por otro usuario
+                    if (colasEnUso[colaSeleccionada] && colasEnUso[colaSeleccionada].usuario !== usuarioActual) {
+                        mostrarError(`La cola ${colaSeleccionada} está siendo trabajada por ${colasEnUso[colaSeleccionada].usuario}. No puedes reanudar.`);
+                        limpiarSesionActiva();
+                        mostrarSeleccionColas();
+                        return;
                     }
+                    
+                    // Si la cola está marcada como en uso por nosotros, reanudar
+                    if (colasEnUso[colaSeleccionada] && colasEnUso[colaSeleccionada].usuario === usuarioActual) {
+                        await actualizarTimestampCola(colaSeleccionada);
+                        mostrarPanelReposicion();
+                    } else {
+                        // Si no está en uso, simplemente mostrar el panel sin marcar como en uso
+                        mostrarPanelReposicion();
+                    }
+                    
+                } catch (error) {
+                    console.error('Error recuperando sesión:', error);
+                    limpiarSesionActiva();
                 }
-                textoCopiar += rowData.join('\t') + '\n';
-            });
-            
-            // Copiar al portapapeles
-            navigator.clipboard.writeText(textoCopiar)
-                .then(() => {
-                    mostrarMensaje('Datos copiados al portapapeles', true);
-                })
-                .catch(err => {
-                    console.error('Error al copiar: ', err);
-                    // Fallback para navegadores que no soportan clipboard API
-                    const textArea = document.createElement('textarea');
-                    textArea.value = textoCopiar;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    mostrarMensaje('Datos copiados al portapapeles', true);
-                });
+            }
         }
 
-        // Volver al menú principal
-        function volverAlMenu() {
+        // ================= CARGA DE DATOS MEJORADA =================
+        async function cargarDatosReposicion() {
+            try {
+                // CARGAR DATOS DE RECOLECCIÓN
+                const recoleccionSnapshot = await database.ref('recolecciones').once('value');
+                const recoleccionData = recoleccionSnapshot.val();
+                
+                if (!recoleccionData) {
+                    mostrarMensaje('No se encontraron datos en recolecciones', 'warning');
+                    return;
+                }
+                
+                // PROCESAR DATOS PARA REPOSICIÓN
+                await procesarDatosReposicion(recoleccionData);
+                
+                // CARGAR ESCANEOS EXISTENTES
+                await cargarEscaneosDesdeFirebase();
+                
+            } catch (error) {
+                console.error('❌ ERROR CRÍTICO:', error);
+                mostrarError('Error cargando datos: ' + error.message);
+            }
+        }
+
+        // ================= PROCESAMIENTO DE DATOS PARA REPOSICIÓN - CORREGIDO =================
+        async function procesarDatosReposicion(recoleccionData) {
+            datosReposicion = {};
+            colasDisponibles = [];
+            const fechaActual = obtenerFechaActual();
+            
+            console.log("📅 Filtrando por fecha actual:", fechaActual);
+            
+            // OBJETO PARA AGRUPAR Y EVITAR DUPLICADOS
+            const itemsAgrupados = {};
+            
+            // PROCESAR CADA REGISTRO DE RECOLECCIÓN
+            Object.values(recoleccionData).forEach(registro => {
+                try {
+                    // VERIFICAR FECHA - Solo procesar registros de hoy
+                    const fechaRegistro = convertirFechaFirebase(registro.fecha);
+                    if (fechaRegistro !== fechaActual) {
+                        return; // Saltar registros que no son de hoy
+                    }
+                    
+                    // VERIFICAR QUE TENGA LOS CAMPOS NECESARIOS
+                    const depositoDestino = registro.deposito_destino;
+                    const colaReposicion = registro.cola_reposicion;
+                    const cantidad = parseInt(registro.recolectado) || 0;
+                    const descripcion = registro.descripcion;
+                    const upc = registro.upc;
+                    
+                    // SOLO PROCESAR REGISTROS VÁLIDOS PARA REPOSICIÓN
+                    if (depositoDestino && colaReposicion && cantidad > 0 && registro.accion === 'escaneado') {
+                        
+                        // CLAVE ÚNICA PARA EVITAR DUPLICADOS: cola + deposito + upc
+                        const claveUnica = `${colaReposicion}_${depositoDestino}_${upc}`;
+                        
+                        if (!itemsAgrupados[claveUnica]) {
+                            itemsAgrupados[claveUnica] = {
+                                cola: colaReposicion,
+                                deposito: depositoDestino,
+                                upc: upc,
+                                articulo: descripcion,
+                                cantidad: 0,
+                                cantidadEscaneada: 0
+                            };
+                        }
+                        
+                        // SUMAR CANTIDAD (EVITANDO DECIMALES)
+                        itemsAgrupados[claveUnica].cantidad += Math.round(cantidad);
+                    }
+                } catch (error) {
+                    console.error("Error procesando registro:", error);
+                }
+            });
+            
+            // PROCESAR ITEMS AGRUPADOS EN LA ESTRUCTURA FINAL
+            Object.values(itemsAgrupados).forEach(item => {
+                const colaReposicion = item.cola;
+                
+                if (!datosReposicion[colaReposicion]) {
+                    datosReposicion[colaReposicion] = {
+                        items: {},
+                        cantidadTotal: 0,
+                        nombre: `Cola ${colaReposicion}`
+                    };
+                    
+                    if (!colasDisponibles.includes(colaReposicion)) {
+                        colasDisponibles.push(colaReposicion);
+                    }
+                }
+                
+                // CLAVE ÚNICA POR ITEM: deposito + upc
+                const claveItem = `${item.deposito}_${item.upc}`;
+                
+                // AGREGAR ITEM (SIN DUPLICADOS)
+                datosReposicion[colaReposicion].items[claveItem] = {
+                    deposito: item.deposito,
+                    upc: item.upc,
+                    articulo: item.articulo,
+                    cantidad: item.cantidad,
+                    cantidadEscaneada: 0
+                };
+                
+                datosReposicion[colaReposicion].cantidadTotal += item.cantidad;
+            });
+            
+            console.log("📊 Datos procesados SIN DUPLICADOS:", {
+                colasDisponibles: colasDisponibles,
+                datosReposicion: datosReposicion
+            });
+            
+            // ORDENAR COLAS
+            colasDisponibles.sort(ordenarColas);
+            
+            ultimaActualizacion = new Date();
+            actualizarInfoCache();
+            
+            mostrarSeleccionColas();
+        }
+
+        // ================= FUNCIONES DE APOYO =================
+        function ordenarColas(a, b) {
+            // Ordenar colas: P01, P02, P03, etc.
+            const numA = parseInt(a.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.replace(\D/g, '')) || 0;
+            return numA - numB;
+        }
+
+        function ordenarItems(a, b) {
+            // Ordenar items por depósito y luego por UPC
+            const depositoA = a.split('_')[0];
+            const depositoB = b.split('_')[0];
+            const upcA = a.split('_')[1];
+            const upcB = b.split('_')[1];
+            
+            if (depositoA !== depositoB) {
+                return depositoA.localeCompare(depositoB);
+            }
+            return upcA.localeCompare(upcB);
+        }
+
+        // ================= INTERFAZ DE COLAS =================
+        function mostrarSeleccionColas() {
+            document.getElementById('rutasSection').classList.remove('hidden');
+            document.getElementById('reposicionSection').classList.add('hidden');
+            actualizarListaColas();
+        }
+
+        function actualizarListaColas() {
+            const container = document.getElementById('rutasContainer');
+            container.innerHTML = '';
+            
+            if (colasDisponibles.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #7f8c8d;">
+                        <p>No hay colas activas para reponer hoy</p>
+                        <p style="font-size: 10px; margin-top: 8px;">
+                            Fecha actual: ${obtenerFechaActual()}<br>
+                            Los datos se cargan automáticamente cuando hay recolección procesada para hoy
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+            
+            colasDisponibles.forEach(cola => {
+                const datosCola = datosReposicion[cola];
+                const div = document.createElement('div');
+                
+                // Verificar si la cola está en uso por OTRO usuario
+                const colaEstaEnUso = colasEnUso[cola];
+                const estaEnUsoPorOtro = colaEstaEnUso && colaEstaEnUso.usuario !== usuarioActual;
+                
+                div.className = `cola-button ${estaEnUsoPorOtro ? 'disabled' : ''}`;
+                div.innerHTML = `
+                    <strong>COLA ${cola}</strong><br>
+                    <span style="font-size: 11px;">
+                        ${datosCola.cantidadTotal} unidades - ${Object.keys(datosCola.items).length} ítems
+                    </span>
+                    ${estaEnUsoPorOtro ? `<br><small style="color:#e74c3c;">EN USO POR ${colaEstaEnUso.usuario}</small>` : ''}
+                    ${colaEstaEnUso && colaEstaEnUso.usuario === usuarioActual ? `<br><small style="color:#27ae60;">TRABAJANDO</small>` : ''}
+                `;
+                
+                if (!estaEnUsoPorOtro) {
+                    div.onclick = () => seleccionarCola(cola);
+                } else {
+                    div.title = `Esta cola está siendo trabajada por ${colaEstaEnUso.usuario}`;
+                }
+                
+                container.appendChild(div);
+            });
+        }
+
+        // ================= VERIFICACIÓN DE PERMISOS PARA COLASENUSO =================
+        async function verificarYConfigurarColasEnUso() {
+            try {
+                // Verificar si podemos escribir en colasEnUso
+                const testRef = database.ref('colasEnUso/test');
+                await testRef.set({ test: Date.now() });
+                await testRef.remove();
+                console.log("✅ Permisos de colasEnUso verificados correctamente");
+                return true;
+            } catch (error) {
+                console.error("❌ Error de permisos en colasEnUso:", error);
+                mostrarError("Error de permisos en Firebase. No se puede bloquear la cola.");
+                return false;
+            }
+        }
+
+        async function seleccionarCola(cola) {
+            // Verificar si la cola está siendo usada por otro usuario
+            if (colasEnUso[cola] && colasEnUso[cola].usuario !== usuarioActual) {
+                mostrarError(`La cola ${cola} está siendo trabajada por ${colasEnUso[cola].usuario}. No puedes ingresar.`);
+                return;
+            }
+            
+            colaSeleccionada = cola;
+            guardarSesionActiva();
+            
+            document.getElementById('colaHeader').textContent = `${cola} TRABAJANDO`;
+            
+            document.getElementById('rutasSection').classList.add('hidden');
+            document.getElementById('reposicionSection').classList.remove('hidden');
+            
+            mostrarPanelReposicion();
+        }
+
+        // ================= MARCAR COLA COMO EN USO =================
+        async function marcarColaComoEnUso(cola) {
+            try {
+                // Verificar permisos primero
+                const tienePermisos = await verificarYConfigurarColasEnUso();
+                if (!tienePermisos) {
+                    // Si no hay permisos, continuar sin bloqueo de cola
+                    console.warn("Continuando sin bloqueo de cola por falta de permisos");
+                    return;
+                }
+                
+                // Marcar la cola como en uso
+                await database.ref(`colasEnUso/${cola}`).set({
+                    usuario: usuarioActual,
+                    timestamp: Date.now(),
+                    fecha: obtenerFechaActual()
+                });
+                
+                // Escuchar cambios en el estado de la cola (por si otro usuario la toma)
+                if (colaEnUsoRef) {
+                    colaEnUsoRef.off();
+                }
+                
+                colaEnUsoRef = database.ref(`colasEnUso/${cola}`);
+                colaEnUsoRef.on('value', (snapshot) => {
+                    if (!snapshot.exists()) {
+                        // La cola fue liberada
+                        mostrarError('La cola ha sido liberada. No puedes continuar trabajando.');
+                        limpiarSesionActiva();
+                        mostrarSeleccionColas();
+                    } else if (snapshot.val().usuario !== usuarioActual) {
+                        // Otro usuario tomó la cola
+                        mostrarError(`La cola ${cola} ha sido tomada por ${snapshot.val().usuario}. No puedes continuar.`);
+                        limpiarSesionActiva();
+                        mostrarSeleccionColas();
+                    }
+                });
+                
+            } catch (error) {
+                console.error("Error marcando cola en uso:", error);
+                // Continuar sin el bloqueo si hay error
+                mostrarMensaje("Advertencia: No se pudo bloquear la cola, pero puedes continuar trabajando.", "warning");
+            }
+        }
+
+        // ================= ACTUALIZAR TIMESTAMP COLA =================
+        async function actualizarTimestampCola(cola) {
+            try {
+                await database.ref(`colasEnUso/${cola}/timestamp`).set(Date.now());
+            } catch (error) {
+                console.error("Error actualizando timestamp:", error);
+            }
+        }
+
+        // ================= LIMPIAR COLAS ABANDONADAS =================
+        async function limpiarColasAbandonadas() {
+            const ahora = Date.now();
+            const tiempoMaximoInactividad = 5 * 60 * 1000; // 5 minutos
+            
+            try {
+                for (const cola in colasEnUso) {
+                    const colaData = colasEnUso[cola];
+                    if (ahora - colaData.timestamp > tiempoMaximoInactividad) {
+                        // La cola ha estado inactiva por más de 5 minutos, liberarla
+                        await database.ref(`colasEnUso/${cola}`).remove();
+                        console.log(`Cola ${cola} liberada por inactividad`);
+                    }
+                }
+            } catch (error) {
+                console.error("Error limpiando colas abandonadas:", error);
+            }
+        }
+
+        async function liberarColaEnUso(cola) {
+            if (colaEnUsoRef) {
+                colaEnUsoRef.off();
+                colaEnUsoRef = null;
+            }
+            
+            if (cola) {
+                try {
+                    // Verificar que la cola aún nos pertenece antes de liberar
+                    const colaEnUsoSnapshot = await database.ref(`colasEnUso/${cola}`).once('value');
+                    if (colaEnUsoSnapshot.exists() && colaEnUsoSnapshot.val().usuario === usuarioActual) {
+                        await database.ref(`colasEnUso/${cola}`).remove();
+                    }
+                } catch (error) {
+                    console.error("Error liberando cola:", error);
+                }
+            }
+        }
+
+        // ================= FUNCIONES DE SESIÓN =================
+        function guardarSesionActiva() {
+            if (colaSeleccionada && usuarioActual) {
+                sesionActiva = {
+                    usuario: usuarioActual,
+                    cola: colaSeleccionada,
+                    timestamp: new Date().getTime()
+                };
+                localStorage.setItem('sesionReposicionActiva', JSON.stringify(sesionActiva));
+            }
+        }
+
+        function limpiarSesionActiva() {
+            localStorage.removeItem('sesionReposicionActiva');
+            sesionActiva = null;
+        }
+
+        async function cargarEscaneosDesdeFirebase() {
+            try {
+                const snapshot = await database.ref('reposiciones').once('value');
+                const data = snapshot.val();
+                if (data) {
+                    escaneosReposicion = data;
+                    
+                    // ACTUALIZAR CANTIDADES ESCANEADAS EN LOS DATOS
+                    Object.values(escaneosReposicion).forEach(escaneo => {
+                        if (escaneo.cola && escaneo.deposito && escaneo.upc) {
+                            const claveItem = `${escaneo.deposito}_${escaneo.upc}`;
+                            if (datosReposicion[escaneo.cola] && datosReposicion[escaneo.cola].items[claveItem]) {
+                                datosReposicion[escaneo.cola].items[claveItem].cantidadEscaneada = 
+                                    (datosReposicion[escaneo.cola].items[claveItem].cantidadEscaneada || 0) + 1;
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error cargando escaneos:', error);
+            }
+        }
+
+        function mostrarPanelReposicion() {
+            actualizarListaItems();
+            seleccionarPrimerItemPendiente();
+            document.getElementById('depositoInput').focus();
+        }
+
+        function actualizarListaItems() {
+            const grid = document.getElementById('depositosGrid');
+            grid.innerHTML = '';
+            
+            if (!colaSeleccionada) return;
+            
+            const itemsCola = Object.keys(datosReposicion[colaSeleccionada].items).sort(ordenarItems);
+            
+            itemsCola.forEach(claveItem => {
+                const datos = datosReposicion[colaSeleccionada].items[claveItem];
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
+                const seleccionado = claveItem === itemActual;
+                const completado = cantidadEscaneada >= datos.cantidad;
+                
+                const row = document.createElement('div');
+                row.className = `deposito-row ${seleccionado ? 'selected' : ''} ${completado ? 'completed' : ''}`;
+                
+                row.innerHTML = `
+                    <div>
+                        <span class="status-indicator ${completado ? 'status-completed' : (seleccionado ? 'status-selected' : 'status-pending')}"></span>
+                    </div>
+                    <div>
+                        <strong>${datos.deposito}</strong><br>
+                        <small>${datos.articulo}</small>
+                    </div>
+                    <div>${datos.upc}</div>
+                    <div>${datos.cantidad}</div>
+                    <div>${cantidadEscaneada}</div>
+                `;
+                
+                row.onclick = () => seleccionarItemManual(claveItem);
+                grid.appendChild(row);
+            });
+        }
+
+        function seleccionarPrimerItemPendiente() {
+            if (!colaSeleccionada) return;
+            
+            const itemsCola = Object.keys(datosReposicion[colaSeleccionada].items).sort(ordenarItems);
+            
+            // Buscar el primer ítem no completado
+            for (let claveItem of itemsCola) {
+                const datos = datosReposicion[colaSeleccionada].items[claveItem];
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
+                
+                if (cantidadEscaneada < datos.cantidad) {
+                    seleccionarItemManual(claveItem);
+                    return;
+                }
+            }
+            
+            // Si todos están completados, mostrar mensaje de fin de cola
+            if (itemsCola.length > 0) {
+                seleccionarItemManual(itemsCola[0]);
+                mostrarFinDeCola();
+            } else {
+                mostrarFinDeCola();
+            }
+        }
+
+        function seleccionarItemManual(claveItem) {
+            itemActual = claveItem;
+            actualizarInterfazItem();
+            document.getElementById('depositoInput').value = '';
+            document.getElementById('depositoInput').classList.remove('error');
+            document.getElementById('upcInput').disabled = false;
+            document.getElementById('upcInput').focus();
+        }
+
+        function actualizarInterfazItem() {
+            if (!itemActual || !colaSeleccionada) return;
+            
+            const datos = datosReposicion[colaSeleccionada].items[itemActual];
+            const cantidadEscaneada = datos.cantidadEscaneada || 0;
+            const pendiente = datos.cantidad - cantidadEscaneada;
+            
+            document.getElementById('currentDeposito').textContent = datos.deposito;
+            document.getElementById('currentArticulo').textContent = datos.articulo;
+            document.getElementById('currentUPC').textContent = `UPC: ${datos.upc}`;
+            document.getElementById('counterSolicitada').textContent = datos.cantidad;
+            document.getElementById('counterRepuesta').textContent = cantidadEscaneada;
+            document.getElementById('counterPendiente').textContent = pendiente;
+            
+            actualizarListaItems();
+        }
+
+        function validarDeposito(deposito) {
+            if (!colaSeleccionada) return;
+            
+            // Buscar algún ítem que coincida con el depósito escaneado
+            const items = datosReposicion[colaSeleccionada].items;
+            let itemEncontrado = null;
+            
+            for (const claveItem in items) {
+                if (items[claveItem].deposito === deposito) {
+                    // Verificar si este ítem no está completado
+                    if (items[claveItem].cantidadEscaneada < items[claveItem].cantidad) {
+                        itemEncontrado = claveItem;
+                        break;
+                    }
+                }
+            }
+            
+            if (!itemEncontrado) {
+                mostrarError('Depósito incorrecto o ya completado. Escanea un depósito válido para esta cola.');
+                document.getElementById('depositoInput').classList.add('error');
+                document.getElementById('depositoInput').value = '';
+                return;
+            }
+            
+            seleccionarItemManual(itemEncontrado);
+        }
+
+        async function validarUPC(upc) {
+            if (!itemActual || !colaSeleccionada) return;
+            
+            const datos = datosReposicion[colaSeleccionada].items[itemActual];
+            const cantidadEscaneada = datos.cantidadEscaneada || 0;
+            
+            // VERIFICAR SI YA SE COMPLETÓ
+            if (cantidadEscaneada >= datos.cantidad) {
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            // VERIFICAR UPC (que coincida con el UPC del ítem actual)
+            if (datos.upc !== upc) {
+                mostrarError('UPC incorrecto. Escanea el código UPC correspondiente a este depósito y artículo.');
+                document.getElementById('upcInput').classList.add('error');
+                document.getElementById('upcInput').value = '';
+                return;
+            }
+            
+            document.getElementById('upcInput').classList.remove('error');
+            
+            // MARCAR LA COLA COMO EN USO CUANDO SE ESCANEA EL PRIMER UPC
+            if (!colasEnUso[colaSeleccionada] || colasEnUso[colaSeleccionada].usuario !== usuarioActual) {
+                await marcarColaComoEnUso(colaSeleccionada);
+            } else {
+                // Actualizar timestamp para indicar actividad reciente
+                await actualizarTimestampCola(colaSeleccionada);
+            }
+            
+            // REGISTRAR ESCANEO
+            await registrarEscaneoReposicion(upc);
+            
+            document.getElementById('upcInput').value = '';
+            
+            // EFECTO VISUAL DE COMPLETADO SI SE LLEGÓ AL TOTAL
+            const nuevaCantidad = (datos.cantidadEscaneada || 0) + 1;
+            if (nuevaCantidad >= datos.cantidad) {
+                mostrarCompletado();
+                setTimeout(() => {
+                    siguienteItem();
+                }, 1000);
+            }
+        }
+
+        function mostrarCompletado() {
+            const overlay = document.getElementById('completionOverlay');
+            overlay.classList.add('show');
+            
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, 1000);
+        }
+
+        function mostrarFinDeCola() {
+            const overlay = document.getElementById('finColaOverlay');
+            overlay.classList.add('show');
+            
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                // Mostrar botón de finalizar más prominentemente
+                document.querySelector('.btn-success').style.background = '#ffc107';
+                document.querySelector('.btn-success').style.color = '#212529';
+                document.querySelector('.btn-success').textContent = '🏁 FINALIZAR COLA';
+            }, 3000);
+        }
+
+        // ================= REGISTRAR ESCANEO - CORREGIDO =================
+        async function registrarEscaneoReposicion(upc) {
+            if (!itemActual || !colaSeleccionada) return;
+            
+            const datos = datosReposicion[colaSeleccionada].items[itemActual];
+            const fechaHora = new Date();
+            
+            // CREAR REGISTRO CON ESTRUCTURA CORRECTA
+            const registro = {
+                USUARIO: usuarioActual,
+                RUTA: datos.ruta || "No disponible",
+                COLA: colaSeleccionada,
+                DEPOSITO: datos.deposito,
+                UPC: upc,
+                DESCRIPCION: datos.articulo,
+                CANTIDAD_PLANIFICADA: datos.cantidad,
+                CANTIDAD_RECOLECTADA: 1, // Cada escaneo es 1 unidad
+                NO_ENCONTRADO: 0,
+                ACCION: "reposicion",
+                TIPO_RECOLECCION: "Reposición",
+                DEPOSITO_DESTINO: datos.deposito,
+                FECHA: fechaHora.toLocaleDateString('es-ES'),
+                HORA: fechaHora.toLocaleTimeString('es-ES')
+            };
+            
+            try {
+                const registroKey = database.ref().child('reposiciones').push().key;
+                await database.ref(`reposiciones/${registroKey}`).set(registro);
+                
+                // ACTUALIZAR LOCALMENTE
+                datos.cantidadEscaneada = (datos.cantidadEscaneada || 0) + 1;
+                
+                // ACTUALIZAR INTERFAZ
+                actualizarInterfazItem();
+                
+                // ACTUALIZAR TABLA DE DATOS
+                actualizarTablaDatos();
+                
+            } catch (error) {
+                console.error('Error registrando escaneo:', error);
+                // Guardar localmente para sincronizar después
+                escaneosPendientes.push(registro);
+                localStorage.setItem('escaneosPendientes', JSON.stringify(escaneosPendientes));
+                mostrarError('Error de conexión. Escaneo guardado localmente.');
+            }
+        }
+
+        // ================= ACTUALIZAR TABLA DE DATOS =================
+        function actualizarTablaDatos() {
+            const tablaBody = document.getElementById('tablaDatosBody');
+            tablaBody.innerHTML = '';
+            
+            if (!colaSeleccionada) return;
+            
+            const itemsCola = Object.keys(datosReposicion[colaSeleccionada].items).sort(ordenarItems);
+            
+            itemsCola.forEach(claveItem => {
+                const datos = datosReposicion[colaSeleccionada].items[claveItem];
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
+                
+                // Crear filas para cada escaneo realizado
+                for (let i = 0; i < cantidadEscaneada; i++) {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${usuarioActual}</td>
+                        <td>${datos.ruta || "No disponible"}</td>
+                        <td>${colaSeleccionada}</td>
+                        <td>${datos.deposito}</td>
+                        <td>${datos.upc}</td>
+                        <td>${datos.articulo}</td>
+                        <td>${datos.cantidad}</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>reposicion</td>
+                        <td>Reposición</td>
+                        <td>${datos.deposito}</td>
+                        <td>${obtenerFechaActual()}</td>
+                        <td>${new Date().toLocaleTimeString('es-ES')}</td>
+                    `;
+                    
+                    tablaBody.appendChild(row);
+                }
+            });
+            
+            // Mostrar u ocultar la tabla según si hay datos
+            const tablaSection = document.getElementById('tablaDatosSection');
+            if (tablaBody.children.length > 0) {
+                tablaSection.style.display = 'block';
+            } else {
+                tablaSection.style.display = 'none';
+            }
+        }
+
+        async function sincronizarEscaneosPendientes() {
+            if (escaneosPendientes.length === 0 || estaSincronizando) return;
+            
+            estaSincronizando = true;
+            document.getElementById('syncIndicator').textContent = 'Sincronizando...';
+            document.getElementById('syncIndicator').classList.add('syncing');
+            
+            try {
+                for (let i = escaneosPendientes.length - 1; i >= 0; i--) {
+                    const escaneo = escaneosPendientes[i];
+                    const registroKey = database.ref().child('reposiciones').push().key;
+                    await database.ref(`reposiciones/${registroKey}`).set(escaneo);
+                    
+                    // Actualizar contadores localmente
+                    if (escaneo.COLA && escaneo.DEPOSITO && escaneo.UPC) {
+                        const claveItem = `${escaneo.DEPOSITO}_${escaneo.UPC}`;
+                        if (datosReposicion[escaneo.COLA] && datosReposicion[escaneo.COLA].items[claveItem]) {
+                            datosReposicion[escaneo.COLA].items[claveItem].cantidadEscaneada = 
+                                (datosReposicion[escaneo.COLA].items[claveItem].cantidadEscaneada || 0) + 1;
+                        }
+                    }
+                    
+                    // Eliminar del array local
+                    escaneosPendientes.splice(i, 1);
+                }
+                
+                localStorage.setItem('escaneosPendientes', JSON.stringify(escaneosPendientes));
+                actualizarInterfazItem();
+                actualizarTablaDatos();
+                actualizarInfoCache();
+                
+                if (escaneosPendientes.length === 0) {
+                    mostrarMensaje('Todos los escaneos pendientes se sincronizaron correctamente.', 'success');
+                }
+                
+            } catch (error) {
+                console.error('Error sincronizando escaneos pendientes:', error);
+            } finally {
+                estaSincronizando = false;
+                document.getElementById('syncIndicator').textContent = '';
+                document.getElementById('syncIndicator').classList.remove('syncing');
+            }
+        }
+
+        function siguienteItem() {
+            if (!colaSeleccionada) return;
+            
+            const items = Object.keys(datosReposicion[colaSeleccionada].items).sort(ordenarItems);
+            const currentIndex = items.indexOf(itemActual);
+            
+            // BUSCAR SIGUIENTE ÍTEM PENDIENTE
+            for (let i = currentIndex + 1; i < items.length; i++) {
+                const claveItem = items[i];
+                const datos = datosReposicion[colaSeleccionada].items[claveItem];
+                const cantidadEscaneada = datos.cantidadEscaneada || 0;
+                
+                if (cantidadEscaneada < datos.cantidad) {
+                    seleccionarItemManual(claveItem);
+                    return;
+                }
+            }
+            
+            // SI NO HAY MÁS PENDIENTES, MOSTRAR FIN DE COLA
+            mostrarFinDeCola();
+        }
+
+        function siguienteDeposito() {
+            siguienteItem();
+        }
+
+        async function finalizarReposicion() {
+            // Sincronizar cualquier escaneo pendiente
+            await sincronizarEscaneosPendientes();
+            
+            if (confirm('¿Finalizar reposición de la cola ' + colaSeleccionada + '?')) {
+                await liberarColaEnUso(colaSeleccionada);
+                limpiarSesionActiva();
+                location.reload();
+            }
+        }
+
+        function actualizarInfoCache() {
+            const infoDiv = document.getElementById('cacheInfo');
+            if (ultimaActualizacion) {
+                infoDiv.textContent = `Última actualización: ${ultimaActualizacion.toLocaleTimeString()} | ${colasDisponibles.length} colas | Escaneos pendientes: ${escaneosPendientes.length}`;
+            }
+        }
+
+        function volverAlPrincipal() {
+            if (escaneosPendientes.length > 0) {
+                if (!confirm('Tienes escaneos pendientes de guardar. Si sales ahora, podrías perder datos. ¿Estás seguro de que quieres salir?')) {
+                    return;
+                }
+            }
+            
+            if (colaSeleccionada) {
+                liberarColaEnUso(colaSeleccionada);
+            }
             window.location.href = 'index.html';
         }
 
-        // Mostrar mensajes de estado
-        function mostrarMensaje(mensaje, esExito) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = mensaje;
-            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
-            statusDiv.style.display = 'block';
+        function mostrarError(mensaje) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="error-message">${mensaje}</div>`;
             setTimeout(() => {
-                statusDiv.style.display = 'none';
+                container.innerHTML = '';
             }, 3000);
         }
+
+        function mostrarMensaje(mensaje, tipo = 'success') {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="${tipo === 'success' ? 'status-success' : 'status-warning'}">${mensaje}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // Actualización automática cada 30 segundos
+        setInterval(() => {
+            if (!colaSeleccionada) {
+                cargarDatosReposicion();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
