@@ -200,6 +200,16 @@
             margin-bottom: 15px;
             color: #6600a1;
         }
+        .cache-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 12px;
+            color: #856404;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -214,7 +224,6 @@
             <div class="connection-status">
                 <div class="connection-item">
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <!-- QUITADA LA PALABRA "FIREBASE" -->
                 </div>
             </div>
         </div>
@@ -225,6 +234,12 @@
         <!-- ESTADÍSTICAS ACTUALES -->
         <div class="action-section">
             <h2 class="section-title">📊 ESTADÍSTICAS ACTUALES</h2>
+            
+            <!-- ✅ NUEVO: AVISO DE CACHE -->
+            <div class="cache-notice">
+                💡 <strong>OPTIMIZADO:</strong> Las estadísticas se cargan desde cache para ahorrar datos. Presiona "Actualizar" para obtener datos frescos.
+            </div>
+            
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">RECOLECCIONES</div>
@@ -255,13 +270,17 @@
             <div class="buttons-horizontal">
                 <button onclick="actualizarEstadisticas()" class="btn-primary">🔄 Actualizar Estadísticas</button>
             </div>
+            
+            <!-- ✅ NUEVO: INFORMACIÓN DE CACHE -->
+            <div class="file-info" id="cacheInfo">
+                Última actualización: No disponible
+            </div>
         </div>
 
         <!-- PANEL DE ADMINISTRACIÓN -->
         <div class="admin-panel">
             <div class="action-section">
                 <h2 class="section-title">📥 DESCARGAR BACKUP COMPLETO</h2>
-                <!-- QUITADA LA LÍNEA DE DESCRIPCIÓN -->
                 
                 <div class="buttons-horizontal">
                     <button class="btn-primary" onclick="descargarBackupExcel()">📊 Descargar Excel Completo</button>
@@ -302,6 +321,9 @@
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
 
+        // ✅ CACHE PARA ESTADÍSTICAS (24 horas)
+        const CACHE_DURATION = 24 * 60 * 60 * 1000;
+
         // ================= INICIALIZAR FIREBASE =================
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
@@ -312,13 +334,22 @@
             reposiciones: 0,
             sloting: 0,
             rutas: 0,
-            almacenamientoMB: 0
+            almacenamientoMB: 0,
+            ultimaActualizacion: null
         };
 
-        // ================= INICIALIZACIÓN =================
+        // ================= INICIALIZACIÓN OPTIMIZADA =================
         window.addEventListener('load', function() {
             inicializarFirebase();
-            actualizarEstadisticas();
+            
+            // ✅ SIEMPRE CARGAR DESDE CACHE PRIMERO
+            if (!cargarEstadisticasDesdeCache()) {
+                mostrarMensaje('📥 Cargando estadísticas iniciales...', true);
+                actualizarEstadisticas();
+            } else {
+                mostrarMensaje(`✅ Estadísticas cargadas desde cache`, true);
+                actualizarInterfazEstadisticas();
+            }
         });
 
         // ================= CONEXIÓN FIREBASE =================
@@ -337,7 +368,68 @@
             });
         }
 
-        // ================= ACTUALIZAR ESTADÍSTICAS =================
+        // ================= SISTEMA DE CACHE PARA ESTADÍSTICAS =================
+        function cargarEstadisticasDesdeCache() {
+            try {
+                const cacheData = localStorage.getItem('cacheEstadisticas');
+                const cacheTime = localStorage.getItem('cacheEstadisticasTime');
+                
+                if (cacheData && cacheTime) {
+                    const ahora = new Date().getTime();
+                    const tiempoTranscurrido = ahora - parseInt(cacheTime);
+                    
+                    if (tiempoTranscurrido < CACHE_DURATION) {
+                        const datosCache = JSON.parse(cacheData);
+                        estadisticas = { ...datosCache };
+                        actualizarInfoCache();
+                        return true;
+                    } else {
+                        // Cache expirado - limpiar
+                        localStorage.removeItem('cacheEstadisticas');
+                        localStorage.removeItem('cacheEstadisticasTime');
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('Error cargando cache de estadísticas:', error);
+                return false;
+            }
+        }
+
+        function guardarEstadisticasEnCache() {
+            try {
+                localStorage.setItem('cacheEstadisticas', JSON.stringify(estadisticas));
+                localStorage.setItem('cacheEstadisticasTime', new Date().getTime().toString());
+                actualizarInfoCache();
+            } catch (error) {
+                console.error('Error guardando cache de estadísticas:', error);
+            }
+        }
+
+        function actualizarInfoCache() {
+            const infoDiv = document.getElementById('cacheInfo');
+            if (estadisticas.ultimaActualizacion) {
+                const ahora = new Date();
+                const diffMs = ahora - new Date(estadisticas.ultimaActualizacion);
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                
+                let textoTiempo;
+                if (diffHours > 0) {
+                    textoTiempo = `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+                } else if (diffMins > 0) {
+                    textoTiempo = `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
+                } else {
+                    textoTiempo = 'Recién actualizado';
+                }
+                
+                infoDiv.textContent = `Estadísticas en cache: ${textoTiempo}`;
+            } else {
+                infoDiv.textContent = 'Estadísticas en cache: No disponible';
+            }
+        }
+
+        // ================= ACTUALIZAR ESTADÍSTICAS OPTIMIZADO =================
         async function actualizarEstadisticas() {
             try {
                 mostrarMensaje('🔄 Actualizando estadísticas...', true);
@@ -367,8 +459,12 @@
                 if (datosRecoleccionRutas) estadisticas.rutas += Object.keys(datosRecoleccionRutas).length;
                 if (datosReposicionRutas) estadisticas.rutas += Object.keys(datosReposicionRutas).length;
                 
-                // Calcular almacenamiento estimado (incluyendo todas las bases de datos)
+                // Calcular almacenamiento estimado
                 estadisticas.almacenamientoMB = await calcularAlmacenamientoEstimado();
+                estadisticas.ultimaActualizacion = new Date();
+                
+                // Guardar en cache
+                guardarEstadisticasEnCache();
                 
                 // Actualizar interfaz
                 actualizarInterfazEstadisticas();
@@ -378,6 +474,12 @@
             } catch (error) {
                 console.error('Error actualizando estadísticas:', error);
                 mostrarMensaje('❌ Error al actualizar estadísticas', false);
+                
+                // Si falla, intentar cargar desde cache
+                if (cargarEstadisticasDesdeCache()) {
+                    mostrarMensaje('✅ Se cargaron estadísticas desde cache', true);
+                    actualizarInterfazEstadisticas();
+                }
             }
         }
 
@@ -689,10 +791,9 @@
             window.location.href = 'index.html';
         }
 
-        // Actualizar automáticamente cada 30 segundos
-        setInterval(() => {
-            actualizarEstadisticas();
-        }, 30000);
+        // ✅ ELIMINADA LA ACTUALIZACIÓN AUTOMÁTICA CADA 30 SEGUNDOS
+        // No más descargas automáticas de estadísticas
+
     </script>
 </body>
 </html>

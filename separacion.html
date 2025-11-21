@@ -52,7 +52,7 @@
         }
         h1 {
             color: #6600a1;
-            font-size: 18px; /* Reducido de 22px */
+            font-size: 18px;
             margin: 0;
         }
         .connection-indicator {
@@ -73,15 +73,15 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow-y: auto; /* Cambiado para permitir scroll */
-            max-height: calc(100vh - 160px); /* Altura máxima para permitir scroll */
+            overflow-y: auto;
+            max-height: calc(100vh - 160px);
         }
         .load-section {
             margin-bottom: 8px;
         }
         .btn-small {
-            padding: 6px 10px; /* Reducido padding */
-            font-size: 11px; /* Reducido tamaño de fuente */
+            padding: 6px 10px;
+            font-size: 11px;
             background: #6600a1;
             color: white;
             border: none;
@@ -237,7 +237,7 @@
         <!-- CABECERA REORGANIZADA Y COMPACTA -->
         <div class="header">
             <div class="header-left">
-                <button class="btn-small" onclick="cargarDatosDesdeFirebase()">Sloting</button>
+                <button class="btn-small" onclick="cargarDatosDesdeFirebase()">Actualizar Sloting</button>
             </div>
             <div class="header-center">
                 <h1>SEPARACIÓN</h1>
@@ -245,7 +245,7 @@
             <div class="header-right">
                 <div id="firebaseIndicator" class="connection-indicator checking"></div>
                 <div class="status-section status-info" id="dataStatus">
-                    Presiona "Sloting"
+                    Cargando...
                 </div>
             </div>
         </div>
@@ -296,7 +296,7 @@
             </div>
         </div>
 
-        <!-- BOTÓN VOLVER AL PRINCIPAL (AHORA VISIBLE) -->
+        <!-- BOTÓN VOLVER AL PRINCIPAL -->
         <div class="footer">
             <button class="back-button" onclick="volverAlPrincipal()">
                 ↩️ Volver a Interfaz
@@ -316,7 +316,8 @@
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
 
-        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+        // ✅ CACHE EXTENDIDO A 7 DÍAS
+        const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 DÍAS
 
         // ================= VARIABLES GLOBALES =================
         let datosSloting = {};
@@ -326,12 +327,18 @@
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // ================= INICIALIZACIÓN =================
+        // ================= INICIALIZACIÓN OPTIMIZADA =================
         window.addEventListener('load', function() {
             inicializarFirebase();
-            cargarDatosDesdeCache();
             
-            // Búsqueda automática al escribir
+            // ✅ SIEMPRE CARGAR DESDE CACHE PRIMERO
+            if (!cargarDatosDesdeCache()) {
+                mostrarEstado('📥 Cargando datos iniciales...', 'info');
+                cargarDatosDesdeFirebase();
+            } else {
+                mostrarEstado(`✅ ${Object.keys(datosSloting).length} registros (CACHE)`, 'success');
+            }
+            
             document.getElementById('upcInput').addEventListener('input', function(e) {
                 const upc = e.target.value.trim();
                 if (upc.length >= 8) {
@@ -362,10 +369,10 @@
             });
         }
 
-        // ================= CARGA DE DATOS DESDE FIREBASE =================
+        // ================= CARGA DE DATOS OPTIMIZADA =================
         async function cargarDatosDesdeFirebase() {
             try {
-                mostrarEstado('📥 Cargando...', 'info');
+                mostrarEstado('📥 Actualizando sloting...', 'info');
                 
                 const snapshot = await database.ref('sloting').once('value');
                 const datosFirebase = snapshot.val();
@@ -379,20 +386,20 @@
                 
                 // Guardar en cache local
                 guardarEnCache(datosSloting);
-                mostrarEstado(`✅ ${Object.keys(datosSloting).length} registros`, 'success');
+                mostrarEstado(`✅ ${Object.keys(datosSloting).length} registros actualizados`, 'success');
                 
             } catch (error) {
                 console.error('Error:', error);
                 mostrarEstado(`❌ ${error.message}`, 'error');
                 
-                // Intentar cargar desde cache como último recurso
-                if (!cargarDatosDesdeCache()) {
-                    mostrarEstado('⚠️ Sin datos', 'error');
+                // Si falla, mantener los datos del cache si existen
+                if (Object.keys(datosSloting).length === 0) {
+                    cargarDatosDesdeCache();
                 }
             }
         }
 
-        // ================= SISTEMA DE CACHE LOCAL =================
+        // ================= SISTEMA DE CACHE MEJORADO =================
         function cargarDatosDesdeCache() {
             try {
                 const cacheData = localStorage.getItem('cacheSloting');
@@ -406,8 +413,11 @@
                         datosSloting = JSON.parse(cacheData);
                         ultimaActualizacion = new Date(parseInt(cacheTime));
                         actualizarInfoCache();
-                        mostrarEstado('✅ Desde cache', 'success');
                         return true;
+                    } else {
+                        // Cache expirado - limpiar automáticamente
+                        localStorage.removeItem('cacheSloting');
+                        localStorage.removeItem('cacheSlotingTime');
                     }
                 }
                 return false;
@@ -434,9 +444,12 @@
                 const diffMs = ahora - ultimaActualizacion;
                 const diffMins = Math.floor(diffMs / 60000);
                 const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / (24 * 3600000));
                 
                 let textoTiempo;
-                if (diffHours > 0) {
+                if (diffDays > 0) {
+                    textoTiempo = `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+                } else if (diffHours > 0) {
                     textoTiempo = `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
                 } else if (diffMins > 0) {
                     textoTiempo = `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
@@ -487,7 +500,7 @@
             // Extraer ruta
             const matchRuta = deposito.match(/(?:P)?(\d+)/);
             if (matchRuta) {
-                ruta = matchRuta[1].replace(/^0+/, ''); // Remover ceros a la izquierda
+                ruta = matchRuta[1].replace(/^0+/, '');
             }
             
             // Extraer número de depósito
@@ -544,12 +557,8 @@
             window.location.href = 'index.html';
         }
 
-        // Sincronización automática cada hora
-        setInterval(() => {
-            if (Object.keys(datosSloting).length > 0) {
-                cargarDatosDesdeFirebase();
-            }
-        }, 60 * 60 * 1000);
+        // ✅ ELIMINADA LA SINCRONIZACIÓN AUTOMÁTICA
+        // No más descargas automáticas cada hora
 
         // Cargar datos automáticamente al iniciar si hay cache
         setTimeout(() => {
