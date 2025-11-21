@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes - SOKSO</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: white;
+            padding: 10px;
+            color: black;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        h1 {
+            color: #6600a1;
+            font-size: 18px;
+        }
+        .connection-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .connection-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .user-display {
+            font-size: 12px;
+            font-weight: bold;
+            color: #6600a1;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .process-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .date-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #6600a1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #55008a;
+        }
+        .btn-secondary {
+            background: #008000;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #006600;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-active {
+            background: #0056b3;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+        }
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .search-label {
+            font-weight: bold;
+            color: #6600a1;
+            white-space: nowrap;
+        }
+        .data-container {
+            overflow-x: auto;
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #6600a1;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .back-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #999;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>REPORTES SOKSO</h1>
+            <div class="connection-info">
+                <div class="user-display">Usuario: <span id="currentUserDisplay"></span></div>
+                <div id="firebaseIndicator" class="connection-indicator checking"></div>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="controls">
+            <div class="process-buttons">
+                <button id="btnRecoleccion" class="btn btn-primary btn-active" onclick="seleccionarProceso('recoleccion')">RECOLECCIÓN</button>
+                <button id="btnReposicion" class="btn btn-primary" onclick="seleccionarProceso('reposicion')">REPOSICIÓN</button>
+                <button id="btnDevoluciones" class="btn btn-primary" onclick="seleccionarProceso('devoluciones')">DEVOLUCIONES</button>
+            </div>
+            
+            <div class="date-buttons">
+                <button id="btnAyer" class="btn btn-secondary" onclick="seleccionarFecha('ayer')">AYER</button>
+                <button id="btnHoy" class="btn btn-secondary btn-active" onclick="seleccionarFecha('hoy')">HOY</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-success" onclick="copiarTabla()">COPY ALL</button>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <span class="search-label">Buscar:</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar en todos los campos...">
+        </div>
+
+        <div class="data-container">
+            <table id="dataTable" class="display" style="width:100%">
+                <!-- La tabla se llenará dinámicamente con JavaScript -->
+            </table>
+        </div>
+
+        <div class="footer">
+            <button class="back-button" onclick="volverAlMenu()">⬅ Volver al Menú</button>
+            <div class="credit">By. James. J</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // Inicializar Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Variables globales
+        let usuarioActual = "";
+        let procesoSeleccionado = "recoleccion";
+        let fechaSeleccionada = "hoy";
+        let dataTable = null;
+        let datosActuales = [];
+
+        // Inicializar la página
+        window.addEventListener('load', function() {
+            // Obtener usuario actual
+            usuarioActual = localStorage.getItem('usuarioSokso') || "Usuario";
+            document.getElementById('currentUserDisplay').textContent = usuarioActual;
+            
+            // Inicializar conexión a Firebase
+            verificarConexionFirebase();
+            
+            // Cargar datos iniciales
+            cargarDatos();
+            
+            // Configurar búsqueda en tiempo real
+            document.getElementById('searchInput').addEventListener('input', function() {
+                if (dataTable) {
+                    dataTable.search(this.value).draw();
+                }
+            });
+        });
+
+        // Verificar conexión a Firebase
+        function verificarConexionFirebase() {
+            const connectedRef = database.ref(".info/connected");
+            connectedRef.on("value", function(snap) {
+                if (snap.val() === true) {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
+                } else {
+                    document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
+                }
+            });
+        }
+
+        // Seleccionar proceso (Recolección, Reposición o Devoluciones)
+        function seleccionarProceso(proceso) {
+            // Quitar clase activa de todos los botones
+            document.getElementById('btnRecoleccion').classList.remove('btn-active');
+            document.getElementById('btnReposicion').classList.remove('btn-active');
+            document.getElementById('btnDevoluciones').classList.remove('btn-active');
+            
+            // Agregar clase activa al botón seleccionado
+            document.getElementById('btn' + proceso.charAt(0).toUpperCase() + proceso.slice(1)).classList.add('btn-active');
+            
+            // Actualizar proceso seleccionado
+            procesoSeleccionado = proceso;
+            
+            // Recargar datos
+            cargarDatos();
+        }
+
+        // Seleccionar fecha (Ayer o Hoy)
+        function seleccionarFecha(fecha) {
+            // Quitar clase activa de todos los botones
+            document.getElementById('btnAyer').classList.remove('btn-active');
+            document.getElementById('btnHoy').classList.remove('btn-active');
+            
+            // Agregar clase activa al botón seleccionado
+            document.getElementById('btn' + fecha.charAt(0).toUpperCase() + fecha.slice(1)).classList.add('btn-active');
+            
+            // Actualizar fecha seleccionada
+            fechaSeleccionada = fecha;
+            
+            // Recargar datos
+            cargarDatos();
+        }
+
+        // Obtener el rango de fechas según la selección
+        function obtenerRangoFechas() {
+            const hoy = new Date();
+            let inicio, fin;
+            
+            if (fechaSeleccionada === 'hoy') {
+                inicio = new Date(hoy);
+                inicio.setHours(0, 0, 0, 0);
+                fin = new Date(hoy);
+                fin.setHours(23, 59, 59, 999);
+            } else { // ayer
+                const ayer = new Date(hoy);
+                ayer.setDate(hoy.getDate() - 1);
+                inicio = new Date(ayer);
+                inicio.setHours(0, 0, 0, 0);
+                fin = new Date(ayer);
+                fin.setHours(23, 59, 59, 999);
+            }
+            
+            return { inicio, fin };
+        }
+
+        // Formatear fecha para mostrar
+        function formatearFechaParaMostrar(date) {
+            const dia = String(date.getDate()).padStart(2, '0');
+            const mes = String(date.getMonth() + 1).padStart(2, '0');
+            const año = date.getFullYear();
+            return `${dia}/${mes}/${año}`;
+        }
+
+        // Convertir fecha de string a objeto Date
+        function parsearFecha(fechaStr) {
+            if (!fechaStr) return null;
+            
+            // Asumimos formato DD/MM/YYYY
+            const partes = fechaStr.split('/');
+            if (partes.length === 3) {
+                const dia = parseInt(partes[0], 10);
+                const mes = parseInt(partes[1], 10) - 1; // Meses en JS son 0-indexados
+                const año = parseInt(partes[2], 10);
+                
+                // Si el año tiene solo 2 dígitos, asumimos siglo 20 o 21
+                const añoCompleto = año < 100 ? (año < 50 ? 2000 + año : 1900 + año) : año;
+                
+                return new Date(añoCompleto, mes, dia);
+            }
+            return null;
+        }
+
+        // Cargar datos desde Firebase según el proceso y fecha seleccionados
+        function cargarDatos() {
+            mostrarMensaje('Cargando datos...', true);
+            
+            const { inicio, fin } = obtenerRangoFechas();
+            const fechaInicioFormateada = formatearFechaParaMostrar(inicio);
+            const fechaFinFormateada = formatearFechaParaMostrar(fin);
+            
+            let refPath = '';
+            let columnas = [];
+            
+            // Definir la ruta de Firebase y las columnas según el proceso seleccionado
+            switch(procesoSeleccionado) {
+                case 'recoleccion':
+                    refPath = 'recolecciones';
+                    columnas = [
+                        { title: 'USUARIO', data: 'usuario', defaultContent: '' },
+                        { title: 'RUTA', data: 'ruta', defaultContent: '' },
+                        { title: 'COLA', data: 'cola', defaultContent: '' },
+                        { title: 'DEPOSITO', data: 'deposito', defaultContent: '' },
+                        { title: 'UPC', data: 'upc', defaultContent: '' },
+                        { title: 'DESCRIPCION', data: 'descripcion', defaultContent: '' },
+                        { title: 'CANTIDAD_PLANIFICADA', data: 'cantidad_planificada', defaultContent: '' },
+                        { title: 'CANTIDAD_RECOLECTADA', data: 'cantidad_recolectada', defaultContent: '' },
+                        { title: 'NO_ENCONTRADO', data: 'no_encontrado', defaultContent: '' },
+                        { title: 'ACCION', data: 'accion', defaultContent: '' },
+                        { title: 'TIPO_RECOLECCION', data: 'tipo_recoleccion', defaultContent: '' },
+                        { title: 'DEPOSITO_DESTINO', data: 'deposito_destino', defaultContent: '' },
+                        { title: 'FECHA', data: 'fecha', defaultContent: '' },
+                        { title: 'HORA', data: 'hora', defaultContent: '' }
+                    ];
+                    break;
+                case 'reposicion':
+                    refPath = 'reposiciones';
+                    columnas = [
+                        { title: 'USUARIO', data: 'usuario', defaultContent: '' },
+                        { title: 'RUTA', data: 'ruta', defaultContent: '' },
+                        { title: 'COLA', data: 'cola', defaultContent: '' },
+                        { title: 'DEPOSITO', data: 'deposito', defaultContent: '' },
+                        { title: 'UPC', data: 'upc', defaultContent: '' },
+                        { title: 'DESCRIPCION', data: 'descripcion', defaultContent: '' },
+                        { title: 'CANTIDAD', data: 'cantidad', defaultContent: '' },
+                        { title: 'FECHA', data: 'fecha', defaultContent: '' },
+                        { title: 'HORA', data: 'hora', defaultContent: '' }
+                    ];
+                    break;
+                case 'devoluciones':
+                    refPath = 'devoluciones';
+                    columnas = [
+                        { title: 'USUARIO', data: 'usuario', defaultContent: '' },
+                        { title: 'RUTA', data: 'ruta', defaultContent: '' },
+                        { title: 'COLA', data: 'cola', defaultContent: '' },
+                        { title: 'DEPOSITO', data: 'deposito', defaultContent: '' },
+                        { title: 'UPC', data: 'upc', defaultContent: '' },
+                        { title: 'DESCRIPCION', data: 'descripcion', defaultContent: '' },
+                        { title: 'CANTIDAD', data: 'cantidad', defaultContent: '' },
+                        { title: 'FECHA', data: 'fecha', defaultContent: '' },
+                        { title: 'HORA', data: 'hora', defaultContent: '' }
+                    ];
+                    break;
+            }
+            
+            // Obtener datos de Firebase
+            const ref = database.ref(refPath);
+            ref.once('value')
+                .then(snapshot => {
+                    const datos = [];
+                    snapshot.forEach(childSnapshot => {
+                        const dato = childSnapshot.val();
+                        // Filtrar por fecha
+                        if (dato.fecha) {
+                            const fechaDato = parsearFecha(dato.fecha);
+                            if (fechaDato && fechaDato >= inicio && fechaDato <= fin) {
+                                datos.push(dato);
+                            }
+                        }
+                    });
+                    
+                    datosActuales = datos;
+                    
+                    // Inicializar o actualizar DataTable
+                    if (dataTable) {
+                        dataTable.destroy();
+                    }
+                    
+                    dataTable = $('#dataTable').DataTable({
+                        data: datos,
+                        columns: columnas,
+                        pageLength: 50,
+                        lengthMenu: [10, 25, 50, 100],
+                        language: {
+                            search: "Buscar:",
+                            lengthMenu: "Mostrar _MENU_ registros",
+                            info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                            infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                            infoFiltered: "(filtrado de _MAX_ registros totales)",
+                            paginate: {
+                                first: "Primero",
+                                last: "Último",
+                                next: "Siguiente",
+                                previous: "Anterior"
+                            }
+                        },
+                        dom: 'lrtip' // Eliminar el buscador propio de DataTables ya que tenemos el nuestro
+                    });
+                    
+                    if (datos.length === 0) {
+                        mostrarMensaje('No se encontraron datos para los filtros seleccionados', false);
+                    } else {
+                        mostrarMensaje(`Se cargaron ${datos.length} registros (${fechaInicioFormateada})`, true);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar datos:', error);
+                    mostrarMensaje('Error al cargar datos: ' + error.message, false);
+                });
+        }
+
+        // Copiar toda la tabla al portapapeles
+        function copiarTabla() {
+            if (datosActuales.length === 0) {
+                mostrarMensaje('No hay datos para copiar', false);
+                return;
+            }
+            
+            let textoCopiar = '';
+            
+            // Obtener encabezados
+            const headers = dataTable.columns().header().toArray();
+            const headerTexts = headers.map(header => header.textContent);
+            textoCopiar += headerTexts.join('\t') + '\n';
+            
+            // Obtener datos
+            dataTable.rows({ search: 'applied' }).data().each(function(row) {
+                const rowData = [];
+                for (let key in row) {
+                    if (row.hasOwnProperty(key)) {
+                        rowData.push(row[key] || '');
+                    }
+                }
+                textoCopiar += rowData.join('\t') + '\n';
+            });
+            
+            // Copiar al portapapeles
+            navigator.clipboard.writeText(textoCopiar)
+                .then(() => {
+                    mostrarMensaje('Datos copiados al portapapeles', true);
+                })
+                .catch(err => {
+                    console.error('Error al copiar: ', err);
+                    // Fallback para navegadores que no soportan clipboard API
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textoCopiar;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    mostrarMensaje('Datos copiados al portapapeles', true);
+                });
+        }
+
+        // Volver al menú principal
+        function volverAlMenu() {
+            window.location.href = 'index.html';
+        }
+
+        // Mostrar mensajes de estado
+        function mostrarMensaje(mensaje, esExito) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = mensaje;
+            statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

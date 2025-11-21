@@ -120,6 +120,13 @@
         .module-button.monitor:hover {
             background: #333333;
         }
+        .module-button.reportes {
+            background: #008000;
+            color: white;
+        }
+        .module-button.reportes:hover {
+            background: #006600;
+        }
         .button-icon {
             font-size: 12px;
             margin-bottom: 1px;
@@ -292,6 +299,11 @@
                     <div class="button-icon">📈</div>
                     <div class="button-text">MONITOR</div>
                 </button>
+                <!-- NUEVO BOTÓN DE REPORTES -->
+                <button class="module-button reportes" onclick="irAModulo('reportes')">
+                    <div class="button-icon">📑</div>
+                    <div class="button-text">REPORTES</div>
+                </button>
             </div>
         </div>
         
@@ -422,7 +434,7 @@
             }
             
             // Verificar que el módulo existe
-            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad'];
+            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad', 'reportes'];
             if (!modulosExistentes.includes(modulo)) {
                 mostrarMensaje('El módulo ' + modulo + ' no está disponible', false);
                 return;

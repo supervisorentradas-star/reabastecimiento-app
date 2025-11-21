@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reposición - REABASTECIMIENTO SOKSO</title>
     <style>
+        /* Todos los estilos anteriores se mantienen igual */
         * {
             box-sizing: border-box;
             font-family: Arial, sans-serif;
@@ -614,6 +615,38 @@
         let escaneosPendientes = [];
         let colaEnUsoRef = null;
         let estaSincronizando = false;
+        let colasEnUso = {};
+
+        // ================= FUNCIONES DE FECHA =================
+        function obtenerFechaActual() {
+            const ahora = new Date();
+            const dia = String(ahora.getDate()).padStart(2, '0');
+            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+            const año = ahora.getFullYear();
+            return `${dia}/${mes}/${año}`;
+        }
+
+        function convertirFechaFirebase(fechaFirebase) {
+            if (!fechaFirebase) return null;
+            
+            // Si ya está en formato dd/mm/yyyy, devolverlo directamente
+            if (typeof fechaFirebase === 'string' && fechaFirebase.includes('/')) {
+                return fechaFirebase;
+            }
+            
+            // Si es un timestamp de Firebase
+            if (typeof fechaFirebase === 'number' || typeof fechaFirebase === 'string') {
+                const fecha = new Date(parseInt(fechaFirebase));
+                if (!isNaN(fecha.getTime())) {
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const año = fecha.getFullYear();
+                    return `${dia}/${mes}/${año}`;
+                }
+            }
+            
+            return null;
+        }
 
         // ================= INICIALIZACIÓN =================
         window.addEventListener('load', function() {
@@ -661,6 +694,13 @@
                         document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
                     }
                 });
+
+                // Escuchar cambios en colas en uso
+                database.ref('colasEnUso').on('value', (snapshot) => {
+                    colasEnUso = snapshot.val() || {};
+                    actualizarListaColas();
+                });
+
             } catch (error) {
                 console.error("Error inicializando Firebase:", error);
             }
@@ -684,16 +724,15 @@
                     await cargarDatosReposicion();
                     await cargarEscaneosDesdeFirebase();
                     
-                    // Verificar si la cola sigue disponible
-                    const colaEnUsoSnapshot = await database.ref(`colasEnUso/${colaSeleccionada}`).once('value');
-                    if (colaEnUsoSnapshot.exists() && colaEnUsoSnapshot.val().usuario !== usuarioActual) {
-                        mostrarError(`La cola ${colaSeleccionada} está siendo trabajada por ${colaEnUsoSnapshot.val().usuario}. No puedes reanudar.`);
+                    // Verificar si la cola sigue disponible y nos pertenece
+                    if (colasEnUso[colaSeleccionada] && colasEnUso[colaSeleccionada].usuario !== usuarioActual) {
+                        mostrarError(`La cola ${colaSeleccionada} está siendo trabajada por ${colasEnUso[colaSeleccionada].usuario}. No puedes reanudar.`);
                         limpiarSesionActiva();
                         mostrarSeleccionColas();
                         return;
                     }
                     
-                    // Marcar la cola como en uso
+                    // Marcar la cola como en uso (con manejo de permisos)
                     await marcarColaEnUso(colaSeleccionada);
                     
                     mostrarPanelReposicion();
@@ -713,7 +752,8 @@
                 const recoleccionData = recoleccionSnapshot.val();
                 
                 if (!recoleccionData) {
-                    throw new Error('No se encontraron datos en recolecciones');
+                    mostrarMensaje('No se encontraron datos en recolecciones', 'warning');
+                    return;
                 }
                 
                 // PROCESAR DATOS PARA REPOSICIÓN
@@ -724,6 +764,7 @@
                 
             } catch (error) {
                 console.error('❌ ERROR CRÍTICO:', error);
+                mostrarError('Error cargando datos: ' + error.message);
             }
         }
 
@@ -731,10 +772,19 @@
         async function procesarDatosReposicion(recoleccionData) {
             datosReposicion = {};
             colasDisponibles = [];
+            const fechaActual = obtenerFechaActual();
+            
+            console.log("📅 Filtrando por fecha actual:", fechaActual);
             
             // PROCESAR CADA REGISTRO DE RECOLECCIÓN
             Object.values(recoleccionData).forEach(registro => {
                 try {
+                    // VERIFICAR FECHA - Solo procesar registros de hoy
+                    const fechaRegistro = convertirFechaFirebase(registro.fecha);
+                    if (fechaRegistro !== fechaActual) {
+                        return; // Saltar registros que no son de hoy
+                    }
+                    
                     // VERIFICAR QUE TENGA LOS CAMPOS NECESARIOS
                     const depositoDestino = registro.deposito_destino;
                     const colaReposicion = registro.cola_reposicion;
@@ -780,6 +830,11 @@
                 } catch (error) {
                     console.error("Error procesando registro:", error);
                 }
+            });
+            
+            console.log("📊 Datos procesados:", {
+                colasDisponibles: colasDisponibles,
+                datosReposicion: datosReposicion
             });
             
             // ORDENAR COLAS
@@ -834,9 +889,10 @@
             if (colasDisponibles.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #7f8c8d;">
-                        <p>No hay colas activas para reponer</p>
+                        <p>No hay colas activas para reponer hoy</p>
                         <p style="font-size: 10px; margin-top: 8px;">
-                            Los datos se cargan automáticamente cuando hay recolección procesada
+                            Fecha actual: ${obtenerFechaActual()}<br>
+                            Los datos se cargan automáticamente cuando hay recolección procesada para hoy
                         </p>
                     </div>
                 `;
@@ -847,36 +903,51 @@
                 const datosCola = datosReposicion[cola];
                 const div = document.createElement('div');
                 
-                // Verificar si la cola está en uso
-                const colaEnUso = localStorage.getItem(`colaEnUso_${cola}`);
-                const estaEnUso = colaEnUso && colaEnUso !== usuarioActual;
+                // Verificar si la cola está en uso por OTRO usuario
+                const colaEstaEnUso = colasEnUso[cola];
+                const estaEnUsoPorOtro = colaEstaEnUso && colaEstaEnUso.usuario !== usuarioActual;
                 
-                div.className = `cola-button ${estaEnUso ? 'disabled' : ''}`;
+                div.className = `cola-button ${estaEnUsoPorOtro ? 'disabled' : ''}`;
                 div.innerHTML = `
                     <strong>COLA ${cola}</strong><br>
                     <span style="font-size: 11px;">
                         ${datosCola.cantidadTotal} unidades - ${Object.keys(datosCola.depositos).length} depósitos
                     </span>
-                    ${estaEnUso ? '<br><small style="color:#e74c3c;">EN USO</small>' : ''}
+                    ${estaEnUsoPorOtro ? `<br><small style="color:#e74c3c;">EN USO POR ${colaEstaEnUso.usuario}</small>` : ''}
+                    ${colaEstaEnUso && colaEstaEnUso.usuario === usuarioActual ? `<br><small style="color:#27ae60;">TRABAJANDO</small>` : ''}
                 `;
                 
-                if (!estaEnUso) {
+                if (!estaEnUsoPorOtro) {
                     div.onclick = () => seleccionarCola(cola);
+                } else {
+                    div.title = `Esta cola está siendo trabajada por ${colaEstaEnUso.usuario}`;
                 }
+                
                 container.appendChild(div);
             });
         }
 
+        // ================= VERIFICACIÓN DE PERMISOS PARA COLASENUSO =================
+        async function verificarYConfigurarColasEnUso() {
+            try {
+                // Verificar si podemos escribir en colasEnUso
+                const testRef = database.ref('colasEnUso/test');
+                await testRef.set({ test: Date.now() });
+                await testRef.remove();
+                console.log("✅ Permisos de colasEnUso verificados correctamente");
+                return true;
+            } catch (error) {
+                console.error("❌ Error de permisos en colasEnUso:", error);
+                mostrarError("Error de permisos en Firebase. No se puede bloquear la cola.");
+                return false;
+            }
+        }
+
         async function seleccionarCola(cola) {
             // Verificar si la cola está siendo usada por otro usuario
-            const colaEnUsoSnapshot = await database.ref(`colasEnUso/${cola}`).once('value');
-            if (colaEnUsoSnapshot.exists()) {
-                const datosUso = colaEnUsoSnapshot.val();
-                // Si la cola está en uso por otro usuario, no permitir
-                if (datosUso.usuario !== usuarioActual) {
-                    mostrarError(`La cola ${cola} está siendo trabajada por ${datosUso.usuario}. No puedes ingresar.`);
-                    return;
-                }
+            if (colasEnUso[cola] && colasEnUso[cola].usuario !== usuarioActual) {
+                mostrarError(`La cola ${cola} está siendo trabajada por ${colasEnUso[cola].usuario}. No puedes ingresar.`);
+                return;
             }
             
             colaSeleccionada = cola;
@@ -892,35 +963,48 @@
         }
 
         async function marcarColaEnUso(cola) {
-            if (colaEnUsoRef) {
-                // Limpiar el listener anterior
-                colaEnUsoRef.off();
-            }
-            
-            // Marcar la cola como en uso
-            await database.ref(`colasEnUso/${cola}`).set({
-                usuario: usuarioActual,
-                timestamp: Date.now()
-            });
-            
-            // Guardar localmente
-            localStorage.setItem(`colaEnUso_${cola}`, usuarioActual);
-            
-            // Escuchar cambios en el estado de la cola (por si otro usuario la toma)
-            colaEnUsoRef = database.ref(`colasEnUso/${cola}`);
-            colaEnUsoRef.on('value', (snapshot) => {
-                if (!snapshot.exists()) {
-                    // La cola fue liberada
-                    mostrarError('La cola ha sido liberada. No puedes continuar trabajando.');
-                    limpiarSesionActiva();
-                    mostrarSeleccionColas();
-                } else if (snapshot.val().usuario !== usuarioActual) {
-                    // Otro usuario tomó la cola
-                    mostrarError(`La cola ${cola} ha sido tomada por ${snapshot.val().usuario}. No puedes continuar.`);
-                    limpiarSesionActiva();
-                    mostrarSeleccionColas();
+            try {
+                if (colaEnUsoRef) {
+                    // Limpiar el listener anterior
+                    colaEnUsoRef.off();
                 }
-            });
+                
+                // Verificar permisos primero
+                const tienePermisos = await verificarYConfigurarColasEnUso();
+                if (!tienePermisos) {
+                    // Si no hay permisos, continuar sin bloqueo de cola
+                    console.warn("Continuando sin bloqueo de cola por falta de permisos");
+                    return;
+                }
+                
+                // Marcar la cola como en uso
+                await database.ref(`colasEnUso/${cola}`).set({
+                    usuario: usuarioActual,
+                    timestamp: Date.now(),
+                    fecha: obtenerFechaActual()
+                });
+                
+                // Escuchar cambios en el estado de la cola (por si otro usuario la toma)
+                colaEnUsoRef = database.ref(`colasEnUso/${cola}`);
+                colaEnUsoRef.on('value', (snapshot) => {
+                    if (!snapshot.exists()) {
+                        // La cola fue liberada
+                        mostrarError('La cola ha sido liberada. No puedes continuar trabajando.');
+                        limpiarSesionActiva();
+                        mostrarSeleccionColas();
+                    } else if (snapshot.val().usuario !== usuarioActual) {
+                        // Otro usuario tomó la cola
+                        mostrarError(`La cola ${cola} ha sido tomada por ${snapshot.val().usuario}. No puedes continuar.`);
+                        limpiarSesionActiva();
+                        mostrarSeleccionColas();
+                    }
+                });
+                
+            } catch (error) {
+                console.error("Error marcando cola en uso:", error);
+                // Continuar sin el bloqueo si hay error
+                mostrarMensaje("Advertencia: No se pudo bloquear la cola, pero puedes continuar trabajando.", "warning");
+            }
         }
 
         async function liberarColaEnUso(cola) {
@@ -930,13 +1014,15 @@
             }
             
             if (cola) {
-                // Verificar que la cola aún nos pertenece antes de liberar
-                const colaEnUsoSnapshot = await database.ref(`colasEnUso/${cola}`).once('value');
-                if (colaEnUsoSnapshot.exists() && colaEnUsoSnapshot.val().usuario === usuarioActual) {
-                    await database.ref(`colasEnUso/${cola}`).remove();
+                try {
+                    // Verificar que la cola aún nos pertenece antes de liberar
+                    const colaEnUsoSnapshot = await database.ref(`colasEnUso/${cola}`).once('value');
+                    if (colaEnUsoSnapshot.exists() && colaEnUsoSnapshot.val().usuario === usuarioActual) {
+                        await database.ref(`colasEnUso/${cola}`).remove();
+                    }
+                } catch (error) {
+                    console.error("Error liberando cola:", error);
                 }
-                // Limpiar localmente
-                localStorage.removeItem(`colaEnUso_${cola}`);
             }
         }
 
@@ -1278,7 +1364,7 @@
 
         function mostrarMensaje(mensaje, tipo = 'success') {
             const container = document.getElementById('messageContainer');
-            container.innerHTML = `<div class="${tipo}-message">${mensaje}</div>`;
+            container.innerHTML = `<div class="${tipo === 'success' ? 'status-success' : 'status-warning'}">${mensaje}</div>`;
             setTimeout(() => {
                 container.innerHTML = '';
             }, 3000);
