@@ -679,6 +679,9 @@
 
             // Intentar sincronizar escaneos pendientes cada 10 segundos
             setInterval(sincronizarEscaneosPendientes, 10000);
+            
+            // Verificar si hay colas en uso pero abandonadas (sin actividad en 5 minutos)
+            setInterval(limpiarColasAbandonadas, 30000);
         });
 
         // ================= CONEXIÓN FIREBASE =================
@@ -724,7 +727,7 @@
                     await cargarDatosReposicion();
                     await cargarEscaneosDesdeFirebase();
                     
-                    // Verificar si la cola sigue disponible y nos pertenece
+                    // Verificar si la cola sigue disponible y no está siendo trabajada por otro usuario
                     if (colasEnUso[colaSeleccionada] && colasEnUso[colaSeleccionada].usuario !== usuarioActual) {
                         mostrarError(`La cola ${colaSeleccionada} está siendo trabajada por ${colasEnUso[colaSeleccionada].usuario}. No puedes reanudar.`);
                         limpiarSesionActiva();
@@ -732,10 +735,14 @@
                         return;
                     }
                     
-                    // Marcar la cola como en uso (con manejo de permisos)
-                    await marcarColaEnUso(colaSeleccionada);
-                    
-                    mostrarPanelReposicion();
+                    // Si la cola está marcada como en uso por nosotros, reanudar
+                    if (colasEnUso[colaSeleccionada] && colasEnUso[colaSeleccionada].usuario === usuarioActual) {
+                        await actualizarTimestampCola(colaSeleccionada);
+                        mostrarPanelReposicion();
+                    } else {
+                        // Si no está en uso, simplemente mostrar el panel sin marcar como en uso
+                        mostrarPanelReposicion();
+                    }
                     
                 } catch (error) {
                     console.error('Error recuperando sesión:', error);
@@ -952,7 +959,6 @@
             
             colaSeleccionada = cola;
             guardarSesionActiva();
-            await marcarColaEnUso(cola);
             
             document.getElementById('colaHeader').textContent = `${cola} TRABAJANDO`;
             
@@ -962,13 +968,9 @@
             mostrarPanelReposicion();
         }
 
-        async function marcarColaEnUso(cola) {
+        // ================= NUEVA FUNCIÓN: MARCAR COLA COMO EN USO =================
+        async function marcarColaComoEnUso(cola) {
             try {
-                if (colaEnUsoRef) {
-                    // Limpiar el listener anterior
-                    colaEnUsoRef.off();
-                }
-                
                 // Verificar permisos primero
                 const tienePermisos = await verificarYConfigurarColasEnUso();
                 if (!tienePermisos) {
@@ -985,6 +987,10 @@
                 });
                 
                 // Escuchar cambios en el estado de la cola (por si otro usuario la toma)
+                if (colaEnUsoRef) {
+                    colaEnUsoRef.off();
+                }
+                
                 colaEnUsoRef = database.ref(`colasEnUso/${cola}`);
                 colaEnUsoRef.on('value', (snapshot) => {
                     if (!snapshot.exists()) {
@@ -1004,6 +1010,34 @@
                 console.error("Error marcando cola en uso:", error);
                 // Continuar sin el bloqueo si hay error
                 mostrarMensaje("Advertencia: No se pudo bloquear la cola, pero puedes continuar trabajando.", "warning");
+            }
+        }
+
+        // ================= NUEVA FUNCIÓN: ACTUALIZAR TIMESTAMP COLA =================
+        async function actualizarTimestampCola(cola) {
+            try {
+                await database.ref(`colasEnUso/${cola}/timestamp`).set(Date.now());
+            } catch (error) {
+                console.error("Error actualizando timestamp:", error);
+            }
+        }
+
+        // ================= NUEVA FUNCIÓN: LIMPIAR COLAS ABANDONADAS =================
+        async function limpiarColasAbandonadas() {
+            const ahora = Date.now();
+            const tiempoMaximoInactividad = 5 * 60 * 1000; // 5 minutos
+            
+            try {
+                for (const cola in colasEnUso) {
+                    const colaData = colasEnUso[cola];
+                    if (ahora - colaData.timestamp > tiempoMaximoInactividad) {
+                        // La cola ha estado inactiva por más de 5 minutos, liberarla
+                        await database.ref(`colasEnUso/${cola}`).remove();
+                        console.log(`Cola ${cola} liberada por inactividad`);
+                    }
+                }
+            } catch (error) {
+                console.error("Error limpiando colas abandonadas:", error);
             }
         }
 
@@ -1185,6 +1219,14 @@
             }
             
             document.getElementById('upcInput').classList.remove('error');
+            
+            // MARCAR LA COLA COMO EN USO CUANDO SE ESCANEA EL PRIMER UPC
+            if (!colasEnUso[colaSeleccionada] || colasEnUso[colaSeleccionada].usuario !== usuarioActual) {
+                await marcarColaComoEnUso(colaSeleccionada);
+            } else {
+                // Actualizar timestamp para indicar actividad reciente
+                await actualizarTimestampCola(colaSeleccionada);
+            }
             
             // REGISTRAR ESCANEO
             await registrarEscaneoReposicion(upc);
