@@ -283,6 +283,10 @@
                     <div class="button-icon">🔄</div>
                     <div class="button-text">REPOSICIÓN</div>
                 </button>
+                <button class="module-button" onclick="irAModulo('devoluciones')">
+                    <div class="button-icon">📤</div>
+                    <div class="button-text">DEVOLUCIONES</div>
+                </button>
             </div>
             
             <!-- Columna derecha -->
@@ -299,7 +303,6 @@
                     <div class="button-icon">📈</div>
                     <div class="button-text">MONITOR</div>
                 </button>
-                <!-- NUEVO BOTÓN DE REPORTES -->
                 <button class="module-button reportes" onclick="irAModulo('reportes')">
                     <div class="button-icon">📑</div>
                     <div class="button-text">REPORTES</div>
@@ -365,6 +368,18 @@
             storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
             messagingSenderId: "107012533068",
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+
+        // Mapeo de módulos a archivos HTML
+        const modulosMap = {
+            'recoleccion': 'interfaz-recoleccion.html',
+            'separacion': 'separacion.html',
+            'reposicion': 'interfaz_reposicion.html',
+            'devoluciones': 'Interfaz-Devoluciones.html',
+            'productividad': 'productividad.html',
+            'reportes': 'reportes.html',
+            'admin': 'interfaz-admin.html',
+            'monitor': 'monitor.html'
         };
 
         const app = firebase.initializeApp(firebaseConfig);
@@ -433,9 +448,11 @@
                 return;
             }
             
+            // Obtener el nombre del archivo desde el mapeo
+            const archivoDestino = modulosMap[modulo];
+            
             // Verificar que el módulo existe
-            const modulosExistentes = ['recoleccion', 'separacion', 'reposicion', 'productividad', 'reportes'];
-            if (!modulosExistentes.includes(modulo)) {
+            if (!archivoDestino) {
                 mostrarMensaje('El módulo ' + modulo + ' no está disponible', false);
                 return;
             }
@@ -444,15 +461,8 @@
             localStorage.setItem('usuarioSokso', usuarioActual);
             
             // Intentar cargar el módulo
-            const moduloUrl = modulo + '.html';
-            
-            // Usar una técnica más robusta para verificar si el archivo existe
-            const link = document.createElement('a');
-            link.href = moduloUrl;
-            
-            // Intentar redirigir directamente
             try {
-                window.location.href = moduloUrl;
+                window.location.href = archivoDestino;
             } catch (error) {
                 console.error('Error al redirigir:', error);
                 mostrarMensaje('Error: No se pudo cargar el módulo ' + modulo, false);
@@ -480,7 +490,7 @@
                 
                 // Intentar cargar el módulo admin
                 try {
-                    window.location.href = 'admin.html';
+                    window.location.href = modulosMap['admin'];
                 } catch (error) {
                     console.error('Error al redirigir a admin:', error);
                     mostrarMensaje('Error: No se pudo cargar el módulo admin', false);
@@ -518,7 +528,7 @@
                 
                 // Intentar cargar el módulo monitor
                 try {
-                    window.location.href = 'monitor.html';
+                    window.location.href = modulosMap['monitor'];
                 } catch (error) {
                     console.error('Error al redirigir a monitor:', error);
                     mostrarMensaje('Error: No se pudo cargar el módulo monitor', false);

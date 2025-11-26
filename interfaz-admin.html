@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - REABASTECIMIENTO SOKSO</title>
+    <!-- Librería para exportar a Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: white;
+            padding: 20px;
+            color: black;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        h1 {
+            color: #6600a1;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            color: #6600a1;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        .connection-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .connection-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .module-selector {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .module-tab {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            top: 0;
+        }
+        .module-tab.active {
+            background: #6600a1;
+            color: white;
+            border: 2px solid #6600a1;
+        }
+        .module-tab:hover {
+            background: #e0e0e0;
+        }
+        .module-tab.active:hover {
+            background: #55008a;
+            border-color: #55008a;
+        }
+        .admin-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .admin-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .admin-button:hover {
+            background: #55008a;
+        }
+        .admin-button.warning {
+            background: #f39c12;
+        }
+        .admin-button.warning:hover {
+            background: #e67e22;
+        }
+        .admin-button.success {
+            background: #27ae60;
+        }
+        .admin-button.success:hover {
+            background: #219653;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        .dashboard-table th, .dashboard-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .dashboard-table th {
+            background: #6600a1;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+            font-weight: bold;
+        }
+        .status-pending {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        .back-button {
+            background: #6600a1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .back-button:hover {
+            background: #55008a;
+        }
+        .status-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            font-size: 14px;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 16px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6600a1;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .hidden {
+            display: none;
+        }
+        /* Estilos para modales */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal h3 {
+            color: #6600a1;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .modal p {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 14px;
+        }
+        input[type="password"], input[type="file"], select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .modal-button.success {
+            background: #6600a1;
+            color: white;
+        }
+        .modal-button.warning {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #27ae60;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+            text-align: left;
+        }
+        .password-field {
+            margin: 15px 0;
+        }
+        .upload-mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .upload-mode {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .upload-mode.selected {
+            border-color: #6600a1;
+            background: #f0e6f5;
+            color: #6600a1;
+        }
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .user-table th, .user-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .user-table th {
+            background: #6600a1;
+            color: white;
+            font-weight: bold;
+        }
+        .user-active {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+        .user-inactive {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Admin - REABASTECIMIENTO SOKSO</h1>
+            <div class="connection-status">
+                <div class="connection-item">
+                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                    <span>FIREBASE</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- SELECTOR DE MÓDULO -->
+        <div class="module-selector">
+            <button class="module-tab active" onclick="cambiarModulo('recoleccion', this)">📦 Recolección</button>
+            <button class="module-tab" onclick="cambiarModulo('reposicion', this)">🔄 Reposición</button>
+            <button class="module-tab" onclick="cambiarModulo('rutas', this)">📋 RUTAS & COLAS</button>
+            <button class="module-tab" onclick="cambiarModulo('sloting', this)">📤 Gestión Sloting</button>
+            <button class="module-tab" onclick="cambiarModulo('usuarios', this)">👥 Usuarios Conectados</button>
+        </div>
+
+        <!-- ESTADÍSTICAS RÁPIDAS -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalRutas">0</div>
+                <div class="stat-label">Rutas Activas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="rutasCompletadas">0</div>
+                <div class="stat-label">Rutas Completadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalRegistros">0/0</div>
+                <div class="stat-label" id="labelRegistros">Planificado/Recolectado</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalOperarios">0/0</div>
+                <div class="stat-label" id="labelOperarios">Picado/Repuesto</div>
+            </div>
+        </div>
+
+        <!-- CONTROLES ADMIN - PANEL PRINCIPAL -->
+        <div id="adminMainPanel" class="admin-controls">
+            <button class="admin-button" onclick="actualizarDesdeFirebase()">🔄 Actualizar desde Firebase</button>
+            <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
+        </div>
+
+        <!-- CONTROLES ADMIN - PANEL RUTAS & COLAS -->
+        <div id="adminRutasPanel" class="admin-controls hidden">
+            <button class="admin-button success" onclick="solicitarSubirRutas('recoleccion')">📤 Subir Recolección</button>
+            <button class="admin-button warning" onclick="verificarRutasActuales()">🔍 Ver Rutas Actuales</button>
+        </div>
+
+        <!-- CONTROLES ADMIN - PANEL SLOTING -->
+        <div id="adminSlotingPanel" class="admin-controls hidden">
+            <button class="admin-button success" onclick="solicitarSubirSloting()">📤 Subir Sloting</button>
+        </div>
+
+        <!-- PANEL DE CONTROL - ESTADO DE RUTAS -->
+        <div id="routesPanel" class="section">
+            <h2 id="panelTitulo">Estado de Rutas - Recolección</h2>
+            <div id="dashboardLoading" class="loading">Cargando estado de rutas...</div>
+            <table class="dashboard-table" id="dashboardTable" style="display:none">
+                <thead id="dashboardTableHead">
+                    <!-- Se llenará dinámicamente según el módulo -->
+                </thead>
+                <tbody id="dashboardTableBody">
+                    <!-- Los datos se llenarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PANEL DE RUTAS & COLAS -->
+        <div id="rutasPanel" class="section hidden">
+            <h2>Gestión de Rutas & Colas</h2>
+            <div class="file-info">
+                <strong>Estado de Recolección:</strong> <span id="recoleccionStatus">No hay datos cargados</span><br>
+                <strong>Última actualización:</strong> <span id="recoleccionLastUpdate">-</span><br>
+                <strong>Total de registros:</strong> <span id="recoleccionTotalRecords">0</span>
+            </div>
+            
+            <div id="recoleccionPreview" style="margin-top: 15px; display: none;">
+                <h3>Vista Previa de Recolección</h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>DEPOSITO</th>
+                            <th>CODIGO UPC</th>
+                            <th>ARTICULO</th>
+                            <th>CANTIDAD</th>
+                            <th>INDICADOR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recoleccionPreviewBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PANEL DE SLOTING -->
+        <div id="slotingPanel" class="section hidden">
+            <h2>Gestión de Sloting</h2>
+            <div id="slotingInfo" class="file-info">
+                <strong>Estado del Sloting:</strong> <span id="slotingStatus">No hay datos cargados</span><br>
+                <strong>Última actualización:</strong> <span id="slotingLastUpdate">-</span><br>
+                <strong>Total de registros:</strong> <span id="slotingTotalRecords">0</span>
+            </div>
+            
+            <div id="slotingPreview" style="margin-top: 15px; display: none;">
+                <h3>Vista Previa del Sloting</h3>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>CODIGO_UPC</th>
+                            <th>ARTICULO</th>
+                            <th>DEPOSITO FINAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slotingPreviewBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PANEL DE USUARIOS CONECTADOS -->
+        <div id="usuariosPanel" class="section hidden">
+            <h2>Usuarios Conectados</h2>
+            <div id="usuariosLoading" class="loading">Cargando información de usuarios...</div>
+            <table class="user-table" id="usuariosTable" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th>Última Actividad</th>
+                        <th>Tiempo Conectado</th>
+                        <th>Módulo Activo</th>
+                    </tr>
+                </thead>
+                <tbody id="usuariosTableBody">
+                    <!-- Los datos se llenarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <button class="back-button" onclick="volverInterfazPrincipal()">↩️ Regresar a Interfaz Principal</button>
+        </div>
+    </div>
+
+    <!-- MODAL PARA SUBIR RUTAS & COLAS -->
+    <div id="rutasModal" class="modal">
+        <div class="modal-content">
+            <h3 id="rutasModalTitle">Subir Rutas & Colas</h3>
+            <p id="rutasModalDescription">Selecciona el archivo CSV con los datos:</p>
+            
+            <div class="file-info">
+                <strong id="rutasFormatoEsperado">Formato esperado:</strong><br>
+                <span id="rutasColumnasEsperadas"></span>
+            </div>
+            
+            <!-- Selección de modo -->
+            <div class="upload-mode-selector">
+                <div class="upload-mode selected" id="modeReplace" onclick="seleccionarModo('replace')">
+                    🔄 REEMPLAZAR
+                </div>
+                <div class="upload-mode" id="modeAdd" onclick="seleccionarModo('add')">
+                    ➕ AÑADIR
+                </div>
+            </div>
+            
+            <!-- Campo de contraseña -->
+            <div class="password-field">
+                <input type="password" id="rutasPassword" placeholder="Ingresa la contraseña (E1)" required>
+            </div>
+            
+            <input type="file" id="rutasFile" accept=".csv">
+            
+            <div class="progress-bar" id="uploadProgressBar" style="display: none;">
+                <div class="progress-fill" id="uploadProgressFill"></div>
+            </div>
+            
+            <div id="uploadStatus" style="margin: 10px 0; font-size: 14px;"></div>
+            
+            <div class="modal-buttons">
+                <button onclick="procesarRutas()" class="modal-button success">Subir Archivo</button>
+                <button onclick="cerrarRutasModal()" class="modal-button warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA SUBIR SLOTING -->
+    <div id="slotingModal" class="modal">
+        <div class="modal-content">
+            <h3>Subir Nuevo Sloting</h3>
+            <p>Selecciona el archivo CSV con los datos del sloting:</p>
+            
+            <div class="file-info">
+                <strong>Formato esperado:</strong><br>
+                - Columnas: CODIGO_UPC, ARTICULO, DEPOSITO FINAL<br>
+                - Separador: coma o tabulación<br>
+                - Codificación: UTF-8
+            </div>
+            
+            <!-- Campo de contraseña -->
+            <div class="password-field">
+                <input type="password" id="slotingPassword" placeholder="Ingresa la contraseña (E1)" required>
+            </div>
+            
+            <input type="file" id="slotingFile" accept=".csv">
+            
+            <div class="progress-bar" id="slotingProgressBar" style="display: none;">
+                <div class="progress-fill" id="slotingProgressFill"></div>
+            </div>
+            
+            <div id="slotingUploadStatus" style="margin: 10px 0; font-size: 14px;"></div>
+            
+            <div class="modal-buttons">
+                <button onclick="procesarSloting()" class="modal-button success">Subir Sloting</button>
+                <button onclick="cerrarSlotingModal()" class="modal-button warning">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="funcionalidades-admin.js"></script>
+</body>
+</html>

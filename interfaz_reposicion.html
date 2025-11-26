@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reposición - REABASTECIMIENTO SOKSO</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: white;
+            padding: 8px;
+            color: #8a0bd2;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #8a0bd2;
+        }
+        .header-left, .header-center, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .connection-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .connected {
+            background-color: #27ae60;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+        }
+        .checking {
+            background-color: #f39c12;
+        }
+        .refresh-button {
+            padding: 6px;
+            font-size: 14px;
+            background: gray;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .data-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+            gap: 6px;
+        }
+        .rutas-section {
+            margin-bottom: 6px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .cola-button {
+            padding: 12px;
+            border: 2px solid #8a0bd2;
+            border-radius: 6px;
+            background: #8a0bd2;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            margin: 4px;
+        }
+        .cola-button:hover {
+            background: #af50e5;
+            border-color: #af50e5;
+        }
+        .cola-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            color: #6c757d;
+            border-color: #6c757d;
+        }
+        .cola-button.completed {
+            background: #27ae60 !important;
+            border-color: #27ae60 !important;
+        }
+        .cola-button.completed:hover {
+            background: #219652 !important;
+            border-color: #219652 !important;
+        }
+        .footer {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 2px solid #8a0bd2;
+            display: flex;
+            justify-content: space-between;
+        }
+        .back-button {
+            background: #af50e5;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Estilos para la ventana 2 */
+        .hidden {
+            display: none;
+        }
+        .current-deposito {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+        .deposito-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #8a0bd2;
+            margin-bottom: 6px;
+        }
+        .articulo-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+        .counters {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .counter-box {
+            background: white;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .counter-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        .counter-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #8a0bd2;
+        }
+        .scan-section {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            text-align: center;
+            border: 1px dashed #bdc3c7;
+        }
+        .scan-section h3 {
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #8a0bd2;
+        }
+        .scan-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 12px;
+            border: 2px solid #8a0bd2;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 6px;
+            background: white;
+        }
+        .scan-input.error {
+            border-color: #e74c3c;
+            background-color: #fdf2f2;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-info {
+            background: #3498db;
+            color: white;
+        }
+        .depositos-list {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+        }
+        .deposito-row {
+            display: grid;
+            grid-template-columns: 20px 1fr 40px 40px;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #ecf0f1;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 11px;
+        }
+        .deposito-row:hover {
+            background: #f8f9fa;
+        }
+        .deposito-row.selected {
+            background: #8a0bd2;
+            color: white;
+        }
+        .deposito-row.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .deposito-header-row {
+            display: grid;
+            grid-template-columns: 20px 1fr 40px 40px;
+            gap: 8px;
+            padding: 8px;
+            background: #8a0bd2;
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 10px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-pending {
+            background: #f39c12;
+        }
+        .status-completed {
+            background: #27ae60;
+        }
+        .status-selected {
+            background: #8a0bd2;
+        }
+        .cache-info {
+            font-size: 9px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: 6px;
+        }
+        .completion-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(40, 167, 69, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .completion-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .completion-message {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #155724;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .fin-cola-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .fin-cola-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .fin-cola-message {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #155724;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 4px 0;
+            text-align: center;
+            font-size: 12px;
+            border: 1px solid #f5c6cb;
+        }
+        .warning-message {
+            background: #fff3cd;
+            color: #856404;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 4px 0;
+            text-align: center;
+            font-size: 12px;
+            border: 1px solid #ffeaa7;
+        }
+        .sync-indicator {
+            font-size: 10px;
+            color: #f39c12;
+            margin-left: 5px;
+        }
+        .sync-indicator.syncing {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .save-indicator {
+            font-size: 10px;
+            color: #27ae60;
+            margin-left: 5px;
+        }
+        .scan-success {
+            animation: scan-success 1s;
+        }
+        @keyframes scan-success {
+            0% { background-color: #d4edda; }
+            100% { background-color: white; }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body>
+    <!-- Overlay para completado -->
+    <div class="completion-overlay" id="completionOverlay">
+        <div class="completion-message">
+            ✅ COMPLETADO<br>
+            <span style="font-size: 14px;">Pasando al siguiente...</span>
+        </div>
+    </div>
+
+    <!-- Overlay para fin de cola -->
+    <div class="fin-cola-overlay" id="finColaOverlay">
+        <div class="fin-cola-message">
+            🏁 FIN DE LA COLA<br>
+            <span style="font-size: 14px;">No hay más depósitos por reponer</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- VENTANA 1: SELECCIÓN DE COLAS -->
+        <div id="ventanaColas">
+            <div class="header">
+                <div class="header-left">
+                    <span>Reposición</span>
+                </div>
+                <div class="header-center">
+                    <span id="usuarioHeader">Usuario</span>
+                </div>
+                <div class="header-right">
+                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <!-- Mensajes de error/éxito -->
+                <div id="messageContainer"></div>
+
+                <h3 style="font-size: 14px; margin-bottom: 10px; text-align: center; color: #8a0bd2;">SELECCIONA UNA COLA PARA REPONER:</h3>
+                <div id="rutasContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <!-- Las colas se cargarán aquí dinámicamente -->
+                </div>
+
+                <div class="cache-info" id="cacheInfo">
+                    Última actualización: No disponible
+                </div>
+            </div>
+
+            <div class="footer">
+                <button class="refresh-button" id="refreshButtonVentana1">🔄 Actualizar</button>
+                <button class="back-button" id="volverAlPrincipalBtn">🚪 Interfaz Principal</button>
+            </div>
+        </div>
+
+        <!-- VENTANA 2: DETALLE DE COLA (OCULTA INICIALMENTE) -->
+        <div class="hidden" id="ventanaReposicion">
+            <div class="header">
+                <div class="header-left">
+                    <span id="tituloCola">COLA: </span>
+                </div>
+                <div class="header-center">
+                    <button class="refresh-button" id="refreshButtonVentana2">↻</button>
+                </div>
+                <div class="header-right">
+                    <span id="saveIndicator" class="save-indicator"></span>
+                    <div id="firebaseIndicatorVentana2" class="connection-indicator checking"></div>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <!-- Mensajes de error/éxito -->
+                <div id="messageContainerVentana2"></div>
+
+                <div class="current-deposito" id="currentDepositoSection">
+                    <div class="deposito-header" id="currentDeposito">-</div>
+                    <div class="articulo-info" id="currentArticulo">-</div>
+                    
+                    <div class="counters">
+                        <div class="counter-box">
+                            <div class="counter-label">CANTIDAD</div>
+                            <div class="counter-value" id="counterSolicitada">0</div>
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">LEÍDA</div>
+                            <div class="counter-value" id="counterRepuesta">0</div>
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">PENDIENTE</div>
+                            <div class="counter-value" id="counterPendiente">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scan-section" id="scanSection">
+                    <h3>ESCANEAR DEPÓSITO</h3>
+                    <input type="text" 
+                           id="depositoInput" 
+                           class="scan-input" 
+                           placeholder="Escanea el código del depósito" 
+                           autocomplete="off">
+                    
+                    <h3>ESCANEAR CÓDIGO UPC</h3>
+                    <input type="text" 
+                           id="upcInput" 
+                           class="scan-input" 
+                           placeholder="Escanea el código UPC del producto" 
+                           autocomplete="off"
+                           disabled>
+                    
+                    <div class="controls">
+                        <button class="btn-warning" id="siguienteDepositoBtn">⏭️ SIG DEPÓSITO</button>
+                        <button class="btn-info" id="volverAColasBtn">↩️ VOLVER A COLAS</button>
+                        <button class="btn-success" id="finalizarReposicionBtn">🏁 FINALIZAR</button>
+                    </div>
+                </div>
+
+                <div class="depositos-list" id="depositosListSection">
+                    <div class="deposito-header-row">
+                        <div></div>
+                        <div>LISTA DE DEPÓSITO - DESCRIPCIÓN</div>
+                        <div>TOTAL</div>
+                        <div>HECHO</div>
+                    </div>
+                    <div id="depositosGrid">
+                        <!-- Los depósitos se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="cache-info" id="cacheInfoVentana2">
+                    Última actualización: No disponible
+                </div>
+            </div>
+
+            <div class="footer">
+                <button class="back-button" id="volverAlPrincipalBtnVentana2">🚪 Interfaz Principal</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="funcionalidad_reposicion.js"></script>
+</body>
+</html>

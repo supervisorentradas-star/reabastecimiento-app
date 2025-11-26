@@ -78,10 +78,9 @@
             <table class="productivity-table" id="tablaRecoleccion" style="display:none">
                 <thead>
                     <tr>
-                        <th>COLA</th>
-                        <th>CDE</th>
                         <th>Recolector</th>
-                        <th>Promedio</th>
+                        <th>Cola</th>
+                        <th>Promedio Diario</th>
                         <th>Total Unidades</th>
                         <th>Días Trabajados</th>
                     </tr>
@@ -100,7 +99,7 @@
                 <thead>
                     <tr>
                         <th>Recolector</th>
-                        <th>Promedio</th>
+                        <th>Promedio Diario</th>
                         <th>Total Unidades</th>
                         <th>Días Trabajados</th>
                     </tr>
@@ -192,8 +191,14 @@
                 database.ref('recolecciones').once('value')
                     .then(snapshot => {
                         const datos = snapshot.val();
-                        datosRecoleccion = datos ? Object.values(datos) : [];
-                        console.log('Datos de recolección cargados:', datosRecoleccion.length);
+                        if (datos) {
+                            // Convertir objeto a array
+                            datosRecoleccion = Object.values(datos);
+                            console.log('Datos de recolección cargados:', datosRecoleccion.length);
+                        } else {
+                            datosRecoleccion = [];
+                            console.log('No hay datos de recolección');
+                        }
                         resolve(datosRecoleccion);
                     })
                     .catch(error => {
@@ -206,18 +211,23 @@
 
         async function cargarDatosReposicion() {
             return new Promise((resolve, reject) => {
-                // Intentar cargar datos de reposición si existen
                 database.ref('reposiciones').once('value')
                     .then(snapshot => {
                         const datos = snapshot.val();
-                        datosReposicion = datos ? Object.values(datos) : [];
-                        console.log('Datos de reposición cargados:', datosReposicion.length);
+                        if (datos) {
+                            // Convertir objeto a array
+                            datosReposicion = Object.values(datos);
+                            console.log('Datos de reposición cargados:', datosReposicion.length);
+                        } else {
+                            datosReposicion = [];
+                            console.log('No hay datos de reposición');
+                        }
                         resolve(datosReposicion);
                     })
                     .catch(error => {
-                        console.log('No se encontraron datos de reposición:', error);
+                        console.error('Error cargando datos de reposición:', error);
                         datosReposicion = [];
-                        resolve([]); // Resolvemos con array vacío en lugar de rechazar
+                        reject(error);
                     });
             });
         }
@@ -240,10 +250,10 @@
             const operarios = {};
             
             datosRecoleccion.forEach(registro => {
-                if (registro.accion === 'escaneado' && registro.usuario && registro.recolectado > 0) {
+                if (registro.usuario && registro.cantidad_recolectada) {
                     const usuario = registro.usuario;
-                    const fecha = new Date(registro.timestamp).toLocaleDateString();
-                    const unidades = registro.recolectado || 0;
+                    const fecha = registro.fechaSistema || registro.fecha || new Date(registro.timestamp).toLocaleDateString();
+                    const unidades = parseInt(registro.cantidad_recolectada) || 0;
                     const cola = registro.cola || 'N/A';
                     
                     if (!operarios[usuario]) {
@@ -282,10 +292,10 @@
             const operarios = {};
             
             datosReposicion.forEach(registro => {
-                if (registro.usuario && registro.unidades) {
+                if (registro.usuario && registro.cantidad) {
                     const usuario = registro.usuario;
-                    const fecha = new Date(registro.timestamp || Date.now()).toLocaleDateString();
-                    const unidades = parseInt(registro.unidades) || 0;
+                    const fecha = registro.fecha || new Date(registro.timestamp).toLocaleDateString();
+                    const unidades = parseInt(registro.cantidad) || 0;
                     
                     if (!operarios[usuario]) {
                         operarios[usuario] = {
@@ -321,14 +331,13 @@
             tbody.innerHTML = '';
             
             if (estadisticas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:15px;">No hay datos de recolección disponibles</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:15px;">No hay datos de recolección disponibles</td></tr>';
             } else {
-                estadisticas.forEach((op, index) => {
+                estadisticas.forEach(op => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${index === 0 ? 'COLA' : ''}</td>
-                        <td>${op.colas || 'N/A'}</td>
                         <td>${op.usuario}</td>
+                        <td>${op.colas || 'N/A'}</td>
                         <td><strong>${op.promedio}</strong></td>
                         <td>${op.totalUnidades}</td>
                         <td>${op.diasTrabajados}</td>
@@ -372,6 +381,9 @@
             [...datosRecoleccion, ...datosReposicion].forEach(registro => {
                 if (registro.timestamp && registro.timestamp > treintaDiasAtras && registro.usuario) {
                     operariosUnicos.add(registro.usuario);
+                } else if (registro.usuario) {
+                    // Si no hay timestamp, incluir igualmente
+                    operariosUnicos.add(registro.usuario);
                 }
             });
             
@@ -383,7 +395,7 @@
             // Calcular promedio general
             const totalDiasRecoleccion = estadisticasRecoleccion.reduce((sum, op) => sum + op.diasTrabajados, 0);
             const totalDiasReposicion = estadisticasReposicion.reduce((sum, op) => sum + op.diasTrabajados, 0);
-            const totalDias = totalDiasRecoleccion + totalDiasReposicion;
+            const totalDias = Math.max(totalDiasRecoleccion, totalDiasReposicion);
             const promedioGeneral = totalDias > 0 ? Math.round(totalUnidades / totalDias) : 0;
             
             // Actualizar UI
