@@ -73,8 +73,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
-            max-height: calc(100vh - 140px);
+            overflow: hidden;
             gap: 6px;
         }
         .rutas-section {
@@ -234,13 +233,28 @@
             background: #3498db;
             color: white;
         }
-        .depositos-list {
+        .depositos-list-container {
             flex: 1;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             border: 1px solid #ddd;
             border-radius: 6px;
-            padding: 8px;
             margin-bottom: 6px;
+        }
+        .depositos-list-header {
+            background: #8a0bd2;
+            color: white;
+            font-weight: bold;
+            border-radius: 4px 4px 0 0;
+            padding: 8px;
+            font-size: 10px;
+        }
+        .depositos-list-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            max-height: 200px;
         }
         .deposito-row {
             display: grid;
@@ -263,18 +277,6 @@
         .deposito-row.completed {
             background: #d4edda;
             color: #155724;
-        }
-        .deposito-header-row {
-            display: grid;
-            grid-template-columns: 20px 1fr 40px 40px;
-            gap: 8px;
-            padding: 8px;
-            background: #8a0bd2;
-            color: white;
-            font-weight: bold;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            font-size: 10px;
         }
         .status-indicator {
             width: 12px;
@@ -441,7 +443,7 @@
                 <div id="messageContainer"></div>
 
                 <h3 style="font-size: 14px; margin-bottom: 10px; text-align: center; color: #8a0bd2;">SELECCIONA UNA COLA PARA REPONER:</h3>
-                <div id="rutasContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <div id="rutasContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; max-height: calc(100vh - 200px);">
                     <!-- Las colas se cargarán aquí dinámicamente -->
                 </div>
 
@@ -518,14 +520,16 @@
                     </div>
                 </div>
 
-                <div class="depositos-list" id="depositosListSection">
-                    <div class="deposito-header-row">
-                        <div></div>
-                        <div>LISTA DE DEPÓSITO - DESCRIPCIÓN</div>
-                        <div>TOTAL</div>
-                        <div>HECHO</div>
+                <div class="depositos-list-container">
+                    <div class="depositos-list-header">
+                        <div style="display: grid; grid-template-columns: 20px 1fr 40px 40px; gap: 8px;">
+                            <div></div>
+                            <div>LISTA DE DEPÓSITO - DESCRIPCIÓN</div>
+                            <div>TOTAL</div>
+                            <div>HECHO</div>
+                        </div>
                     </div>
-                    <div id="depositosGrid">
+                    <div class="depositos-list-content" id="depositosGrid">
                         <!-- Los depósitos se cargarán aquí dinámicamente -->
                     </div>
                 </div>

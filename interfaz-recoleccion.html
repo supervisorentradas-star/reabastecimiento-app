@@ -315,6 +315,11 @@
             color: white;
         }
 
+        .btn-primary {
+            background: rgb(138, 11, 210);
+            color: white;
+        }
+
         .btn-success {
             background: #27ae60;
             color: white;
@@ -345,6 +350,11 @@
 
         .deposito-item.completed {
             background: #d5f4e6;
+        }
+
+        .deposito-item.not-found {
+            background: #f8d7da;
+            border-left: 4px solid #e74c3c;
         }
 
         .deposito-codigo-small {
@@ -399,6 +409,17 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        /* BOTÓN DE ACTUALIZAR EN VENTANA 3 */
+        .refresh-button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: rgb(138, 11, 210);
+            cursor: pointer;
+            padding: 5px;
+            margin: 0 10px;
         }
 
         /* RESPONSIVE */
@@ -497,7 +518,10 @@
                     <div>RUTA: <span id="rutaPicking">--</span></div>
                     <div>COLA: <span id="colaPicking">--</span></div>
                 </div>
-                <div class="connection-indicator" id="connectionIndicatorV3"></div>
+                <div>
+                    <button class="refresh-button" onclick="actualizarDatosPicking()">🔄</button>
+                    <div class="connection-indicator" id="connectionIndicatorV3"></div>
+                </div>
             </div>
 
             <div class="current-deposito">
@@ -529,8 +553,10 @@
 
             <div class="picking-actions">
                 <button class="btn btn-warning" onclick="marcarNoEncontrado()">No Encontrado</button>
-                <button class="btn btn-primary" onclick="volverAColas()">VOLVER A COLAS</button>
-                <button class="btn btn-success" onclick="finalizarRecoleccion()">Finalizar</button>
+                <button class="btn btn-primary" onclick="volverAColas()">Volver a Colas</button>
+                <button class="btn btn-success" onclick="transferirPalet()">
+                    🔄 Transferir
+                </button>
             </div>
 
             <h3 class="section-title">LISTA DE DEPÓSITOS</h3>

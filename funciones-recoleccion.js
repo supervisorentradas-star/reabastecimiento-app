@@ -32,9 +32,11 @@ let procesandoEscaneo = false;
 // ✅ ALMACENAMIENTO TEMPORAL EN MEMORIA
 let progresoTemporal = {};
 let cambiosPendientes = {};
-
-// ✅ FECHA ACTUAL DEL SISTEMA
 let fechaSistema = '';
+
+// ✅ CONTROL DE TRANSFERENCIAS
+let transferenciasRealizadas = [];
+let numeroTransferencia = 1;
 
 // ================= INICIALIZACIÓN RÁPIDA =================
 document.addEventListener('DOMContentLoaded', function() {
@@ -87,6 +89,7 @@ async function limpiarDatosDiasAnteriores() {
             progresoTemporal = {};
             cambiosPendientes = {};
             cacheProgresos = {};
+            numeroTransferencia = 1;
             
             mostrarMensaje('✅ Sistema reiniciado para nueva fecha', true);
         }
@@ -174,10 +177,21 @@ async function cargarProgresosTemporales() {
             }
             console.log('📥 Cambios pendientes cargados (filtrados por fecha):', Object.keys(cambiosPendientes).length);
         }
+
+        // Cargar número de transferencia
+        const transferenciaGuardada = localStorage.getItem(`numeroTransferencia_${usuarioActual}`);
+        if (transferenciaGuardada) {
+            const transferenciaData = JSON.parse(transferenciaGuardada);
+            if (transferenciaData.fecha === fechaSistema) {
+                numeroTransferencia = transferenciaData.numero;
+            }
+        }
+        
     } catch (error) {
         console.error('Error cargando progresos temporales:', error);
         progresoTemporal = {};
         cambiosPendientes = {};
+        numeroTransferencia = 1;
     }
 }
 
@@ -199,6 +213,10 @@ function guardarProgresosTemporales() {
         
         localStorage.setItem(`progresoTemporal_${usuarioActual}`, JSON.stringify(progresoTemporal));
         localStorage.setItem(`cambiosPendientes_${usuarioActual}`, JSON.stringify(cambiosPendientes));
+        localStorage.setItem(`numeroTransferencia_${usuarioActual}`, JSON.stringify({
+            numero: numeroTransferencia,
+            fecha: fechaSistema
+        }));
     } catch (error) {
         console.error('Error guardando progresos temporales:', error);
     }
@@ -229,13 +247,13 @@ function actualizarProgresoTemporal(deposito, upc, recolectado, no_encontrado = 
         progresoTemporal[key] = { 
             recolectado: 0, 
             no_encontrado: 0,
-            fecha: fechaSistema // ✅ SIEMPRE INCLUIR FECHA
+            fecha: fechaSistema
         };
     }
     
     progresoTemporal[key].recolectado = recolectado;
     progresoTemporal[key].no_encontrado = no_encontrado;
-    progresoTemporal[key].fecha = fechaSistema; // ✅ ACTUALIZAR FECHA
+    progresoTemporal[key].fecha = fechaSistema;
     
     cambiosPendientes[key] = {
         deposito: deposito,
@@ -243,7 +261,7 @@ function actualizarProgresoTemporal(deposito, upc, recolectado, no_encontrado = 
         recolectado: recolectado,
         no_encontrado: no_encontrado,
         timestamp: Date.now(),
-        fechaSistema: fechaSistema // ✅ INCLUIR FECHA DEL SISTEMA
+        fechaSistema: fechaSistema
     };
     
     guardarProgresosTemporales();
@@ -277,7 +295,7 @@ async function sincronizarCambiosPendientes() {
             cacheProgresos[key] = {
                 recolectado: cambio.recolectado,
                 no_encontrado: cambio.no_encontrado,
-                fecha: fechaSistema // ✅ INCLUIR FECHA EN CACHE
+                fecha: fechaSistema
             };
             
             console.log(`✅ Sincronizado: ${key} - ${cambio.recolectado} unidades`);
@@ -314,7 +332,7 @@ function inicializarFirebase() {
     });
 }
 
-// ✅ CORRECCIÓN CRÍTICA: CONFIGURACIÓN DE EVENT LISTENERS MEJORADA
+// ✅ CONFIGURACIÓN DE EVENT LISTENERS MEJORADA
 function configurarEventListeners() {
     document.querySelectorAll('.tipo-button').forEach(button => {
         button.addEventListener('click', function() {
@@ -767,7 +785,7 @@ async function cargarProgresoActual() {
 async function actualizarInterfazPicking() {
     const item = depositosActuales[depositoActualIndex];
     if (!item) {
-        await finalizarRecoleccion();
+        await finalizarRecoleccionCompleta();
         return;
     }
 
@@ -799,7 +817,7 @@ function actualizarListaDepositos() {
         const estado = `${leida}/${item.cantidad}`;
         
         const div = document.createElement('div');
-        div.className = `deposito-item ${index === depositoActualIndex ? 'current' : ''} ${item.completado ? 'completed' : ''}`;
+        div.className = `deposito-item ${index === depositoActualIndex ? 'current' : ''} ${item.completado ? 'completed' : ''} ${item.no_encontrado === item.cantidad ? 'not-found' : ''}`;
         div.innerHTML = `
             <div class="deposito-codigo-small">${item.deposito}</div>
             <div class="deposito-cantidad">${item.cantidad}</div>
@@ -817,13 +835,169 @@ function actualizarListaDepositos() {
     });
 }
 
-// ✅ CORRECCIÓN CRÍTICA: PROCESAMIENTO CON UN SOLO EVENT LISTENER
-async function procesarEscaneoUPC(upc) {
-    if (procesandoEscaneo) {
-        console.log('⏳ Escaneo en progreso, ignorando...');
+// ================= FUNCIONES DE TRANSFERENCIA SIMPLIFICADAS =================
+
+// ✅ TRANSFERIR DATOS ACTUALES
+async function transferirPalet() {
+    if (Object.keys(cambiosPendientes).length === 0) {
+        mostrarMensaje('📭 No hay datos para transferir', true);
         return;
     }
 
+    console.log(`🔄 Iniciando transferencia #${numeroTransferencia} con ${Object.keys(cambiosPendientes).length} registros`);
+    mostrarMensaje(`🔄 Transferiendo datos...`, true);
+
+    try {
+        // Sincronizar los cambios pendientes
+        await sincronizarTransferenciaActual();
+        
+        // Registrar transferencia
+        transferenciasRealizadas.push({
+            numero: numeroTransferencia,
+            registros: Object.keys(cambiosPendientes).length,
+            timestamp: Date.now(),
+            cola: colaActual,
+            ruta: rutaActual
+        });
+        
+        console.log(`✅ Transferencia #${numeroTransferencia} completada: ${Object.keys(cambiosPendientes).length} registros`);
+        mostrarMensaje(`✅ Transferencia completada (${Object.keys(cambiosPendientes).length} registros)`, true);
+        
+        // Preguntar si quiere continuar
+        setTimeout(() => {
+            preguntarContinuarRecoleccion();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Error en transferencia:', error);
+        mostrarMensaje('❌ Error en transferencia: ' + error.message, false);
+    }
+}
+
+// ✅ SINCRONIZAR TRANSFERENCIA ACTUAL
+async function sincronizarTransferenciaActual() {
+    if (Object.keys(cambiosPendientes).length === 0) {
+        return;
+    }
+    
+    console.log(`📦 Sincronizando transferencia: ${Object.keys(cambiosPendientes).length} registros`);
+    
+    try {
+        let registrosProcesados = 0;
+        const cambiosActuales = { ...cambiosPendientes };
+        
+        for (const key in cambiosActuales) {
+            const cambio = cambiosActuales[key];
+            
+            if (cambio.fechaSistema !== fechaSistema) {
+                console.warn(`⚠️ Cambio de fecha diferente omitido`);
+                continue;
+            }
+            
+            await guardarProgresoFirebase(
+                cambio.deposito,
+                cambio.upc,
+                cambio.recolectado,
+                cambio.no_encontrado
+            );
+            
+            cacheProgresos[key] = {
+                recolectado: cambio.recolectado,
+                no_encontrado: cambio.no_encontrado,
+                fecha: fechaSistema
+            };
+            
+            registrosProcesados++;
+            
+            // Progreso cada 10 registros
+            if (registrosProcesados % 10 === 0) {
+                console.log(`📊 Progreso transferencia: ${registrosProcesados}/${Object.keys(cambiosActuales).length}`);
+            }
+        }
+        
+        // ✅ LIMPIAR cambios pendientes después de transferir
+        limpiarCambiosTransferencia();
+        
+        console.log(`✅ Transferencia sincronizada: ${registrosProcesados} registros`);
+        return registrosProcesados;
+        
+    } catch (error) {
+        console.error('❌ Error sincronizando transferencia:', error);
+        throw error;
+    }
+}
+
+// ✅ LIMPIAR CAMBIOS DESPUÉS DE TRANSFERIR
+function limpiarCambiosTransferencia() {
+    // Limpiar cambios pendientes pero MANTENER progreso temporal
+    cambiosPendientes = {};
+    
+    // Incrementar número de transferencia
+    numeroTransferencia++;
+    
+    guardarProgresosTemporales();
+    console.log('🧹 Cambios de transferencia limpiados');
+}
+
+// ✅ PREGUNTAR SI CONTINÚA RECOLECTANDO
+function preguntarContinuarRecoleccion() {
+    const continuar = confirm(
+        `✅ Transferencia #${numeroTransferencia - 1} completada exitosamente.\n\n` +
+        `¿Deseas continuar recolectando en la misma cola?\n\n` +
+        `• SÍ: Seguirás con la cola actual\n` +
+        `• NO: Liberarás la cola para otro usuario`
+    );
+    
+    if (continuar) {
+        continuarRecoleccion();
+    } else {
+        finalizarRecoleccionCompleta();
+    }
+}
+
+// ✅ CONTINUAR RECOLECCIÓN EN MISMA COLA
+function continuarRecoleccion() {
+    mostrarMensaje('🔄 Continuando recolección...', true);
+    
+    // Mantener toda la configuración actual
+    
+    // Actualizar interfaz
+    actualizarInterfazPicking();
+    
+    // Enfocar input de escaneo
+    const upcInput = document.getElementById('upcInput');
+    if (upcInput) {
+        upcInput.focus();
+        upcInput.value = '';
+    }
+    
+    console.log('↩️ Continuando recolección en misma cola');
+}
+
+// ✅ FINALIZAR Y LIBERAR COLA
+async function finalizarRecoleccionCompleta() {
+    mostrarMensaje('🚪 Finalizando recolección y liberando cola...', true);
+    
+    // Liberar cola en Firebase
+    await liberarCola();
+    
+    // Limpiar todo
+    cacheTimestamp = 0;
+    progresoTemporal = {};
+    cambiosPendientes = {};
+    numeroTransferencia = 1;
+    
+    guardarProgresosTemporales();
+    
+    setTimeout(() => {
+        mostrarMensaje('✅ Cola liberada - Otros usuarios pueden trabajar ahora', true);
+        mostrarVentana(2);
+    }, 1500);
+}
+
+// ✅ PROCESAR ESCANEO - CON VALIDACIÓN DE CANTIDAD MEJORADA
+async function procesarEscaneoUPC(upc) {
+    if (procesandoEscaneo) return;
     procesandoEscaneo = true;
 
     try {
@@ -833,21 +1007,17 @@ async function procesarEscaneoUPC(upc) {
             return;
         }
 
-        console.log('🔍 Procesando UPC:', upc);
-        console.log('📦 UPC esperado:', item.upc);
-
+        // Validación UPC
         const upcEscaneado = upc.toString().trim();
         const upcEsperado = item.upc.toString().trim();
         
         let esValido = false;
-        
         if (upcEscaneado === upcEsperado) {
             esValido = true;
         } else {
             const maxLength = Math.max(upcEscaneado.length, upcEsperado.length);
             const upcEscaneadoPadded = upcEscaneado.padStart(maxLength, '0');
             const upcEsperadoPadded = upcEsperado.padStart(maxLength, '0');
-            
             if (upcEscaneadoPadded === upcEsperadoPadded) {
                 esValido = true;
             }
@@ -859,30 +1029,30 @@ async function procesarEscaneoUPC(upc) {
             return;
         }
 
+        // ✅ MEJORA: VALIDAR QUE NO SE EXCEDA LA CANTIDAD PLANIFICADA
         const nuevoRecolectado = item.recolectado + 1;
+        if (nuevoRecolectado > item.cantidad) {
+            mostrarMensaje(`❌ No se puede exceder la cantidad planificada (${item.cantidad})`, false);
+            playErrorSound();
+            return;
+        }
+
         actualizarProgresoTemporal(item.deposito, item.upc, nuevoRecolectado, item.no_encontrado);
         
         item.recolectado = nuevoRecolectado;
         
         playSuccessSound();
-        
         await actualizarInterfazPicking();
         
         if (item.recolectado >= item.cantidad) {
             item.completado = true;
             mostrarMensaje('✅ Depósito completado', true);
             
-            setTimeout(async () => {
-                try {
-                    await sincronizarCambiosPendientes();
-                    siguienteDeposito();
-                } catch (error) {
-                    console.error('Error sincronizando al completar depósito:', error);
-                    siguienteDeposito();
-                }
+            setTimeout(() => {
+                siguienteDeposito();
             }, 800);
         } else {
-            mostrarMensaje('✓ Escaneo correcto (guardado temporalmente)', true);
+            mostrarMensaje('✓ Escaneo correcto', true);
         }
 
     } catch (error) {
@@ -891,11 +1061,8 @@ async function procesarEscaneoUPC(upc) {
         playErrorSound();
     } finally {
         procesandoEscaneo = false;
-        
         const upcInput = document.getElementById('upcInput');
-        if (upcInput) {
-            upcInput.focus();
-        }
+        if (upcInput) upcInput.focus();
     }
 }
 
@@ -968,6 +1135,7 @@ async function marcarNoEncontrado() {
         
         mostrarMensaje(`❌ ${cantidadFaltante} unidad(es) marcada(s) como no encontrada(s)`, true);
         
+        // ✅ MEJORA: Pasar automáticamente al siguiente depósito
         setTimeout(async () => {
             try {
                 await sincronizarCambiosPendientes();
@@ -985,20 +1153,12 @@ async function marcarNoEncontrado() {
 }
 
 async function siguienteDeposito() {
-    if (Object.keys(cambiosPendientes).length > 0) {
-        try {
-            await sincronizarCambiosPendientes();
-        } catch (error) {
-            console.error('Error sincronizando al cambiar depósito:', error);
-        }
-    }
-    
     const siguienteIndex = encontrarSiguienteDepositoNoCompletado();
     if (siguienteIndex !== -1) {
         depositoActualIndex = siguienteIndex;
         await actualizarInterfazPicking();
     } else {
-        await finalizarRecoleccion();
+        await finalizarRecoleccionCompleta();
     }
 }
 
@@ -1012,35 +1172,18 @@ function encontrarSiguienteDepositoNoCompletado() {
     return -1;
 }
 
-async function finalizarRecoleccion() {
-    if (Object.keys(cambiosPendientes).length > 0) {
-        try {
-            await sincronizarCambiosPendientes();
-        } catch (error) {
-            console.error('Error sincronizando al finalizar:', error);
-            mostrarMensaje('⚠️ Recolección completada, pero hay cambios pendientes por sincronizar', true);
-        }
-    }
-    
-    mostrarMensaje('🎉 ¡Recolección completada!', true);
-    await liberarCola();
-    cacheTimestamp = 0;
-    
-    progresoTemporal = {};
-    cambiosPendientes = {};
-    guardarProgresosTemporales();
-    
-    setTimeout(() => {
-        mostrarVentana(2);
-    }, 1500);
-}
-
 // ================= FIREBASE OPTIMIZADO =================
 async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado) {
     try {
         const item = depositosActuales.find(d => d.deposito === deposito && d.upc === upc);
         if (!item) {
             throw new Error('Item no encontrado para guardar en Firebase');
+        }
+
+        // ✅ MEJORA: VALIDACIÓN ADICIONAL DE CANTIDADES
+        if (recolectado > item.cantidad) {
+            console.warn(`⚠️ Advertencia: Recolectado (${recolectado}) > Planificado (${item.cantidad}) para ${deposito}`);
+            // No lanzamos error pero registramos la advertencia
         }
 
         const registro = {
@@ -1051,7 +1194,7 @@ async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado
             upc: upc,
             descripcion: item.descripcion,
             cantidad_planificada: item.cantidad,
-            cantidad_recolectada: recolectado,
+            cantidad_recolectada: Math.min(recolectado, item.cantidad), // ✅ MEJORA: No permitir exceder
             no_encontrados: no_encontrado,
             fecha: new Date().toLocaleDateString(),
             hora: new Date().toLocaleTimeString(),
@@ -1059,13 +1202,14 @@ async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado
             tipoRecoleccion: tipoRecoleccionActual,
             deposito_destino: item.deposito_destino,
             cola_reposicion: item.cola_reposicion,
-            fechaSistema: fechaSistema // ✅ INCLUIR FECHA DEL SISTEMA PARA FILTROS
+            fechaSistema: fechaSistema,
+            transferenciaNumero: numeroTransferencia
         };
 
         const key = `${deposito}_${upc}_${usuarioActual}_${Date.now()}`;
         await database.ref(`recolecciones/${key}`).set(registro);
         
-        console.log(`✅ Guardado en Firebase: ${deposito} - ${recolectado}/${item.cantidad}`);
+        console.log(`✅ Guardado en Firebase: ${deposito} - ${Math.min(recolectado, item.cantidad)}/${item.cantidad} (Transferencia #${numeroTransferencia})`);
         
     } catch (error) {
         console.error('Error guardando en Firebase:', error);
@@ -1097,50 +1241,78 @@ function mostrarVentana(numero) {
 
 async function volverARutas() {
     if (Object.keys(cambiosPendientes).length > 0) {
-        try {
-            await sincronizarCambiosPendientes();
-        } catch (error) {
-            console.error('Error sincronizando al salir:', error);
-            if (!confirm('Hay cambios pendientes por sincronizar. ¿Estás seguro de que quieres salir?')) {
-                return;
+        const transferir = confirm(
+            `Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
+            '¿Quieres transferir antes de salir?\n\n' +
+            '• SÍ: Transferir y salir\n' +
+            '• NO: Salir sin transferir (perderás los datos)'
+        );
+        
+        if (transferir) {
+            try {
+                await sincronizarTransferenciaActual();
+                mostrarMensaje('✅ Datos transferidos antes de salir', true);
+            } catch (error) {
+                console.error('Error transfiriendo al salir:', error);
+                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
+                    return;
+                }
             }
         }
     }
     
-    liberarCola();
+    await liberarCola();
     mostrarVentana(1);
 }
 
 async function volverAColas() {
     if (Object.keys(cambiosPendientes).length > 0) {
-        try {
-            await sincronizarCambiosPendientes();
-        } catch (error) {
-            console.error('Error sincronizando al salir:', error);
-            if (!confirm('Hay cambios pendientes por sincronizar. ¿Estás seguro de que quieres salir?')) {
-                return;
+        const transferir = confirm(
+            `Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
+            '¿Quieres transferir antes de salir?\n\n' +
+            '• SÍ: Transferir y salir\n' +
+            '• NO: Salir sin transferir (perderás los datos)'
+        );
+        
+        if (transferir) {
+            try {
+                await sincronizarTransferenciaActual();
+                mostrarMensaje('✅ Datos transferidos antes de salir', true);
+            } catch (error) {
+                console.error('Error transfiriendo al salir:', error);
+                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
+                    return;
+                }
             }
         }
     }
     
-    liberarCola();
-    mostrarVentana(2);
+    await finalizarRecoleccionCompleta();
 }
 
 async function volverInterfazPrincipal() {
     if (confirm('¿Salir al menú principal?')) {
         if (Object.keys(cambiosPendientes).length > 0) {
-            try {
-                await sincronizarCambiosPendientes();
-            } catch (error) {
-                console.error('Error sincronizando al salir:', error);
-                if (!confirm('Hay cambios pendientes por sincronizar. ¿Estás seguro de que quieres salir?')) {
-                    return;
+            const transferir = confirm(
+                `Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
+                '¿Quieres transferir antes de salir?\n\n' +
+                '• SÍ: Transferir y salir\n' +
+                '• NO: Salir sin transferir (perderás los datos)'
+            );
+            
+            if (transferir) {
+                try {
+                    await sincronizarTransferenciaActual();
+                } catch (error) {
+                    console.error('Error transfiriendo al salir:', error);
+                    if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
+                        return;
+                    }
                 }
             }
         }
         
-        liberarCola();
+        await liberarCola();
         window.location.href = 'index.html';
     }
 }
@@ -1154,7 +1326,7 @@ function mostrarMensaje(mensaje, esExito) {
 
     setTimeout(() => {
         mensajeDiv.style.display = 'none';
-    }, 2000);
+    }, 3000);
 }
 
 function actualizarDatos() {
@@ -1169,6 +1341,24 @@ function cargarRutas() {
     cacheProgresos = {};
     cacheColasEnUso = {};
     cargarRutasDesdeFirebase();
+}
+
+// ✅ NUEVA FUNCIÓN: ACTUALIZAR DATOS EN VENTANA 3
+async function actualizarDatosPicking() {
+    mostrarMensaje('🔄 Actualizando datos...', true);
+    
+    try {
+        // Recargar progresos actuales
+        await cargarProgresoActual();
+        
+        // Actualizar interfaz
+        await actualizarInterfazPicking();
+        
+        mostrarMensaje('✅ Datos actualizados', true);
+    } catch (error) {
+        console.error('Error actualizando datos:', error);
+        mostrarMensaje('❌ Error al actualizar datos', false);
+    }
 }
 
 // ================= LIMPIEZA AUTOMÁTICA =================
