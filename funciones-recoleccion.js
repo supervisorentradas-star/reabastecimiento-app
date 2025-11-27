@@ -314,6 +314,7 @@ function inicializarFirebase() {
     });
 }
 
+// ✅ CORRECCIÓN CRÍTICA: CONFIGURACIÓN DE EVENT LISTENERS MEJORADA
 function configurarEventListeners() {
     document.querySelectorAll('.tipo-button').forEach(button => {
         button.addEventListener('click', function() {
@@ -326,37 +327,23 @@ function configurarEventListeners() {
 
     const upcInput = document.getElementById('upcInput');
     if (upcInput) {
-        upcInput.removeEventListener('keypress', handleEnterKey);
-        
+        // ✅ SOLUCIÓN DEFINITIVA: Un solo event listener para input
         upcInput.addEventListener('input', function(e) {
             const upc = e.target.value.trim();
             
             if (upc.length >= 7 && !procesandoEscaneo) {
-                console.log('🔍 Código detectado (longitud ' + upc.length + '):', upc);
-                
-                setTimeout(() => {
-                    if (!procesandoEscaneo) {
-                        procesarEscaneoUPC(upc);
-                        e.target.value = '';
-                    }
-                }, 100);
+                console.log('🔍 Código UPC escaneado:', upc);
+                procesarEscaneoUPC(upc);
+                e.target.value = ''; // Limpiar inmediatamente después del escaneo
             }
         });
 
-        upcInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const upc = e.target.value.trim();
-                if (upc && upc.length >= 7 && !procesandoEscaneo) {
-                    e.preventDefault();
-                    procesarEscaneoUPC(upc);
-                    e.target.value = '';
-                }
-            }
-        });
-
+        // ✅ MANTENER PEGADO PARA PRUEBAS
         upcInput.addEventListener('paste', function(e) {
             console.log('📋 Pegado permitido para pruebas');
         });
+        
+        // ❌ ELIMINADO: Event listener duplicado de 'keypress' que causaba duplicación
     }
 }
 
@@ -830,7 +817,7 @@ function actualizarListaDepositos() {
     });
 }
 
-// ✅ CORRECCIÓN: PROCESAMIENTO CON ALMACENAMIENTO TEMPORAL
+// ✅ CORRECCIÓN CRÍTICA: PROCESAMIENTO CON UN SOLO EVENT LISTENER
 async function procesarEscaneoUPC(upc) {
     if (procesandoEscaneo) {
         console.log('⏳ Escaneo en progreso, ignorando...');
@@ -907,7 +894,6 @@ async function procesarEscaneoUPC(upc) {
         
         const upcInput = document.getElementById('upcInput');
         if (upcInput) {
-            upcInput.value = '';
             upcInput.focus();
         }
     }
@@ -955,17 +941,6 @@ function playErrorSound() {
         oscillator.stop(context.currentTime + 0.3);
     } catch (error) {
         console.log('Audio no disponible');
-    }
-}
-
-function handleEnterKey(e) {
-    if (e.key === 'Enter') {
-        const upc = e.target.value.trim();
-        if (upc && upc.length >= 7 && !procesandoEscaneo) {
-            e.preventDefault();
-            procesarEscaneoUPC(upc);
-            e.target.value = '';
-        }
     }
 }
 
@@ -1194,16 +1169,6 @@ function cargarRutas() {
     cacheProgresos = {};
     cacheColasEnUso = {};
     cargarRutasDesdeFirebase();
-}
-
-function establecerFechaActual() {
-    const fecha = new Date();
-    const dia = fecha.getDate().toString().padStart(2, '0');
-    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-    const anio = fecha.getFullYear();
-    fechaSistema = `${dia}/${mes}/${anio}`;
-    
-    document.getElementById('fechaActual').textContent = fechaSistema;
 }
 
 // ================= LIMPIEZA AUTOMÁTICA =================
