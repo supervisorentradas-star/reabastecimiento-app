@@ -13,7 +13,7 @@
         }
         body {
             background-color: white;
-            padding: 10px;
+            padding: 15px;
             color: rgb(138, 11, 210);
             min-height: 100vh;
         }
@@ -22,40 +22,43 @@
             margin: 0 auto;
             background: white;
             border-radius: 8px;
-            padding: 10px;
+            padding: 15px;
             border: 1px solid rgb(138, 11, 210);
+            height: 95vh;
+            display: flex;
+            flex-direction: column;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 1px solid rgb(138, 11, 210);
         }
         h1 {
             color: rgb(138, 11, 210);
-            font-size: 18px;
+            font-size: 22px;
         }
         .connection-indicator {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background-color: #27ae60;
         }
         .tabs {
             display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 15px;
         }
         .tab-button {
             background: rgb(138, 11, 210);
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             flex: 1;
         }
@@ -64,51 +67,53 @@
         }
         .filters {
             display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 15px;
+            margin-bottom: 15px;
             align-items: center;
         }
         .date-filter {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
         .date-filter label {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
         }
         .date-filter input {
-            padding: 5px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            width: 180px;
         }
         .search-filter {
             flex: 1;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
         .search-filter input {
             flex: 1;
-            padding: 5px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 14px;
         }
         .table-container {
             overflow-x: auto;
-            margin-bottom: 10px;
-            max-height: 400px;
-            overflow-y: auto;
+            margin-bottom: 15px;
+            flex: 1;
             border: 1px solid #ddd;
+            max-height: calc(100vh - 300px);
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 13px;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 6px;
+            padding: 8px;
             text-align: left;
         }
         th {
@@ -117,6 +122,7 @@
             cursor: pointer;
             position: sticky;
             top: 0;
+            white-space: nowrap;
         }
         th:hover {
             background-color: rgb(110, 0, 220);
@@ -126,17 +132,17 @@
         }
         .actions {
             display: flex;
-            gap: 5px;
-            margin-top: 10px;
-            padding-top: 10px;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
             border-top: 1px solid rgb(138, 11, 210);
         }
         .action-button {
-            padding: 8px 15px;
+            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
         }
         .primary {
@@ -150,9 +156,42 @@
         }
         .no-data {
             text-align: center;
-            padding: 20px;
+            padding: 30px;
             color: #666;
             font-style: italic;
+        }
+        .summary {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .summary-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: rgb(138, 11, 210);
+        }
+        .table-footer {
+            background-color: #e8f4ff;
+            font-weight: bold;
+        }
+        .table-footer td {
+            border-top: 2px solid rgb(138, 11, 210);
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -177,7 +216,7 @@
                 <input type="date" id="dateFilter">
             </div>
             <div class="search-filter">
-                <input type="text" id="searchFilter" placeholder="Buscar...">
+                <input type="text" id="searchFilter" placeholder="Buscar por usuario, ruta, cola, depósito, descripción...">
             </div>
         </div>
         
@@ -189,13 +228,20 @@
                 <tbody id="tableBody">
                     <!-- Los datos se generan dinámicamente -->
                 </tbody>
+                <tfoot id="tableFooter">
+                    <!-- Los totales se generan dinámicamente -->
+                </tfoot>
             </table>
+        </div>
+        
+        <div class="summary" id="summaryContainer">
+            <!-- Los resúmenes se generan dinámicamente -->
         </div>
         
         <div class="actions">
             <button class="action-button primary" onclick="goToMain()">🚪 Interfaz Principal</button>
-            <button class="action-button secondary" onclick="copyAll()">Copy All</button>
-            <button class="action-button secondary" onclick="downloadExcel()">Descargar</button>
+            <button class="action-button secondary" onclick="copyAll()">📋 Copiar Todo</button>
+            <button class="action-button secondary" onclick="downloadExcel()">📥 Descargar Excel</button>
         </div>
     </div>
 
@@ -220,7 +266,7 @@
         let allData = {
             recoleccion: [],
             reposiciones: [],
-            devoluciones: [] // Cambiado de reposicion_devol a devoluciones
+            devoluciones: []
         };
         let filteredData = {
             recoleccion: [],
@@ -232,9 +278,9 @@
             direction: 'asc'
         };
 
-        // Encabezados de cada reporte
+        // Encabezados de cada reporte - CORREGIDO: campo cola_reposicion
         const headers = {
-            recoleccion: ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad_recolectada', 'cantidad_planificada', 'no_encontrados', 'tipoRecoleccion', 'deposito_destino', 'hora', 'cola_reposiciones', 'fecha'],
+            recoleccion: ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad_recolectada', 'cantidad_planificada', 'no_encontrados', 'tipoRecoleccion', 'deposito_destino', 'hora', 'cola_reposicion', 'fecha'],
             reposiciones: ['usuario', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad', 'fecha', 'hora'],
             devoluciones: ['usuario', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad', 'fecha', 'hora']
         };
@@ -306,6 +352,8 @@
                 const data = snapshot.val();
                 if (data) {
                     allData.recoleccion = Object.values(data);
+                    console.log('Datos de recolección cargados:', allData.recoleccion.length);
+                    console.log('Ejemplo de datos:', allData.recoleccion[0]);
                 } else {
                     allData.recoleccion = [];
                 }
@@ -335,7 +383,7 @@
                 renderTable();
             });
             
-            // Cargar datos de devoluciones (CORREGIDO: usando reposicion_devol)
+            // Cargar datos de devoluciones
             database.ref('reposicion_devol').once('value').then(snapshot => {
                 const data = snapshot.val();
                 if (data) {
@@ -353,18 +401,63 @@
             });
         }
 
+        // CORRECCIÓN: Función mejorada para formatear fecha
+        function formatDateToDDMMYYYY(dateString) {
+            if (!dateString) return '';
+            
+            // Si ya está en formato DD/MM/YYYY, devolverlo tal cual
+            if (dateString.includes('/')) {
+                return dateString;
+            }
+            
+            // Si está en formato YYYY-MM-DD, convertirlo
+            if (dateString.includes('-')) {
+                const parts = dateString.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+            
+            // Si es un timestamp o formato desconocido, intentar crear fecha
+            try {
+                const date = new Date(dateString);
+                if (!isNaN(date.getTime())) {
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+            } catch (e) {
+                console.error('Error formateando fecha:', e);
+            }
+            
+            return dateString;
+        }
+
+        // CORRECCIÓN: Función mejorada para comparar fechas
+        function datesMatch(filterDate, itemDate) {
+            if (!filterDate || !itemDate) return false;
+            
+            // Formatear ambas fechas a DD/MM/YYYY para comparación
+            const filterFormatted = formatDateToDDMMYYYY(filterDate);
+            const itemFormatted = formatDateToDDMMYYYY(itemDate);
+            
+            return filterFormatted === itemFormatted;
+        }
+
         function filterData() {
             const dateFilter = document.getElementById('dateFilter').value;
             const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
             
+            console.log('Filtro de fecha aplicado:', dateFilter);
+            
             // Filtrar datos para cada tab
             Object.keys(allData).forEach(tab => {
                 filteredData[tab] = allData[tab].filter(item => {
-                    // Filtrar por fecha si hay una fecha seleccionada
-                    if (dateFilter && item.fecha) {
-                        const itemDate = new Date(item.fecha.split('/').reverse().join('-'));
-                        const filterDate = new Date(dateFilter);
-                        if (itemDate.toDateString() !== filterDate.toDateString()) {
+                    // CORRECCIÓN: Filtrar por fecha - usar la función mejorada
+                    if (dateFilter) {
+                        const itemDate = item.fecha || item.fechaSistema;
+                        if (!datesMatch(dateFilter, itemDate)) {
                             return false;
                         }
                     }
@@ -372,8 +465,9 @@
                     // Filtrar por búsqueda si hay texto
                     if (searchFilter) {
                         let match = false;
-                        // Buscar en todos los campos del objeto
-                        for (const key in item) {
+                        // Buscar en campos específicos para mejor rendimiento
+                        const searchFields = ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc'];
+                        for (const key of searchFields) {
                             if (item[key] && item[key].toString().toLowerCase().includes(searchFilter)) {
                                 match = true;
                                 break;
@@ -385,15 +479,21 @@
                     return true;
                 });
             });
+            
+            console.log('Datos filtrados para', currentTab, ':', filteredData[currentTab].length);
         }
 
         function renderTable() {
             const tableHeader = document.getElementById('tableHeader');
             const tableBody = document.getElementById('tableBody');
+            const tableFooter = document.getElementById('tableFooter');
+            const summaryContainer = document.getElementById('summaryContainer');
             
             // Limpiar tabla
             tableHeader.innerHTML = '';
             tableBody.innerHTML = '';
+            tableFooter.innerHTML = '';
+            summaryContainer.innerHTML = '';
             
             // Obtener datos actuales
             const currentData = filteredData[currentTab];
@@ -403,7 +503,7 @@
             const headerRow = document.createElement('tr');
             currentHeaders.forEach(header => {
                 const th = document.createElement('th');
-                th.textContent = header.toUpperCase();
+                th.textContent = header.toUpperCase().replace(/_/g, ' ');
                 th.addEventListener('click', () => sortTable(header));
                 headerRow.appendChild(th);
             });
@@ -414,7 +514,7 @@
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
                 noDataCell.colSpan = currentHeaders.length;
-                noDataCell.textContent = 'Aún no hay datos para este reporte';
+                noDataCell.textContent = 'No se encontraron datos para los filtros aplicados';
                 noDataCell.className = 'no-data';
                 noDataRow.appendChild(noDataCell);
                 tableBody.appendChild(noDataRow);
@@ -444,11 +544,120 @@
                 const row = document.createElement('tr');
                 currentHeaders.forEach(header => {
                     const cell = document.createElement('td');
+                    // CORRECCIÓN: Mostrar el valor correcto para cola_reposicion
                     cell.textContent = item[header] || '';
                     row.appendChild(cell);
                 });
                 tableBody.appendChild(row);
             });
+            
+            // Agregar resumen y totales según el tab
+            if (currentTab === 'recoleccion') {
+                addRecoleccionSummary(currentData, summaryContainer);
+                addRecoleccionTotals(currentData, currentHeaders, tableFooter);
+            } else if (currentTab === 'reposiciones') {
+                addReposicionesSummary(currentData, summaryContainer);
+            } else if (currentTab === 'devoluciones') {
+                addDevolucionesSummary(currentData, summaryContainer);
+            }
+        }
+
+        function addRecoleccionSummary(data, container) {
+            // Calcular totales
+            const totalRecolectado = data.reduce((sum, item) => sum + (parseFloat(item.cantidad_recolectada) || 0), 0);
+            const totalPlanificado = data.reduce((sum, item) => sum + (parseFloat(item.cantidad_planificada) || 0), 0);
+            const totalNoEncontrados = data.reduce((sum, item) => sum + (parseFloat(item.no_encontrados) || 0), 0);
+            
+            // Crear elementos de resumen
+            const summaryHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL RECOLECTADO</div>
+                    <div class="summary-value">${totalRecolectado}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL PLANIFICADO</div>
+                    <div class="summary-value">${totalPlanificado}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL NO ENCONTRADOS</div>
+                    <div class="summary-value">${totalNoEncontrados}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">EFICIENCIA</div>
+                    <div class="summary-value">${totalPlanificado > 0 ? ((totalRecolectado / totalPlanificado) * 100).toFixed(1) + '%' : '0%'}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">REGISTROS</div>
+                    <div class="summary-value">${data.length}</div>
+                </div>
+            `;
+            
+            container.innerHTML = summaryHTML;
+        }
+
+        function addRecoleccionTotals(data, headers, footer) {
+            // Calcular totales por columna
+            const totalRecolectado = data.reduce((sum, item) => sum + (parseFloat(item.cantidad_recolectada) || 0), 0);
+            const totalPlanificado = data.reduce((sum, item) => sum + (parseFloat(item.cantidad_planificada) || 0), 0);
+            const totalNoEncontrados = data.reduce((sum, item) => sum + (parseFloat(item.no_encontrados) || 0), 0);
+            
+            // Crear fila de totales
+            const totalsRow = document.createElement('tr');
+            totalsRow.className = 'table-footer';
+            
+            headers.forEach(header => {
+                const cell = document.createElement('td');
+                
+                if (header === 'cantidad_recolectada') {
+                    cell.textContent = totalRecolectado;
+                } else if (header === 'cantidad_planificada') {
+                    cell.textContent = totalPlanificado;
+                } else if (header === 'no_encontrados') {
+                    cell.textContent = totalNoEncontrados;
+                } else if (header === 'usuario') {
+                    cell.textContent = 'TOTALES:';
+                } else {
+                    cell.textContent = '';
+                }
+                
+                totalsRow.appendChild(cell);
+            });
+            
+            footer.appendChild(totalsRow);
+        }
+
+        function addReposicionesSummary(data, container) {
+            const totalCantidad = data.reduce((sum, item) => sum + (parseFloat(item.cantidad) || 0), 0);
+            
+            const summaryHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL REPOSICIONES</div>
+                    <div class="summary-value">${totalCantidad}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">REGISTROS</div>
+                    <div class="summary-value">${data.length}</div>
+                </div>
+            `;
+            
+            container.innerHTML = summaryHTML;
+        }
+
+        function addDevolucionesSummary(data, container) {
+            const totalCantidad = data.reduce((sum, item) => sum + (parseFloat(item.cantidad) || 0), 0);
+            
+            const summaryHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL DEVOLUCIONES</div>
+                    <div class="summary-value">${totalCantidad}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">REGISTROS</div>
+                    <div class="summary-value">${data.length}</div>
+                </div>
+            `;
+            
+            container.innerHTML = summaryHTML;
         }
 
         function sortTable(column) {

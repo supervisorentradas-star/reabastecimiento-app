@@ -76,13 +76,11 @@ async function limpiarDatosDiasAnteriores() {
     try {
         console.log('🧹 Verificando datos de días anteriores...');
         
-        // Verificar si hay datos guardados de días anteriores
         const ultimaFecha = localStorage.getItem('ultimaFechaEjecucion');
         
         if (ultimaFecha && ultimaFecha !== fechaSistema) {
             console.log('🗑️ Limpiando datos de fecha anterior:', ultimaFecha);
             
-            // Limpiar todos los datos temporales
             localStorage.removeItem(`progresoTemporal_${usuarioActual}`);
             localStorage.removeItem(`cambiosPendientes_${usuarioActual}`);
             
@@ -94,7 +92,6 @@ async function limpiarDatosDiasAnteriores() {
             mostrarMensaje('✅ Sistema reiniciado para nueva fecha', true);
         }
         
-        // Guardar la fecha actual
         localStorage.setItem('ultimaFechaEjecucion', fechaSistema);
         
     } catch (error) {
@@ -125,17 +122,14 @@ function validarFechaRegistro(registro) {
     if (fechaRegistro !== fechaSistema) {
         console.warn(`❌ Fecha no coincide: Sistema=${fechaSistema}, Registro=${fechaRegistro}`);
         
-        // Reportar a James Jimenez si es un día diferente
         if (fechaRegistro !== fechaSistema) {
             console.error(`🚨 INCONSISTENCIA DE FECHAS - Reportar a James Jimenez`);
             console.error(`Sistema: ${fechaSistema} | Firebase: ${fechaRegistro}`);
             
-            // Mostrar alerta al usuario
             if (!localStorage.getItem('alertaFechaMostrada')) {
                 mostrarMensaje(`🚨 INCONSISTENCIA: Datos de fecha ${fechaRegistro} en sistema. Reportar a James Jimenez.`, false);
                 localStorage.setItem('alertaFechaMostrada', 'true');
                 
-                // Limpiar la alerta después de 10 segundos
                 setTimeout(() => {
                     localStorage.removeItem('alertaFechaMostrada');
                 }, 10000);
@@ -154,7 +148,6 @@ async function cargarProgresosTemporales() {
         if (progresosGuardados) {
             const todosLosProgresos = JSON.parse(progresosGuardados);
             
-            // ✅ FILTRAR SOLO PROGRESOS DE LA FECHA ACTUAL
             progresoTemporal = {};
             for (const key in todosLosProgresos) {
                 if (todosLosProgresos[key].fecha === fechaSistema) {
@@ -168,7 +161,6 @@ async function cargarProgresosTemporales() {
         if (cambiosGuardados) {
             const todosLosCambios = JSON.parse(cambiosGuardados);
             
-            // ✅ FILTRAR SOLO CAMBIOS DE LA FECHA ACTUAL
             cambiosPendientes = {};
             for (const key in todosLosCambios) {
                 if (todosLosCambios[key].fechaSistema === fechaSistema) {
@@ -178,7 +170,6 @@ async function cargarProgresosTemporales() {
             console.log('📥 Cambios pendientes cargados (filtrados por fecha):', Object.keys(cambiosPendientes).length);
         }
 
-        // Cargar número de transferencia
         const transferenciaGuardada = localStorage.getItem(`numeroTransferencia_${usuarioActual}`);
         if (transferenciaGuardada) {
             const transferenciaData = JSON.parse(transferenciaGuardada);
@@ -198,7 +189,6 @@ async function cargarProgresosTemporales() {
 // ✅ GUARDAR PROGRESOS TEMPORALES EN localStorage
 function guardarProgresosTemporales() {
     try {
-        // ✅ INCLUIR FECHA EN CADA REGISTRO
         for (const key in progresoTemporal) {
             if (!progresoTemporal[key].fecha) {
                 progresoTemporal[key].fecha = fechaSistema;
@@ -226,12 +216,10 @@ function guardarProgresosTemporales() {
 function obtenerProgresoActual(deposito, upc) {
     const key = `${deposito}_${upc}`;
     
-    // ✅ SOLO USAR PROGRESOS TEMPORALES DE LA FECHA ACTUAL
     if (progresoTemporal[key] && progresoTemporal[key].fecha === fechaSistema) {
         return progresoTemporal[key];
     }
     
-    // ✅ SOLO USAR CACHE DE PROGRESOS DE LA FECHA ACTUAL
     if (cacheProgresos[key] && cacheProgresos[key].fecha === fechaSistema) {
         return cacheProgresos[key];
     }
@@ -279,7 +267,6 @@ async function sincronizarCambiosPendientes() {
         for (const key in cambiosPendientes) {
             const cambio = cambiosPendientes[key];
             
-            // ✅ Validar que el cambio corresponde a la fecha actual
             if (cambio.fechaSistema !== fechaSistema) {
                 console.warn(`⚠️ Cambio de fecha diferente omitido: ${cambio.fechaSistema} vs ${fechaSistema}`);
                 continue;
@@ -345,23 +332,19 @@ function configurarEventListeners() {
 
     const upcInput = document.getElementById('upcInput');
     if (upcInput) {
-        // ✅ SOLUCIÓN DEFINITIVA: Un solo event listener para input
         upcInput.addEventListener('input', function(e) {
             const upc = e.target.value.trim();
             
             if (upc.length >= 7 && !procesandoEscaneo) {
                 console.log('🔍 Código UPC escaneado:', upc);
                 procesarEscaneoUPC(upc);
-                e.target.value = ''; // Limpiar inmediatamente después del escaneo
+                e.target.value = '';
             }
         });
 
-        // ✅ MANTENER PEGADO PARA PRUEBAS
         upcInput.addEventListener('paste', function(e) {
             console.log('📋 Pegado permitido para pruebas');
         });
-        
-        // ❌ ELIMINADO: Event listener duplicado de 'keypress' que causaba duplicación
     }
 }
 
@@ -403,7 +386,6 @@ async function procesarDatosFirebase(datosFirebase) {
     
     datosArray.forEach(registro => {
         try {
-            // ✅ VALIDACIÓN CRÍTICA: FECHA DEL SISTEMA vs FECHA DEL REGISTRO
             if (!validarFechaRegistro(registro)) {
                 registrosOmitidos++;
                 return;
@@ -469,7 +451,6 @@ async function procesarDatosFirebase(datosFirebase) {
 function mostrarOpcionesRutas() {
     const container = document.getElementById('rutasGrid');
     
-    // ✅ SI NO HAY DATOS, MOSTRAR MENSAJE CLARO
     if (!window.rutasData || Object.keys(window.rutasData).length === 0) {
         container.innerHTML = '<div class="loading">No hay rutas disponibles para hoy</div>';
         document.getElementById('totalUnidades').textContent = '0';
@@ -488,7 +469,6 @@ function mostrarOpcionesRutas() {
         const itemsRuta = window.rutasData[ruta];
         const totalUnidades = itemsRuta.reduce((sum, item) => sum + item.cantidad, 0);
         
-        // ✅ CALCULAR PROGRESO SIEMPRE DESDE CERO PARA NUEVO DÍA
         calcularProgresoRuta(ruta).then(progreso => {
             const button = document.createElement('button');
             button.className = 'ruta-button';
@@ -510,7 +490,6 @@ async function cargarTodosLosProgresos() {
         cacheProgresos = {};
         
         Object.values(todosLosProgresos).forEach(registro => {
-            // ✅ FILTRAR SOLO PROGRESOS DE LA FECHA ACTUAL
             if (registro.fechaSistema === fechaSistema) {
                 const key = `${registro.deposito}_${registro.upc}`;
                 if (!cacheProgresos[key]) {
@@ -548,7 +527,6 @@ async function cargarColasEnUso() {
 
 async function calcularProgresoRuta(ruta) {
     try {
-        // ✅ SI NO HAY DATOS, PROGRESO CERO
         if (!window.rutasData || !window.rutasData[ruta]) {
             return { recolectado: 0 };
         }
@@ -573,7 +551,6 @@ async function calcularProgresoRuta(ruta) {
 }
 
 function seleccionarRuta(ruta) {
-    // ✅ VERIFICAR QUE LA RUTA EXISTE EN LOS DATOS ACTUALES
     if (!window.rutasData || !window.rutasData[ruta]) {
         mostrarMensaje('❌ Ruta no disponible para hoy', false);
         return;
@@ -837,7 +814,7 @@ function actualizarListaDepositos() {
 
 // ================= FUNCIONES DE TRANSFERENCIA SIMPLIFICADAS =================
 
-// ✅ TRANSFERIR DATOS ACTUALES
+// ✅ TRANSFERIR DATOS ACTUALES - CORREGIDO
 async function transferirPalet() {
     if (Object.keys(cambiosPendientes).length === 0) {
         mostrarMensaje('📭 No hay datos para transferir', true);
@@ -848,10 +825,8 @@ async function transferirPalet() {
     mostrarMensaje(`🔄 Transferiendo datos...`, true);
 
     try {
-        // Sincronizar los cambios pendientes
         await sincronizarTransferenciaActual();
         
-        // Registrar transferencia
         transferenciasRealizadas.push({
             numero: numeroTransferencia,
             registros: Object.keys(cambiosPendientes).length,
@@ -863,9 +838,9 @@ async function transferirPalet() {
         console.log(`✅ Transferencia #${numeroTransferencia} completada: ${Object.keys(cambiosPendientes).length} registros`);
         mostrarMensaje(`✅ Transferencia completada (${Object.keys(cambiosPendientes).length} registros)`, true);
         
-        // Preguntar si quiere continuar
+        // ✅ CORRECCIÓN: No preguntar automáticamente, solo informar
         setTimeout(() => {
-            preguntarContinuarRecoleccion();
+            mostrarMensaje('✅ Datos guardados. Puedes continuar trabajando.', true);
         }, 1000);
         
     } catch (error) {
@@ -909,13 +884,11 @@ async function sincronizarTransferenciaActual() {
             
             registrosProcesados++;
             
-            // Progreso cada 10 registros
             if (registrosProcesados % 10 === 0) {
                 console.log(`📊 Progreso transferencia: ${registrosProcesados}/${Object.keys(cambiosActuales).length}`);
             }
         }
         
-        // ✅ LIMPIAR cambios pendientes después de transferir
         limpiarCambiosTransferencia();
         
         console.log(`✅ Transferencia sincronizada: ${registrosProcesados} registros`);
@@ -929,59 +902,36 @@ async function sincronizarTransferenciaActual() {
 
 // ✅ LIMPIAR CAMBIOS DESPUÉS DE TRANSFERIR
 function limpiarCambiosTransferencia() {
-    // Limpiar cambios pendientes pero MANTENER progreso temporal
     cambiosPendientes = {};
-    
-    // Incrementar número de transferencia
     numeroTransferencia++;
-    
     guardarProgresosTemporales();
     console.log('🧹 Cambios de transferencia limpiados');
 }
 
-// ✅ PREGUNTAR SI CONTINÚA RECOLECTANDO
-function preguntarContinuarRecoleccion() {
-    const continuar = confirm(
-        `✅ Transferencia #${numeroTransferencia - 1} completada exitosamente.\n\n` +
-        `¿Deseas continuar recolectando en la misma cola?\n\n` +
-        `• SÍ: Seguirás con la cola actual\n` +
-        `• NO: Liberarás la cola para otro usuario`
-    );
-    
-    if (continuar) {
-        continuarRecoleccion();
-    } else {
-        finalizarRecoleccionCompleta();
-    }
-}
-
-// ✅ CONTINUAR RECOLECCIÓN EN MISMA COLA
-function continuarRecoleccion() {
-    mostrarMensaje('🔄 Continuando recolección...', true);
-    
-    // Mantener toda la configuración actual
-    
-    // Actualizar interfaz
-    actualizarInterfazPicking();
-    
-    // Enfocar input de escaneo
-    const upcInput = document.getElementById('upcInput');
-    if (upcInput) {
-        upcInput.focus();
-        upcInput.value = '';
-    }
-    
-    console.log('↩️ Continuando recolección en misma cola');
-}
-
-// ✅ FINALIZAR Y LIBERAR COLA
+// ✅ CORRECCIÓN CRÍTICA: FINALIZAR RECOLECCIÓN CON TRANSFERENCIA AUTOMÁTICA
 async function finalizarRecoleccionCompleta() {
-    mostrarMensaje('🚪 Finalizando recolección y liberando cola...', true);
+    mostrarMensaje('🚪 Finalizando recolección...', true);
+    
+    // ✅ CORRECCIÓN: TRANSFERIR AUTOMÁTICAMENTE ANTES DE LIBERAR
+    if (Object.keys(cambiosPendientes).length > 0) {
+        try {
+            console.log('🔄 Transferencia automática al finalizar cola...');
+            await sincronizarTransferenciaActual();
+            mostrarMensaje('✅ Datos transferidos automáticamente', true);
+        } catch (error) {
+            console.error('❌ Error en transferencia automática:', error);
+            mostrarMensaje('❌ Error al transferir datos automáticamente', false);
+            // Continuar para liberar la cola de todos modos
+        }
+    } else {
+        console.log('📭 No hay cambios pendientes para transferir');
+        mostrarMensaje('📭 No hay datos pendientes por transferir', true);
+    }
     
     // Liberar cola en Firebase
     await liberarCola();
     
-    // Limpiar todo
+    // Limpiar variables temporales
     cacheTimestamp = 0;
     progresoTemporal = {};
     cambiosPendientes = {};
@@ -990,9 +940,23 @@ async function finalizarRecoleccionCompleta() {
     guardarProgresosTemporales();
     
     setTimeout(() => {
-        mostrarMensaje('✅ Cola liberada - Otros usuarios pueden trabajar ahora', true);
+        mostrarMensaje('✅ Cola liberada - Datos guardados correctamente', true);
         mostrarVentana(2);
     }, 1500);
+}
+
+// ✅ CONTINUAR RECOLECCIÓN EN MISMA COLA
+function continuarRecoleccion() {
+    mostrarMensaje('🔄 Continuando recolección...', true);
+    actualizarInterfazPicking();
+    
+    const upcInput = document.getElementById('upcInput');
+    if (upcInput) {
+        upcInput.focus();
+        upcInput.value = '';
+    }
+    
+    console.log('↩️ Continuando recolección en misma cola');
 }
 
 // ✅ PROCESAR ESCANEO - CON VALIDACIÓN DE CANTIDAD MEJORADA
@@ -1007,7 +971,6 @@ async function procesarEscaneoUPC(upc) {
             return;
         }
 
-        // Validación UPC
         const upcEscaneado = upc.toString().trim();
         const upcEsperado = item.upc.toString().trim();
         
@@ -1029,7 +992,6 @@ async function procesarEscaneoUPC(upc) {
             return;
         }
 
-        // ✅ MEJORA: VALIDAR QUE NO SE EXCEDA LA CANTIDAD PLANIFICADA
         const nuevoRecolectado = item.recolectado + 1;
         if (nuevoRecolectado > item.cantidad) {
             mostrarMensaje(`❌ No se puede exceder la cantidad planificada (${item.cantidad})`, false);
@@ -1116,7 +1078,6 @@ async function marcarNoEncontrado() {
     const item = depositosActuales[depositoActualIndex];
     if (!item) return;
 
-    // Calcular la diferencia faltante
     const cantidadFaltante = item.cantidad - (item.recolectado + item.no_encontrado);
     
     if (cantidadFaltante <= 0) {
@@ -1125,17 +1086,15 @@ async function marcarNoEncontrado() {
     }
 
     if (confirm(`¿Marcar ${cantidadFaltante} unidad(es) como no encontrada(s) en ${item.deposito}?`)) {
-        // ✅ CORRECCIÓN: Solo agregar la diferencia faltante, no la cantidad total
         const nuevoNoEncontrado = item.no_encontrado + cantidadFaltante;
         
         actualizarProgresoTemporal(item.deposito, item.upc, item.recolectado, nuevoNoEncontrado);
         
-        item.no_encontrado = nuevoNo_encontrado;
+        item.no_encontrado = nuevoNoEncontrado;
         item.completado = true;
         
         mostrarMensaje(`❌ ${cantidadFaltante} unidad(es) marcada(s) como no encontrada(s)`, true);
         
-        // ✅ MEJORA: Pasar automáticamente al siguiente depósito
         setTimeout(async () => {
             try {
                 await sincronizarCambiosPendientes();
@@ -1158,6 +1117,7 @@ async function siguienteDeposito() {
         depositoActualIndex = siguienteIndex;
         await actualizarInterfazPicking();
     } else {
+        // ✅ CORRECCIÓN CRÍTICA: Ahora finalizarRecoleccionCompleta() transfiere automáticamente
         await finalizarRecoleccionCompleta();
     }
 }
@@ -1180,10 +1140,8 @@ async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado
             throw new Error('Item no encontrado para guardar en Firebase');
         }
 
-        // ✅ MEJORA: VALIDACIÓN ADICIONAL DE CANTIDADES
         if (recolectado > item.cantidad) {
             console.warn(`⚠️ Advertencia: Recolectado (${recolectado}) > Planificado (${item.cantidad}) para ${deposito}`);
-            // No lanzamos error pero registramos la advertencia
         }
 
         const registro = {
@@ -1194,7 +1152,7 @@ async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado
             upc: upc,
             descripcion: item.descripcion,
             cantidad_planificada: item.cantidad,
-            cantidad_recolectada: Math.min(recolectado, item.cantidad), // ✅ MEJORA: No permitir exceder
+            cantidad_recolectada: Math.min(recolectado, item.cantidad),
             no_encontrados: no_encontrado,
             fecha: new Date().toLocaleDateString(),
             hora: new Date().toLocaleTimeString(),
@@ -1348,12 +1306,8 @@ async function actualizarDatosPicking() {
     mostrarMensaje('🔄 Actualizando datos...', true);
     
     try {
-        // Recargar progresos actuales
         await cargarProgresoActual();
-        
-        // Actualizar interfaz
         await actualizarInterfazPicking();
-        
         mostrarMensaje('✅ Datos actualizados', true);
     } catch (error) {
         console.error('Error actualizando datos:', error);
