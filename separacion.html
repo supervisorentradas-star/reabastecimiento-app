@@ -133,16 +133,10 @@
             flex: 1;
             overflow-y: auto;
         }
-        .result-header {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 6px;
-            color: #6600a1;
-            font-size: 16px;
-        }
+        /* TITULO ELIMINADO */
         .result-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr; /* CAMBIADO DE 3 A 2 COLUMNAS */
             gap: 5px;
             margin: 6px 0;
         }
@@ -179,9 +173,10 @@
             border-radius: 4px;
             margin-top: 6px;
             text-align: center;
-            color: #7f8c8d;
-            font-size: 11px;
+            color: #6600a1; /* CAMBIADO A COLOR PRINCIPAL */
+            font-size: 12px; /* AUMENTADO TAMAÑO */
             border: 1px solid #ddd;
+            font-weight: bold; /* PONER EN NEGRITA */
         }
         .status-section {
             margin: 6px 0;
@@ -284,28 +279,25 @@
 
             <!-- SECCIÓN DE RESULTADOS -->
             <div class="result-section hidden" id="resultSection">
-                <div class="result-header">REPORTE DE REABASTECIMIENTO</div>
+                <!-- TITULO ELIMINADO: "REPORTE DE REABASTECIMIENTO" -->
                 
+                <!-- DEPÓSITO AHORA VA PRIMERO -->
+                <div class="deposito-display" id="resultDeposito">-</div>
+                
+                <!-- GRID DE 2 COLUMNAS PARA PAS Y BLOQUE -->
                 <div class="result-grid">
                     <div class="result-cell">
-                        <div class="result-label">RUTA</div>
-                        <div class="result-value" id="resultRuta">-</div>
+                        <div class="result-label">PAS</div>
+                        <div class="result-value" id="resultPas">-</div>
                     </div>
                     <div class="result-cell">
                         <div class="result-label">BLOQUE</div>
                         <div class="result-value" id="resultBloque">-</div>
                     </div>
-                    <div class="result-cell">
-                        <div class="result-label">NIVEL</div>
-                        <div class="result-value" id="resultNivel">-</div>
-                    </div>
                 </div>
 
-                <div class="deposito-display" id="resultDeposito">-</div>
-
-                <div class="articulo-info">
-                    <strong>Artículo:</strong> <span id="resultArticulo">-</span>
-                </div>
+                <!-- ARTÍCULO EN NEGRITA -->
+                <div class="articulo-info" id="resultArticulo">-</div>
             </div>
         </div>
 
@@ -379,7 +371,7 @@
         function verificarConexionFirebase() {
             const connectedRef = database.ref(".info/connected");
             connectedRef.on("value", function(snap) {
-                if (nap.val() === true) {
+                if (snap.val() === true) {
                     document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
                 } else {
                     document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
@@ -495,11 +487,15 @@
             
             const info = extraerInformacionDeposito(resultado.deposito);
             
-            document.getElementById('resultRuta').textContent = info.ruta;
-            document.getElementById('resultBloque').textContent = info.bloque;
-            document.getElementById('resultNivel').textContent = info.nivel;
+            // MOSTRAR DEPÓSITO PRIMERO
             document.getElementById('resultDeposito').textContent = resultado.deposito;
-            document.getElementById('resultArticulo').textContent = resultado.articulo;
+            
+            // MOSTRAR PAS Y BLOQUE (NIVEL ELIMINADO)
+            document.getElementById('resultPas').textContent = info.ruta;
+            document.getElementById('resultBloque').textContent = info.bloque;
+            
+            // MOSTRAR ARTÍCULO EN NEGRITA
+            document.getElementById('resultArticulo').textContent = `Artículo: ${resultado.articulo}`;
             
             resultSection.classList.remove('hidden');
             mostrarEstado('✅ Encontrado', 'success');
@@ -513,7 +509,6 @@
         function extraerInformacionDeposito(deposito) {
             let ruta = '';
             let bloque = '';
-            let nivel = '';
             
             // Extraer ruta
             const matchRuta = deposito.match(/(?:P)?(\d+)/);
@@ -534,12 +529,6 @@
                 }
             }
             
-            // Extraer nivel (última letra)
-            const matchNivel = deposito.match(/([A-Z])$/);
-            if (matchNivel) {
-                nivel = matchNivel[1];
-            }
-            
             // Determinar bloque según reglas
             const rutaNum = parseInt(ruta);
             if (rutaNum >= 1 && rutaNum <= 8) {
@@ -548,7 +537,7 @@
                 bloque = 'Toldo';
             }
             
-            return { ruta, bloque, nivel, numeroDeposito };
+            return { ruta, bloque };
         }
 
         // ================= UTILIDADES =================
