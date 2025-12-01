@@ -278,7 +278,7 @@
             direction: 'asc'
         };
 
-        // Encabezados de cada reporte - CORREGIDO: campo cola_reposicion
+        // Encabezados de cada reporte
         const headers = {
             recoleccion: ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad_recolectada', 'cantidad_planificada', 'no_encontrados', 'tipoRecoleccion', 'deposito_destino', 'hora', 'cola_reposicion', 'fecha'],
             reposiciones: ['usuario', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad', 'fecha', 'hora'],
@@ -352,8 +352,6 @@
                 const data = snapshot.val();
                 if (data) {
                     allData.recoleccion = Object.values(data);
-                    console.log('Datos de recolección cargados:', allData.recoleccion.length);
-                    console.log('Ejemplo de datos:', allData.recoleccion[0]);
                 } else {
                     allData.recoleccion = [];
                 }
@@ -401,24 +399,33 @@
             });
         }
 
-        // CORRECCIÓN: Función mejorada para formatear fecha
+        // FUNCIÓN MEJORADA: Normaliza fechas a formato DD/MM/YYYY con 2 dígitos
         function formatDateToDDMMYYYY(dateString) {
             if (!dateString) return '';
             
-            // Si ya está en formato DD/MM/YYYY, devolverlo tal cual
+            // Si ya está en formato con barras
             if (dateString.includes('/')) {
+                const parts = dateString.split('/');
+                if (parts.length === 3) {
+                    // Normalizar día y mes a 2 dígitos
+                    const day = parts[0].padStart(2, '0');
+                    const month = parts[1].padStart(2, '0');
+                    const year = parts[2];
+                    return `${day}/${month}/${year}`;
+                }
                 return dateString;
             }
             
-            // Si está en formato YYYY-MM-DD, convertirlo
+            // Si está en formato YYYY-MM-DD (input type="date")
             if (dateString.includes('-')) {
                 const parts = dateString.split('-');
                 if (parts.length === 3) {
-                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    // Formato YYYY-MM-DD
+                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
                 }
             }
             
-            // Si es un timestamp o formato desconocido, intentar crear fecha
+            // Si es un timestamp o formato desconocido
             try {
                 const date = new Date(dateString);
                 if (!isNaN(date.getTime())) {
@@ -434,9 +441,11 @@
             return dateString;
         }
 
-        // CORRECCIÓN: Función mejorada para comparar fechas
+        // FUNCIÓN MEJORADA: Compara fechas normalizadas
         function datesMatch(filterDate, itemDate) {
-            if (!filterDate || !itemDate) return false;
+            if (!filterDate) return true; // Si no hay filtro, mostrar todo
+            
+            if (!itemDate) return false; // Si el item no tiene fecha, no mostrar
             
             // Formatear ambas fechas a DD/MM/YYYY para comparación
             const filterFormatted = formatDateToDDMMYYYY(filterDate);
@@ -449,12 +458,10 @@
             const dateFilter = document.getElementById('dateFilter').value;
             const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
             
-            console.log('Filtro de fecha aplicado:', dateFilter);
-            
             // Filtrar datos para cada tab
             Object.keys(allData).forEach(tab => {
                 filteredData[tab] = allData[tab].filter(item => {
-                    // CORRECCIÓN: Filtrar por fecha - usar la función mejorada
+                    // Filtrar por fecha
                     if (dateFilter) {
                         const itemDate = item.fecha || item.fechaSistema;
                         if (!datesMatch(dateFilter, itemDate)) {
@@ -465,7 +472,7 @@
                     // Filtrar por búsqueda si hay texto
                     if (searchFilter) {
                         let match = false;
-                        // Buscar en campos específicos para mejor rendimiento
+                        // Buscar en campos específicos
                         const searchFields = ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc'];
                         for (const key of searchFields) {
                             if (item[key] && item[key].toString().toLowerCase().includes(searchFilter)) {
@@ -479,8 +486,6 @@
                     return true;
                 });
             });
-            
-            console.log('Datos filtrados para', currentTab, ':', filteredData[currentTab].length);
         }
 
         function renderTable() {
@@ -527,8 +532,14 @@
                     let aValue = a[sortConfig.column];
                     let bValue = b[sortConfig.column];
                     
+                    // Para fechas, convertirlas a formato comparable
+                    if (sortConfig.column === 'fecha') {
+                        aValue = formatDateToDDMMYYYY(aValue);
+                        bValue = formatDateToDDMMYYYY(bValue);
+                    }
+                    
                     // Convertir a números si es posible
-                    if (!isNaN(aValue) && !isNaN(bValue)) {
+                    if (!isNaN(aValue) && !isNaN(bValue) && aValue !== '' && bValue !== '') {
                         aValue = parseFloat(aValue);
                         bValue = parseFloat(bValue);
                     }
@@ -539,13 +550,19 @@
                 });
             }
             
-            // Crear filas de datos
+            // Crear filas de datos con fechas formateadas
             currentData.forEach(item => {
                 const row = document.createElement('tr');
                 currentHeaders.forEach(header => {
                     const cell = document.createElement('td');
-                    // CORRECCIÓN: Mostrar el valor correcto para cola_reposicion
-                    cell.textContent = item[header] || '';
+                    let value = item[header] || '';
+                    
+                    // Formatear fecha para mostrar
+                    if (header === 'fecha' && value) {
+                        value = formatDateToDDMMYYYY(value);
+                    }
+                    
+                    cell.textContent = value;
                     row.appendChild(cell);
                 });
                 tableBody.appendChild(row);
