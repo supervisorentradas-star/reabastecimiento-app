@@ -36,6 +36,8 @@
             margin-bottom: 6px;
             padding-bottom: 4px;
             border-bottom: 2px solid #8a0bd2;
+            flex-shrink: 0;
+            height: 40px;
         }
         .header-left, .header-center, .header-right {
             display: flex;
@@ -57,18 +59,18 @@
             background-color: #f39c12;
         }
         .refresh-button {
-            padding: 6px;
-            font-size: 14px;
+            padding: 6px 12px;
+            font-size: 12px;
             background: gray;
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            padding: 10px 16px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+        
         .data-section {
             flex: 1;
             display: flex;
@@ -76,11 +78,7 @@
             overflow: hidden;
             gap: 6px;
         }
-        .rutas-section {
-            margin-bottom: 6px;
-            flex: 1;
-            overflow-y: auto;
-        }
+        
         .cola-button {
             padding: 12px;
             border: 2px solid #8a0bd2;
@@ -112,12 +110,15 @@
             background: #219652 !important;
             border-color: #219652 !important;
         }
+        
         .footer {
             margin-top: 6px;
             padding-top: 6px;
             border-top: 2px solid #8a0bd2;
             display: flex;
             justify-content: space-between;
+            flex-shrink: 0;
+            height: 50px;
         }
         .back-button {
             background: #af50e5;
@@ -130,10 +131,11 @@
             font-weight: bold;
         }
 
-        /* Estilos para la ventana 2 */
+        /* Estilos para la ventana 2 - MEJORADOS PARA MC9300 */
         .hidden {
             display: none;
         }
+        
         .current-deposito {
             background: #f8f9fa;
             padding: 10px;
@@ -141,7 +143,8 @@
             margin-bottom: 6px;
             text-align: center;
             border: 1px solid #ddd;
-            transition: all 0.3s;
+            flex-shrink: 0;
+            min-height: 120px;
         }
         .deposito-header {
             font-size: 16px;
@@ -150,10 +153,10 @@
             margin-bottom: 6px;
         }
         .articulo-info {
-            font-size: 12px;
-            color: #7f8c8d;
+            font-size: 14px;
+            color: #000000;
             margin-bottom: 8px;
-            font-style: italic;
+            font-weight: bold;
         }
         .counters {
             display: grid;
@@ -179,6 +182,7 @@
             font-weight: bold;
             color: #8a0bd2;
         }
+        
         .scan-section {
             background: #f8f9fa;
             padding: 10px;
@@ -186,6 +190,8 @@
             margin-bottom: 6px;
             text-align: center;
             border: 1px dashed #bdc3c7;
+            flex-shrink: 0;
+            min-height: 180px;
         }
         .scan-section h3 {
             font-size: 12px;
@@ -195,7 +201,7 @@
         .scan-input {
             width: 100%;
             padding: 10px;
-            font-size: 12px;
+            font-size: 14px;
             border: 2px solid #8a0bd2;
             border-radius: 6px;
             text-align: center;
@@ -206,9 +212,10 @@
             border-color: #e74c3c;
             background-color: #fdf2f2;
         }
+        
         .controls {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             margin-top: 8px;
         }
@@ -216,7 +223,7 @@
             padding: 10px;
             border: none;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
@@ -225,14 +232,11 @@
             background: #f39c12;
             color: white;
         }
-        .btn-success {
-            background: #27ae60;
-            color: white;
-        }
         .btn-info {
             background: #3498db;
             color: white;
         }
+        
         .depositos-list-container {
             flex: 1;
             display: flex;
@@ -241,6 +245,9 @@
             border: 1px solid #ddd;
             border-radius: 6px;
             margin-bottom: 6px;
+            /* ALTURA FIJA PARA SCROLL - MÁS ALTA */
+            height: 350px;
+            min-height: 350px;
         }
         .depositos-list-header {
             background: #8a0bd2;
@@ -249,35 +256,102 @@
             border-radius: 4px 4px 0 0;
             padding: 8px;
             font-size: 10px;
+            flex-shrink: 0;
         }
         .depositos-list-content {
             flex: 1;
             overflow-y: auto;
-            padding: 8px;
-            max-height: 200px;
+            overflow-x: hidden;
+            padding: 4px;
+            /* GARANTIZAR QUE EL SCROLL FUNCIONE - ESTILOS MEJORADOS */
+            min-height: 0;
+            height: 100%;
+            /* FORZAR SCROLL VISIBLE */
+            overflow-y: scroll !important;
         }
-        .deposito-row {
+        
+        /* NUEVOS ESTILOS PARA LISTA EXPANDIBLE */
+        .deposito-group {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            background: white;
+        }
+        .deposito-header-row {
             display: grid;
             grid-template-columns: 20px 1fr 40px 40px;
             gap: 8px;
             padding: 8px;
-            border-bottom: 1px solid #ecf0f1;
             align-items: center;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 11px;
+            border-bottom: 1px solid #e0e0e0;
         }
-        .deposito-row:hover {
+        .deposito-header-row:hover {
             background: #f8f9fa;
         }
-        .deposito-row.selected {
-            background: #8a0bd2;
-            color: white;
+        .deposito-header-row.expanded {
+            background: #e3f2fd;
+            border-bottom: 2px solid #8a0bd2;
         }
-        .deposito-row.completed {
+        .deposito-header-row.pendiente {
+            background: #fff3cd;
+            border-left: 4px solid #f39c12;
+        }
+        .deposito-header-row.completado {
+            background: #d4edda;
+            border-left: 4px solid #27ae60;
+        }
+        .deposito-header-row.parcial {
+            background: #d1ecf1;
+            border-left: 4px solid #3498db;
+        }
+        .deposito-items {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .deposito-items.expanded {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .deposito-item-row {
+            display: grid;
+            grid-template-columns: 20px 1fr 40px 40px;
+            gap: 8px;
+            padding: 6px 8px 6px 28px;
+            border-bottom: 1px solid #f8f9fa;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 10px;
+            background: white;
+        }
+        .deposito-item-row:hover {
+            background: #f8f9fa;
+        }
+        .deposito-item-row.selected {
+            background: #8a0bd2 !important;
+            color: white !important;
+        }
+        .deposito-item-row.completed {
             background: #d4edda;
             color: #155724;
         }
+        .deposito-item-row.pendiente {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .expand-icon {
+            transition: transform 0.3s;
+            font-size: 10px;
+            text-align: center;
+        }
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+        
         .status-indicator {
             width: 12px;
             height: 12px;
@@ -291,14 +365,20 @@
             background: #27ae60;
         }
         .status-selected {
-            background: #8a0bd2;
+            background: #ffffff;
         }
+        .status-partial {
+            background: #3498db;
+        }
+        
         .cache-info {
             font-size: 9px;
             color: #7f8c8d;
             text-align: center;
             margin-top: 6px;
+            flex-shrink: 0;
         }
+        
         .completion-overlay {
             position: fixed;
             top: 0;
@@ -328,6 +408,7 @@
             font-size: 18px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
+        
         .fin-cola-overlay {
             position: fixed;
             top: 0;
@@ -357,6 +438,7 @@
             font-size: 24px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
+        
         .error-message {
             background: #f8d7da;
             color: #721c24;
@@ -377,30 +459,77 @@
             font-size: 12px;
             border: 1px solid #ffeaa7;
         }
-        .sync-indicator {
-            font-size: 10px;
-            color: #f39c12;
-            margin-left: 5px;
-        }
-        .sync-indicator.syncing {
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+        
         .save-indicator {
             font-size: 10px;
             color: #27ae60;
             margin-left: 5px;
         }
+        
         .scan-success {
             animation: scan-success 1s;
         }
         @keyframes scan-success {
             0% { background-color: #d4edda; }
             100% { background-color: white; }
+        }
+
+        /* SCROLLBAR MEJORADO - MÁS VISIBLE Y FUNCIONAL */
+        .depositos-list-content::-webkit-scrollbar {
+            width: 14px;
+            background-color: #f5f5f5;
+        }
+        .depositos-list-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .depositos-list-content::-webkit-scrollbar-thumb {
+            background: #8a0bd2;
+            border-radius: 8px;
+            border: 3px solid #f1f1f1;
+        }
+        .depositos-list-content::-webkit-scrollbar-thumb:hover {
+            background: #af50e5;
+        }
+        .depositos-list-content::-webkit-scrollbar-thumb:active {
+            background: #6a0894;
+        }
+        
+        /* Para Firefox */
+        .depositos-list-content {
+            scrollbar-width: thin;
+            scrollbar-color: #8a0bd2 #f1f1f1;
+        }
+        
+        .deposito-items.expanded::-webkit-scrollbar {
+            width: 8px;
+        }
+        .deposito-items.expanded::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .deposito-items.expanded::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 4px;
+        }
+        
+        .talla-info {
+            font-size: 9px;
+            color: #7f8c8d;
+            margin-left: 4px;
+        }
+
+        /* GARANTIZAR QUE EL SCROLL FUNCIONE */
+        .scroll-fix {
+            min-height: 0;
+            overflow: auto;
+        }
+
+        /* ESTILO PARA DEPÓSITO ACTIVO EN LA LISTA */
+        .deposito-activo {
+            background-color: #e8f5e8 !important;
+            border-left: 4px solid #27ae60 !important;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -439,11 +568,10 @@
             </div>
 
             <div class="data-section">
-                <!-- Mensajes de error/éxito -->
                 <div id="messageContainer"></div>
 
                 <h3 style="font-size: 14px; margin-bottom: 10px; text-align: center; color: #8a0bd2;">SELECCIONA UNA COLA PARA REPONER:</h3>
-                <div id="rutasContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; max-height: calc(100vh - 200px);">
+                <div id="rutasContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; flex: 1;">
                     <!-- Las colas se cargarán aquí dinámicamente -->
                 </div>
 
@@ -474,7 +602,6 @@
             </div>
 
             <div class="data-section">
-                <!-- Mensajes de error/éxito -->
                 <div id="messageContainerVentana2"></div>
 
                 <div class="current-deposito" id="currentDepositoSection">
@@ -503,7 +630,8 @@
                            id="depositoInput" 
                            class="scan-input" 
                            placeholder="Escanea el código del depósito" 
-                           autocomplete="off">
+                           autocomplete="off"
+                           value="">
                     
                     <h3>ESCANEAR CÓDIGO UPC</h3>
                     <input type="text" 
@@ -514,9 +642,8 @@
                            disabled>
                     
                     <div class="controls">
-                        <button class="btn-warning" id="siguienteDepositoBtn">⏭️ SIG DEPÓSITO</button>
-                        <button class="btn-info" id="volverAColasBtn">↩️ VOLVER A COLAS</button>
-                        <button class="btn-success" id="finalizarReposicionBtn">🏁 FINALIZAR</button>
+                        <button class="btn-warning" id="siguienteDepositoBtn">⏭️ SIGUIENTE</button>
+                        <button class="btn-info" id="volverAColasBtn">↩️ COLAS</button>
                     </div>
                 </div>
 
@@ -524,13 +651,13 @@
                     <div class="depositos-list-header">
                         <div style="display: grid; grid-template-columns: 20px 1fr 40px 40px; gap: 8px;">
                             <div></div>
-                            <div>LISTA DE DEPÓSITO - DESCRIPCIÓN</div>
+                            <div>DEPÓSITO - ARTÍCULO</div>
                             <div>TOTAL</div>
                             <div>HECHO</div>
                         </div>
                     </div>
-                    <div class="depositos-list-content" id="depositosGrid">
-                        <!-- Los depósitos se cargarán aquí dinámicamente -->
+                    <div class="depositos-list-content scroll-fix" id="depositosGrid">
+                        <!-- Los depósitos se cargarán aquí dinámicamente EN ORDEN -->
                     </div>
                 </div>
 

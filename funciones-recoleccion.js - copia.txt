@@ -13,7 +13,7 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// ================= VARIABLES GLOBALES =================
+// ================= VARIABLES GLOBALES OPTIMIZADAS =================
 let cacheRutas = null;
 let cacheProgresos = {};
 let cacheColasEnUso = {};
@@ -38,10 +38,7 @@ let fechaSistema = '';
 let transferenciasRealizadas = [];
 let numeroTransferencia = 1;
 
-// ✅ BLOQUEO DE NAVEGACIÓN
-let navegacionBloqueada = false;
-
-// ================= INICIALIZACIÓN =================
+// ================= INICIALIZACIÓN RÁPIDA =================
 document.addEventListener('DOMContentLoaded', function() {
     inicializarAplicacion();
 });
@@ -74,17 +71,6 @@ async function inicializarAplicacion() {
     }
 }
 
-// ✅ ESTABLECER FECHA ACTUAL DEL SISTEMA
-function establecerFechaActual() {
-    const fecha = new Date();
-    const dia = fecha.getDate().toString().padStart(2, '0');
-    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-    const anio = fecha.getFullYear();
-    fechaSistema = `${dia}/${mes}/${anio}`;
-    
-    document.getElementById('fechaActual').textContent = fechaSistema;
-}
-
 // ✅ LIMPIAR DATOS DE DÍAS ANTERIORES
 async function limpiarDatosDiasAnteriores() {
     try {
@@ -97,7 +83,6 @@ async function limpiarDatosDiasAnteriores() {
             
             localStorage.removeItem(`progresoTemporal_${usuarioActual}`);
             localStorage.removeItem(`cambiosPendientes_${usuarioActual}`);
-            localStorage.removeItem(`numeroTransferencia_${usuarioActual}`);
             
             progresoTemporal = {};
             cambiosPendientes = {};
@@ -112,6 +97,17 @@ async function limpiarDatosDiasAnteriores() {
     } catch (error) {
         console.error('Error limpiando datos anteriores:', error);
     }
+}
+
+// ✅ ESTABLECER FECHA ACTUAL DEL SISTEMA
+function establecerFechaActual() {
+    const fecha = new Date();
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    const anio = fecha.getFullYear();
+    fechaSistema = `${dia}/${mes}/${anio}`;
+    
+    document.getElementById('fechaActual').textContent = fechaSistema;
 }
 
 // ✅ VALIDAR FECHA DE REGISTRO vs FECHA DEL SISTEMA
@@ -158,7 +154,7 @@ async function cargarProgresosTemporales() {
                     progresoTemporal[key] = todosLosProgresos[key];
                 }
             }
-            console.log('📥 Progresos temporales cargados:', Object.keys(progresoTemporal).length);
+            console.log('📥 Progresos temporales cargados (filtrados por fecha):', Object.keys(progresoTemporal).length);
         }
         
         const cambiosGuardados = localStorage.getItem(`cambiosPendientes_${usuarioActual}`);
@@ -171,7 +167,7 @@ async function cargarProgresosTemporales() {
                     cambiosPendientes[key] = todosLosCambios[key];
                 }
             }
-            console.log('📥 Cambios pendientes cargados:', Object.keys(cambiosPendientes).length);
+            console.log('📥 Cambios pendientes cargados (filtrados por fecha):', Object.keys(cambiosPendientes).length);
         }
 
         const transferenciaGuardada = localStorage.getItem(`numeroTransferencia_${usuarioActual}`);
@@ -231,26 +227,9 @@ function obtenerProgresoActual(deposito, upc) {
     return { recolectado: 0, no_encontrado: 0, fecha: fechaSistema };
 }
 
-// ✅ ACTUALIZAR PROGRESO TEMPORAL CON VALIDACIÓN ESTRICTA
+// ✅ ACTUALIZAR PROGRESO TEMPORAL (SIEMPRE CON FECHA)
 function actualizarProgresoTemporal(deposito, upc, recolectado, no_encontrado = 0) {
     const key = `${deposito}_${upc}`;
-    
-    // Buscar el item original para validar
-    let itemOriginal = null;
-    if (depositosActuales.length > 0) {
-        itemOriginal = depositosActuales.find(item => 
-            item.deposito === deposito && item.upc === upc
-        );
-    }
-    
-    // Validación estricta: no puede exceder cantidad planificada
-    if (itemOriginal) {
-        const total = recolectado + no_encontrado;
-        if (total > itemOriginal.cantidad) {
-            console.error(`❌ Error: Total ${total} excede cantidad planificada ${itemOriginal.cantidad}`);
-            throw new Error(`No se puede exceder la cantidad planificada (${itemOriginal.cantidad})`);
-        }
-    }
     
     if (!progresoTemporal[key]) {
         progresoTemporal[key] = { 
@@ -274,7 +253,6 @@ function actualizarProgresoTemporal(deposito, upc, recolectado, no_encontrado = 
     };
     
     guardarProgresosTemporales();
-    return true;
 }
 
 // ✅ SINCRONIZAR CAMBIOS PENDIENTES CON FIREBASE
@@ -286,10 +264,8 @@ async function sincronizarCambiosPendientes() {
     console.log('🔄 Sincronizando cambios pendientes con Firebase...');
     
     try {
-        const cambiosParaSincronizar = { ...cambiosPendientes };
-        
-        for (const key in cambiosParaSincronizar) {
-            const cambio = cambiosParaSincronizar[key];
+        for (const key in cambiosPendientes) {
+            const cambio = cambiosPendientes[key];
             
             if (cambio.fechaSistema !== fechaSistema) {
                 console.warn(`⚠️ Cambio de fecha diferente omitido: ${cambio.fechaSistema} vs ${fechaSistema}`);
@@ -303,7 +279,6 @@ async function sincronizarCambiosPendientes() {
                 cambio.no_encontrado
             );
             
-            // Actualizar cache
             cacheProgresos[key] = {
                 recolectado: cambio.recolectado,
                 no_encontrado: cambio.no_encontrado,
@@ -313,11 +288,7 @@ async function sincronizarCambiosPendientes() {
             console.log(`✅ Sincronizado: ${key} - ${cambio.recolectado} unidades`);
         }
         
-        // Limpiar solo los sincronizados
-        for (const key in cambiosParaSincronizar) {
-            delete cambiosPendientes[key];
-        }
-        
+        cambiosPendientes = {};
         guardarProgresosTemporales();
         
         console.log('✅ Todos los cambios sincronizados con Firebase');
@@ -348,7 +319,7 @@ function inicializarFirebase() {
     });
 }
 
-// ✅ CONFIGURACIÓN DE EVENT LISTENERS
+// ✅ CONFIGURACIÓN DE EVENT LISTENERS MEJORADA
 function configurarEventListeners() {
     document.querySelectorAll('.tipo-button').forEach(button => {
         button.addEventListener('click', function() {
@@ -370,10 +341,14 @@ function configurarEventListeners() {
                 e.target.value = '';
             }
         });
+
+        upcInput.addEventListener('paste', function(e) {
+            console.log('📋 Pegado permitido para pruebas');
+        });
     }
 }
 
-// ================= VENTANA 1: RUTAS =================
+// ================= VENTANA 1: RUTAS OPTIMIZADAS =================
 async function cargarRutasDesdeFirebase() {
     try {
         mostrarMensaje('📥 Cargando datos...', true);
@@ -473,7 +448,7 @@ async function procesarDatosFirebase(datosFirebase) {
     document.getElementById('tipoActual').textContent = tipoRecoleccionActual;
 }
 
-async function mostrarOpcionesRutas() {
+function mostrarOpcionesRutas() {
     const container = document.getElementById('rutasGrid');
     
     if (!window.rutasData || Object.keys(window.rutasData).length === 0) {
@@ -490,47 +465,45 @@ async function mostrarOpcionesRutas() {
         return;
     }
 
-    for (const ruta of rutas) {
+    rutas.forEach(ruta => {
         const itemsRuta = window.rutasData[ruta];
         const totalUnidades = itemsRuta.reduce((sum, item) => sum + item.cantidad, 0);
         
-        const progreso = await calcularProgresoRuta(ruta);
-        const recolectado = Math.min(progreso.recolectado, totalUnidades); // Asegurar no exceder
-        
-        const button = document.createElement('button');
-        button.className = 'ruta-button';
-        button.innerHTML = `${ruta}<br>${recolectado}/${totalUnidades}`;
-        button.onclick = () => seleccionarRuta(ruta);
-        
-        container.appendChild(button);
-    }
+        calcularProgresoRuta(ruta).then(progreso => {
+            const button = document.createElement('button');
+            button.className = 'ruta-button';
+            button.innerHTML = `${ruta}<br>${progreso.recolectado}/${totalUnidades}`;
+            button.onclick = () => seleccionarRuta(ruta);
+            
+            container.appendChild(button);
+        });
+    });
 }
 
-// ================= CONSULTAS OPTIMIZADAS =================
+// ================= CONSULTAS OPTIMIZADAS PARA FIREBASE =================
 async function cargarTodosLosProgresos() {
     try {
         console.log('🔄 Cargando todos los progresos...');
         const snapshot = await database.ref('recolecciones').once('value');
         const todosLosProgresos = snapshot.val() || {};
         
-        const nuevosCache = {};
+        cacheProgresos = {};
         
         Object.values(todosLosProgresos).forEach(registro => {
             if (registro.fechaSistema === fechaSistema) {
                 const key = `${registro.deposito}_${registro.upc}`;
-                if (!nuevosCache[key]) {
-                    nuevosCache[key] = { 
+                if (!cacheProgresos[key]) {
+                    cacheProgresos[key] = { 
                         recolectado: 0, 
                         no_encontrado: 0,
                         fecha: fechaSistema 
                     };
                 }
-                nuevosCache[key].recolectado += (registro.cantidad_recolectada || 0);
-                nuevosCache[key].no_encontrado += (registro.no_encontrados || 0);
+                cacheProgresos[key].recolectado += (registro.cantidad_recolectada || 0);
+                cacheProgresos[key].no_encontrado += (registro.no_encontrados || 0);
             }
         });
         
-        cacheProgresos = nuevosCache;
         console.log('✅ Progresos cargados:', Object.keys(cacheProgresos).length, 'registros');
         return cacheProgresos;
     } catch (error) {
@@ -589,7 +562,7 @@ function seleccionarRuta(ruta) {
     mostrarVentana(2);
 }
 
-// ================= VENTANA 2: COLAS =================
+// ================= VENTANA 2: COLAS OPTIMIZADAS =================
 async function cargarColasParaRuta(ruta) {
     if (!window.rutasData || !window.rutasData[ruta]) {
         mostrarMensaje('❌ No hay datos para esta ruta', false);
@@ -647,9 +620,10 @@ async function mostrarOpcionesColas() {
         return;
     }
 
+    const colasUnicas = [...new Set(colas)];
     container.innerHTML = '';
     
-    for (const cola of colas) {
+    for (const cola of colasUnicas) {
         const itemsCola = itemsPorCola[cola];
         const totalUnidades = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
         
@@ -665,8 +639,6 @@ async function mostrarOpcionesColas() {
         
         if (estadoCola.clase !== 'occupied') {
             button.onclick = () => seleccionarCola(cola);
-        } else {
-            button.disabled = true;
         }
         
         container.appendChild(button);
@@ -677,11 +649,7 @@ async function verificarEstadoCola(cola) {
     try {
         const colaEnUso = await verificarColaEnUso(cola);
         if (colaEnUso && colaEnUso.usuario !== usuarioActual) {
-            return { 
-                clase: 'occupied', 
-                estado: `OCUPADA POR ${colaEnUso.usuario}`, 
-                recolectado: 0 
-            };
+            return { clase: 'occupied', estado: `OCUPADA`, recolectado: 0 };
         }
 
         const itemsCola = itemsPorCola[cola];
@@ -689,7 +657,7 @@ async function verificarEstadoCola(cola) {
         
         itemsCola.forEach(item => {
             const progreso = obtenerProgresoActual(item.deposito, item.upc);
-            totalRecolectado += Math.min(progreso.recolectado, item.cantidad);
+            totalRecolectado += progreso.recolectado;
         });
 
         const totalUnidades = itemsCola.reduce((sum, item) => sum + item.cantidad, 0);
@@ -707,7 +675,7 @@ async function verificarEstadoCola(cola) {
     }
 }
 
-// ================= GESTIÓN DE COLAS EN USO =================
+// ================= GESTIÓN DE COLAS EN USO OPTIMIZADA =================
 async function verificarColaEnUso(cola) {
     try {
         const colaKey = `${rutaActual}_${cola}`;
@@ -770,32 +738,7 @@ async function reservarCola(cola) {
     };
 }
 
-// ✅ LIBERAR COLA DE FORMA CONFIABLE
-async function liberarColaConfiable() {
-    if (!rutaActual || !colaActual || !usuarioActual) {
-        console.warn('⚠️ No hay datos suficientes para liberar cola');
-        return false;
-    }
-    
-    try {
-        const key = `${rutaActual}_${colaActual}_${usuarioActual}`;
-        
-        // 1. Liberar en Firebase
-        await database.ref(`colasEnUso/${key}`).remove();
-        
-        // 2. Actualizar cache local
-        delete cacheColasEnUso[key];
-        
-        console.log('✅ Cola liberada correctamente en Firebase');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error liberando cola:', error);
-        return false;
-    }
-}
-
-// ================= VENTANA 3: PICKING =================
+// ================= VENTANA 3: PICKING MEJORADO =================
 async function iniciarProcesoPicking() {
     depositosActuales = itemsPorCola[colaActual] || [];
     depositoActualIndex = 0;
@@ -810,9 +753,9 @@ async function iniciarProcesoPicking() {
 async function cargarProgresoActual() {
     depositosActuales.forEach(item => {
         const progreso = obtenerProgresoActual(item.deposito, item.upc);
-        item.recolectado = Math.min(progreso.recolectado, item.cantidad);
-        item.no_encontrado = Math.min(progreso.no_encontrado, item.cantidad - item.recolectado);
-        item.completado = (item.recolectado + item.no_encontrado) >= item.cantidad;
+        item.recolectado = progreso.recolectado;
+        item.no_encontrado = progreso.no_encontrado;
+        item.completado = (progreso.recolectado + progreso.no_encontrado) >= item.cantidad;
     });
 }
 
@@ -827,7 +770,7 @@ async function actualizarInterfazPicking() {
     document.getElementById('depositoActualDescripcion').textContent = item.descripcion;
     
     const leida = item.recolectado + item.no_encontrado;
-    const pendiente = Math.max(0, item.cantidad - leida);
+    const pendiente = item.cantidad - leida;
     
     document.getElementById('cantidadTotal').textContent = item.cantidad;
     document.getElementById('cantidadLeida').textContent = leida;
@@ -848,7 +791,6 @@ function actualizarListaDepositos() {
 
     depositosActuales.forEach((item, index) => {
         const leida = item.recolectado + item.no_encontrado;
-        const pendiente = Math.max(0, item.cantidad - leida);
         const estado = `${leida}/${item.cantidad}`;
         
         const div = document.createElement('div');
@@ -870,24 +812,154 @@ function actualizarListaDepositos() {
     });
 }
 
-// ✅ VALIDACIÓN ESTRICTA DE CANTIDADES EN ESCANEO
-function validarCantidadEstricta(item, nuevoRecolectado) {
-    const MAXIMO_PERMITIDO = item.cantidad;
-    const YA_RECOLECTADO = item.recolectado;
-    const DIFERENCIA = nuevoRecolectado - YA_RECOLECTADO;
-    
-    if (nuevoRecolectado > MAXIMO_PERMITIDO) {
-        throw new Error(`❌ Límite excedido: ${nuevoRecolectado} > ${MAXIMO_PERMITIDO}`);
+// ================= FUNCIONES DE TRANSFERENCIA SIMPLIFICADAS =================
+
+// ✅ TRANSFERIR DATOS ACTUALES - CORREGIDO
+async function transferirPalet() {
+    if (Object.keys(cambiosPendientes).length === 0) {
+        mostrarMensaje('📭 No hay datos para transferir', true);
+        return;
     }
-    
-    if (DIFERENCIA > 1) {
-        throw new Error(`❌ Incremento inválido: +${DIFERENCIA} unidades`);
+
+    console.log(`🔄 Iniciando transferencia #${numeroTransferencia} con ${Object.keys(cambiosPendientes).length} registros`);
+    mostrarMensaje(`🔄 Transferiendo datos...`, true);
+
+    try {
+        await sincronizarTransferenciaActual();
+        
+        transferenciasRealizadas.push({
+            numero: numeroTransferencia,
+            registros: Object.keys(cambiosPendientes).length,
+            timestamp: Date.now(),
+            cola: colaActual,
+            ruta: rutaActual
+        });
+        
+        console.log(`✅ Transferencia #${numeroTransferencia} completada: ${Object.keys(cambiosPendientes).length} registros`);
+        mostrarMensaje(`✅ Transferencia completada (${Object.keys(cambiosPendientes).length} registros)`, true);
+        
+        // ✅ CORRECCIÓN: No preguntar automáticamente, solo informar
+        setTimeout(() => {
+            mostrarMensaje('✅ Datos guardados. Puedes continuar trabajando.', true);
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Error en transferencia:', error);
+        mostrarMensaje('❌ Error en transferencia: ' + error.message, false);
     }
-    
-    return true;
 }
 
-// ✅ PROCESAR ESCANEO CON VALIDACIÓN MEJORADA
+// ✅ SINCRONIZAR TRANSFERENCIA ACTUAL
+async function sincronizarTransferenciaActual() {
+    if (Object.keys(cambiosPendientes).length === 0) {
+        return;
+    }
+    
+    console.log(`📦 Sincronizando transferencia: ${Object.keys(cambiosPendientes).length} registros`);
+    
+    try {
+        let registrosProcesados = 0;
+        const cambiosActuales = { ...cambiosPendientes };
+        
+        for (const key in cambiosActuales) {
+            const cambio = cambiosActuales[key];
+            
+            if (cambio.fechaSistema !== fechaSistema) {
+                console.warn(`⚠️ Cambio de fecha diferente omitido`);
+                continue;
+            }
+            
+            await guardarProgresoFirebase(
+                cambio.deposito,
+                cambio.upc,
+                cambio.recolectado,
+                cambio.no_encontrado
+            );
+            
+            cacheProgresos[key] = {
+                recolectado: cambio.recolectado,
+                no_encontrado: cambio.no_encontrado,
+                fecha: fechaSistema
+            };
+            
+            registrosProcesados++;
+            
+            if (registrosProcesados % 10 === 0) {
+                console.log(`📊 Progreso transferencia: ${registrosProcesados}/${Object.keys(cambiosActuales).length}`);
+            }
+        }
+        
+        limpiarCambiosTransferencia();
+        
+        console.log(`✅ Transferencia sincronizada: ${registrosProcesados} registros`);
+        return registrosProcesados;
+        
+    } catch (error) {
+        console.error('❌ Error sincronizando transferencia:', error);
+        throw error;
+    }
+}
+
+// ✅ LIMPIAR CAMBIOS DESPUÉS DE TRANSFERIR
+function limpiarCambiosTransferencia() {
+    cambiosPendientes = {};
+    numeroTransferencia++;
+    guardarProgresosTemporales();
+    console.log('🧹 Cambios de transferencia limpiados');
+}
+
+// ✅ CORRECCIÓN CRÍTICA: FINALIZAR RECOLECCIÓN CON TRANSFERENCIA AUTOMÁTICA
+async function finalizarRecoleccionCompleta() {
+    mostrarMensaje('🚪 Finalizando recolección...', true);
+    
+    // ✅ CORRECCIÓN: TRANSFERIR AUTOMÁTICAMENTE ANTES DE LIBERAR
+    if (Object.keys(cambiosPendientes).length > 0) {
+        try {
+            console.log('🔄 Transferencia automática al finalizar cola...');
+            await sincronizarTransferenciaActual();
+            mostrarMensaje('✅ Datos transferidos automáticamente', true);
+        } catch (error) {
+            console.error('❌ Error en transferencia automática:', error);
+            mostrarMensaje('❌ Error al transferir datos automáticamente', false);
+            // Continuar para liberar la cola de todos modos
+        }
+    } else {
+        console.log('📭 No hay cambios pendientes para transferir');
+        mostrarMensaje('📭 No hay datos pendientes por transferir', true);
+    }
+    
+    // Liberar cola en Firebase
+    await liberarCola();
+    
+    // Limpiar variables temporales
+    cacheTimestamp = 0;
+    progresoTemporal = {};
+    cambiosPendientes = {};
+    numeroTransferencia = 1;
+    
+    guardarProgresosTemporales();
+    
+    setTimeout(() => {
+        mostrarMensaje('✅ Cola liberada - Datos guardados correctamente', true);
+        mostrarVentana(2);
+    }, 1500);
+}
+
+// ✅ CONTINUAR RECOLECCIÓN EN MISMA COLA
+function continuarRecoleccion() {
+    mostrarMensaje('🔄 Continuando recolección...', true);
+    actualizarInterfazPicking();
+    
+    const upcInput = document.getElementById('upcInput');
+    if (upcInput) {
+        upcInput.focus();
+        upcInput.value = '';
+    }
+    
+    console.log('↩️ Continuando recolección en misma cola');
+}
+
+// ✅ PROCESAR ESCANEO - CON VALIDACIÓN DE CANTIDAD MEJORADA
 async function procesarEscaneoUPC(upc) {
     if (procesandoEscaneo) return;
     procesandoEscaneo = true;
@@ -921,11 +993,12 @@ async function procesarEscaneoUPC(upc) {
         }
 
         const nuevoRecolectado = item.recolectado + 1;
-        
-        // Validación estricta
-        validarCantidadEstricta(item, nuevoRecolectado);
-        
-        // Actualizar progreso
+        if (nuevoRecolectado > item.cantidad) {
+            mostrarMensaje(`❌ No se puede exceder la cantidad planificada (${item.cantidad})`, false);
+            playErrorSound();
+            return;
+        }
+
         actualizarProgresoTemporal(item.deposito, item.upc, nuevoRecolectado, item.no_encontrado);
         
         item.recolectado = nuevoRecolectado;
@@ -946,7 +1019,7 @@ async function procesarEscaneoUPC(upc) {
 
     } catch (error) {
         console.error('Error en escaneo:', error);
-        mostrarMensaje(error.message, false);
+        mostrarMensaje('❌ Error en escaneo: ' + error.message, false);
         playErrorSound();
     } finally {
         procesandoEscaneo = false;
@@ -955,298 +1028,7 @@ async function procesarEscaneoUPC(upc) {
     }
 }
 
-// ✅ TRANSFERIR PALET CON ACTUALIZACIÓN AUTOMÁTICA
-async function transferirPalet() {
-    if (Object.keys(cambiosPendientes).length === 0) {
-        mostrarMensaje('📭 No hay datos para transferir', true);
-        return;
-    }
-
-    console.log(`🔄 Iniciando transferencia #${numeroTransferencia} con ${Object.keys(cambiosPendientes).length} registros`);
-    mostrarMensaje(`🔄 Transferiendo datos...`, true);
-
-    try {
-        // 1. Sincronizar con Firebase
-        await sincronizarCambiosPendientes();
-        
-        // 2. Actualizar cache local
-        await cargarTodosLosProgresos();
-        
-        // 3. Actualizar interfaz
-        await cargarProgresoActual();
-        await actualizarInterfazPicking();
-        
-        // 4. Registrar transferencia
-        transferenciasRealizadas.push({
-            numero: numeroTransferencia,
-            registros: Object.keys(cambiosPendientes).length,
-            timestamp: Date.now(),
-            cola: colaActual,
-            ruta: rutaActual
-        });
-        
-        numeroTransferencia++;
-        guardarProgresosTemporales();
-        
-        console.log(`✅ Transferencia #${numeroTransferencia-1} completada`);
-        mostrarMensaje(`✅ Transferencia completada - Datos actualizados`, true);
-        
-    } catch (error) {
-        console.error('❌ Error en transferencia:', error);
-        mostrarMensaje('❌ Error en transferencia: ' + error.message, false);
-    }
-}
-
-// ✅ FINALIZAR RECOLECCIÓN COMPLETA CON TRANSFERENCIA AUTOMÁTICA
-async function finalizarRecoleccionCompleta() {
-    mostrarMensaje('🚪 Finalizando recolección...', true);
-    
-    // ✅ TRANSFERIR AUTOMÁTICAMENTE SI HAY CAMBIOS PENDIENTES
-    if (Object.keys(cambiosPendientes).length > 0) {
-        try {
-            console.log('🔄 Transferencia automática al finalizar cola...');
-            await sincronizarCambiosPendientes();
-            mostrarMensaje('✅ Datos transferidos automáticamente', true);
-        } catch (error) {
-            console.error('❌ Error en transferencia automática:', error);
-            mostrarMensaje('❌ Error al transferir datos automáticamente', false);
-        }
-    } else {
-        console.log('📭 No hay cambios pendientes para transferir');
-        mostrarMensaje('📭 No hay datos pendientes por transferir', true);
-    }
-    
-    // ✅ LIBERAR COLA EN FIREBASE
-    await liberarColaConfiable();
-    
-    // ✅ LIMPIAR VARIABLES DE SESIÓN
-    colaActual = null;
-    depositosActuales = [];
-    depositoActualIndex = 0;
-    
-    // ✅ PERMANECER EN VENTANA 3 PERO SIN COLA ACTIVA
-    mostrarMensaje('✅ Cola finalizada - Puedes seleccionar otra cola o salir', true);
-    
-    // Actualizar interfaz para mostrar estado vacío
-    document.getElementById('depositoActualCodigo').textContent = '-----';
-    document.getElementById('depositoActualDescripcion').textContent = '-----';
-    document.getElementById('cantidadTotal').textContent = '0';
-    document.getElementById('cantidadLeida').textContent = '0';
-    document.getElementById('cantidadPendiente').textContent = '0';
-    document.getElementById('listaDepositos').innerHTML = '<div class="loading">Cola finalizada</div>';
-}
-
-// ✅ MARCAR NO ENCONTRADO CON VALIDACIÓN
-async function marcarNoEncontrado() {
-    const item = depositosActuales[depositoActualIndex];
-    if (!item) return;
-
-    const cantidadFaltante = item.cantidad - (item.recolectado + item.no_encontrado);
-    
-    if (cantidadFaltante <= 0) {
-        mostrarMensaje('⚠️ Este depósito ya está completado', false);
-        return;
-    }
-
-    if (confirm(`¿Marcar ${cantidadFaltante} unidad(es) como no encontrada(s) en ${item.deposito}?`)) {
-        const nuevoNoEncontrado = item.no_encontrado + cantidadFaltante;
-        
-        try {
-            actualizarProgresoTemporal(item.deposito, item.upc, item.recolectado, nuevoNoEncontrado);
-            
-            item.no_encontrado = nuevoNoEncontrado;
-            item.completado = true;
-            
-            mostrarMensaje(`❌ ${cantidadFaltante} unidad(es) marcada(s) como no encontrada(s)`, true);
-            
-            setTimeout(() => {
-                siguienteDeposito();
-            }, 800);
-        } catch (error) {
-            mostrarMensaje(error.message, false);
-        }
-    }
-}
-
-async function siguienteDeposito() {
-    const siguienteIndex = encontrarSiguienteDepositoNoCompletado();
-    if (siguienteIndex !== -1) {
-        depositoActualIndex = siguienteIndex;
-        await actualizarInterfazPicking();
-    } else {
-        // ✅ NO SE CIERRA AUTOMÁTICAMENTE, SE QUEDA EN VENTANA 3
-        await finalizarRecoleccionCompleta();
-    }
-}
-
-function encontrarSiguienteDepositoNoCompletado() {
-    for (let i = 0; i < depositosActuales.length; i++) {
-        const index = (depositoActualIndex + i + 1) % depositosActuales.length;
-        if (!depositosActuales[index].completado) {
-            return index;
-        }
-    }
-    return -1;
-}
-
-// ================= FIREBASE =================
-async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado) {
-    try {
-        const item = depositosActuales.find(d => d.deposito === deposito && d.upc === upc);
-        if (!item) {
-            throw new Error('Item no encontrado para guardar en Firebase');
-        }
-
-        // Validación final
-        const total = recolectado + no_encontrado;
-        if (total > item.cantidad) {
-            console.warn(`⚠️ Ajustando: Total ${total} > Planificado ${item.cantidad}`);
-            recolectado = Math.min(recolectado, item.cantidad);
-            no_encontrado = Math.min(no_encontrado, item.cantidad - recolectado);
-        }
-
-        const registro = {
-            usuario: usuarioActual,
-            ruta: rutaActual,
-            cola: colaActual,
-            deposito: deposito,
-            upc: upc,
-            descripcion: item.descripcion,
-            cantidad_planificada: item.cantidad,
-            cantidad_recolectada: recolectado,
-            no_encontrados: no_encontrado,
-            fecha: new Date().toLocaleDateString(),
-            hora: new Date().toLocaleTimeString(),
-            timestamp: Date.now(),
-            tipoRecoleccion: tipoRecoleccionActual,
-            deposito_destino: item.deposito_destino,
-            cola_reposicion: item.cola_reposicion,
-            fechaSistema: fechaSistema,
-            transferenciaNumero: numeroTransferencia
-        };
-
-        const key = `${deposito}_${upc}_${usuarioActual}_${Date.now()}`;
-        await database.ref(`recolecciones/${key}`).set(registro);
-        
-        console.log(`✅ Guardado en Firebase: ${deposito} - ${recolectado}/${item.cantidad} (Transferencia #${numeroTransferencia})`);
-        
-    } catch (error) {
-        console.error('Error guardando en Firebase:', error);
-        throw error;
-    }
-}
-
-// ================= NAVEGACIÓN CON BLOQUEO =================
-function mostrarVentana(numero) {
-    // ✅ BLOQUEAR NAVEGACIÓN SI HAY CAMBIOS PENDIENTES
-    if (numero !== 3 && Object.keys(cambiosPendientes).length > 0) {
-        const confirmar = confirm(
-            `⚠️ Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
-            '¿Estás seguro de que quieres salir? Se perderán los datos no transferidos.\n\n' +
-            '• Aceptar: Salir sin transferir (PERDERÁS LOS DATOS)\n' +
-            '• Cancelar: Permanecer y transferir primero'
-        );
-        
-        if (!confirmar) {
-            return; // Bloquear navegación
-        }
-    }
-    
-    document.querySelectorAll('.ventana').forEach(ventana => {
-        ventana.style.display = 'none';
-    });
-    document.getElementById(`ventana${numero}`).style.display = 'block';
-}
-
-async function volverARutas() {
-    if (Object.keys(cambiosPendientes).length > 0) {
-        const transferir = confirm(
-            `⚠️ Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
-            '¿Quieres transferir antes de salir?\n\n' +
-            '• Aceptar: Transferir y salir\n' +
-            '• Cancelar: Salir sin transferir (PERDERÁS LOS DATOS)'
-        );
-        
-        if (transferir) {
-            try {
-                await sincronizarCambiosPendientes();
-                mostrarMensaje('✅ Datos transferidos antes de salir', true);
-            } catch (error) {
-                console.error('Error transfiriendo al salir:', error);
-                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
-                    return;
-                }
-            }
-        }
-    }
-    
-    await liberarColaConfiable();
-    mostrarVentana(1);
-}
-
-async function volverAColas() {
-    if (Object.keys(cambiosPendientes).length > 0) {
-        const transferir = confirm(
-            `⚠️ Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
-            '¿Quieres transferir antes de salir?\n\n' +
-            '• Aceptar: Transferir y salir\n' +
-            '• Cancelar: Salir sin transferir (PERDERÁS LOS DATOS)'
-        );
-        
-        if (transferir) {
-            try {
-                await sincronizarCambiosPendientes();
-                mostrarMensaje('✅ Datos transferidos antes de salir', true);
-            } catch (error) {
-                console.error('Error transfiriendo al salir:', error);
-                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
-                    return;
-                }
-            }
-        }
-    }
-    
-    await liberarColaConfiable();
-    mostrarVentana(2);
-}
-
-async function volverInterfazPrincipal() {
-    if (Object.keys(cambiosPendientes).length > 0) {
-        const transferir = confirm(
-            `⚠️ Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
-            '¿Quieres transferir antes de salir?\n\n' +
-            '• Aceptar: Transferir y salir\n' +
-            '• Cancelar: Salir sin transferir (PERDERÁS LOS DATOS)'
-        );
-        
-        if (transferir) {
-            try {
-                await sincronizarCambiosPendientes();
-            } catch (error) {
-                console.error('Error transfiriendo al salir:', error);
-                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
-                    return;
-                }
-            }
-        }
-    }
-    
-    await liberarColaConfiable();
-    window.location.href = 'index.html';
-}
-
-// ================= UTILIDADES =================
-function mostrarMensaje(mensaje, esExito) {
-    const mensajeDiv = document.getElementById('mensajeTemporal');
-    mensajeDiv.textContent = mensaje;
-    mensajeDiv.className = esExito ? 'mensaje-exito' : 'mensaje-error';
-    mensajeDiv.style.display = 'block';
-
-    setTimeout(() => {
-        mensajeDiv.style.display = 'none';
-    }, 3000);
-}
-
+// ✅ FUNCIONES DE SONIDO
 function playSuccessSound() {
     try {
         const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -1291,6 +1073,220 @@ function playErrorSound() {
     }
 }
 
+// ✅ CORRECCIÓN CRÍTICA: MARCAR SOLO LA DIFERENCIA COMO NO ENCONTRADA
+async function marcarNoEncontrado() {
+    const item = depositosActuales[depositoActualIndex];
+    if (!item) return;
+
+    const cantidadFaltante = item.cantidad - (item.recolectado + item.no_encontrado);
+    
+    if (cantidadFaltante <= 0) {
+        mostrarMensaje('⚠️ Este depósito ya está completado', false);
+        return;
+    }
+
+    if (confirm(`¿Marcar ${cantidadFaltante} unidad(es) como no encontrada(s) en ${item.deposito}?`)) {
+        const nuevoNoEncontrado = item.no_encontrado + cantidadFaltante;
+        
+        actualizarProgresoTemporal(item.deposito, item.upc, item.recolectado, nuevoNoEncontrado);
+        
+        item.no_encontrado = nuevoNoEncontrado;
+        item.completado = true;
+        
+        mostrarMensaje(`❌ ${cantidadFaltante} unidad(es) marcada(s) como no encontrada(s)`, true);
+        
+        setTimeout(async () => {
+            try {
+                await sincronizarCambiosPendientes();
+                setTimeout(() => {
+                    siguienteDeposito();
+                }, 500);
+            } catch (error) {
+                console.error('Error sincronizando no encontrado:', error);
+                setTimeout(() => {
+                    siguienteDeposito();
+                }, 500);
+            }
+        }, 500);
+    }
+}
+
+async function siguienteDeposito() {
+    const siguienteIndex = encontrarSiguienteDepositoNoCompletado();
+    if (siguienteIndex !== -1) {
+        depositoActualIndex = siguienteIndex;
+        await actualizarInterfazPicking();
+    } else {
+        // ✅ CORRECCIÓN CRÍTICA: Ahora finalizarRecoleccionCompleta() transfiere automáticamente
+        await finalizarRecoleccionCompleta();
+    }
+}
+
+function encontrarSiguienteDepositoNoCompletado() {
+    for (let i = 0; i < depositosActuales.length; i++) {
+        const index = (depositoActualIndex + i + 1) % depositosActuales.length;
+        if (!depositosActuales[index].completado) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+// ================= FIREBASE OPTIMIZADO =================
+async function guardarProgresoFirebase(deposito, upc, recolectado, no_encontrado) {
+    try {
+        const item = depositosActuales.find(d => d.deposito === deposito && d.upc === upc);
+        if (!item) {
+            throw new Error('Item no encontrado para guardar en Firebase');
+        }
+
+        if (recolectado > item.cantidad) {
+            console.warn(`⚠️ Advertencia: Recolectado (${recolectado}) > Planificado (${item.cantidad}) para ${deposito}`);
+        }
+
+        const registro = {
+            usuario: usuarioActual,
+            ruta: rutaActual,
+            cola: colaActual,
+            deposito: deposito,
+            upc: upc,
+            descripcion: item.descripcion,
+            cantidad_planificada: item.cantidad,
+            cantidad_recolectada: Math.min(recolectado, item.cantidad),
+            no_encontrados: no_encontrado,
+            fecha: new Date().toLocaleDateString(),
+            hora: new Date().toLocaleTimeString(),
+            timestamp: Date.now(),
+            tipoRecoleccion: tipoRecoleccionActual,
+            deposito_destino: item.deposito_destino,
+            cola_reposicion: item.cola_reposicion,
+            fechaSistema: fechaSistema,
+            transferenciaNumero: numeroTransferencia
+        };
+
+        const key = `${deposito}_${upc}_${usuarioActual}_${Date.now()}`;
+        await database.ref(`recolecciones/${key}`).set(registro);
+        
+        console.log(`✅ Guardado en Firebase: ${deposito} - ${Math.min(recolectado, item.cantidad)}/${item.cantidad} (Transferencia #${numeroTransferencia})`);
+        
+    } catch (error) {
+        console.error('Error guardando en Firebase:', error);
+        throw error;
+    }
+}
+
+async function liberarCola() {
+    if (rutaActual && colaActual && usuarioActual) {
+        try {
+            const key = `${rutaActual}_${colaActual}_${usuarioActual}`;
+            await database.ref(`colasEnUso/${key}`).remove();
+            
+            delete cacheColasEnUso[key];
+            
+        } catch (error) {
+            console.error('Error liberando cola:', error);
+        }
+    }
+}
+
+// ================= NAVEGACIÓN =================
+function mostrarVentana(numero) {
+    document.querySelectorAll('.ventana').forEach(ventana => {
+        ventana.style.display = 'none';
+    });
+    document.getElementById(`ventana${numero}`).style.display = 'block';
+}
+
+async function volverARutas() {
+    if (Object.keys(cambiosPendientes).length > 0) {
+        const transferir = confirm(
+            `Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
+            '¿Quieres transferir antes de salir?\n\n' +
+            '• SÍ: Transferir y salir\n' +
+            '• NO: Salir sin transferir (perderás los datos)'
+        );
+        
+        if (transferir) {
+            try {
+                await sincronizarTransferenciaActual();
+                mostrarMensaje('✅ Datos transferidos antes de salir', true);
+            } catch (error) {
+                console.error('Error transfiriendo al salir:', error);
+                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
+                    return;
+                }
+            }
+        }
+    }
+    
+    await liberarCola();
+    mostrarVentana(1);
+}
+
+async function volverAColas() {
+    if (Object.keys(cambiosPendientes).length > 0) {
+        const transferir = confirm(
+            `Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
+            '¿Quieres transferir antes de salir?\n\n' +
+            '• SÍ: Transferir y salir\n' +
+            '• NO: Salir sin transferir (perderás los datos)'
+        );
+        
+        if (transferir) {
+            try {
+                await sincronizarTransferenciaActual();
+                mostrarMensaje('✅ Datos transferidos antes de salir', true);
+            } catch (error) {
+                console.error('Error transfiriendo al salir:', error);
+                if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
+                    return;
+                }
+            }
+        }
+    }
+    
+    await finalizarRecoleccionCompleta();
+}
+
+async function volverInterfazPrincipal() {
+    if (confirm('¿Salir al menú principal?')) {
+        if (Object.keys(cambiosPendientes).length > 0) {
+            const transferir = confirm(
+                `Tienes ${Object.keys(cambiosPendientes).length} registros sin transferir.\n\n` +
+                '¿Quieres transferir antes de salir?\n\n' +
+                '• SÍ: Transferir y salir\n' +
+                '• NO: Salir sin transferir (perderás los datos)'
+            );
+            
+            if (transferir) {
+                try {
+                    await sincronizarTransferenciaActual();
+                } catch (error) {
+                    console.error('Error transfiriendo al salir:', error);
+                    if (!confirm('Error al transferir. ¿Salir sin guardar?')) {
+                        return;
+                    }
+                }
+            }
+        }
+        
+        await liberarCola();
+        window.location.href = 'index.html';
+    }
+}
+
+// ================= UTILIDADES =================
+function mostrarMensaje(mensaje, esExito) {
+    const mensajeDiv = document.getElementById('mensajeTemporal');
+    mensajeDiv.textContent = mensaje;
+    mensajeDiv.className = esExito ? 'mensaje-exito' : 'mensaje-error';
+    mensajeDiv.style.display = 'block';
+
+    setTimeout(() => {
+        mensajeDiv.style.display = 'none';
+    }, 3000);
+}
+
 function actualizarDatos() {
     cacheTimestamp = 0;
     cacheProgresos = {};
@@ -1303,6 +1299,20 @@ function cargarRutas() {
     cacheProgresos = {};
     cacheColasEnUso = {};
     cargarRutasDesdeFirebase();
+}
+
+// ✅ NUEVA FUNCIÓN: ACTUALIZAR DATOS EN VENTANA 3
+async function actualizarDatosPicking() {
+    mostrarMensaje('🔄 Actualizando datos...', true);
+    
+    try {
+        await cargarProgresoActual();
+        await actualizarInterfazPicking();
+        mostrarMensaje('✅ Datos actualizados', true);
+    } catch (error) {
+        console.error('Error actualizando datos:', error);
+        mostrarMensaje('❌ Error al actualizar datos', false);
+    }
 }
 
 // ================= LIMPIEZA AUTOMÁTICA =================

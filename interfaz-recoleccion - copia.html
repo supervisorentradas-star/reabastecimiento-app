@@ -411,6 +411,17 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* BOTÓN DE ACTUALIZAR EN VENTANA 3 */
+        .refresh-button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: rgb(138, 11, 210);
+            cursor: pointer;
+            padding: 5px;
+            margin: 0 10px;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .rutas-grid,
@@ -507,7 +518,10 @@
                     <div>RUTA: <span id="rutaPicking">--</span></div>
                     <div>COLA: <span id="colaPicking">--</span></div>
                 </div>
-                <div class="connection-indicator" id="connectionIndicatorV3"></div>
+                <div>
+                    <button class="refresh-button" onclick="actualizarDatosPicking()">🔄</button>
+                    <div class="connection-indicator" id="connectionIndicatorV3"></div>
+                </div>
             </div>
 
             <div class="current-deposito">
