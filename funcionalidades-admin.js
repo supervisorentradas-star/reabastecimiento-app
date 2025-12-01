@@ -876,7 +876,7 @@ function actualizarEstadisticas() {
     }
 }
 
-// Función para agrupar registros de recolección por ruta y cola
+// Función para agrupar registros de recolección por ruta y cola - CORREGIDA
 function agruparRecoleccionPorRutaYCola(registros) {
     const grupos = {};
     
@@ -901,42 +901,56 @@ function agruparRecoleccionPorRutaYCola(registros) {
     });
     
     // Luego, procesar los registros de recolección para calcular el completado
+    // Usamos un mapa para evitar duplicados
+    const registrosProcesados = new Map();
+    
     registros.forEach(registro => {
+        // Crear una clave única para cada registro
+        const registroKey = `${registro.deposito}_${registro.upc}_${registro.timestamp}`;
+        
+        // Evitar procesar el mismo registro múltiples veces
+        if (registrosProcesados.has(registroKey)) {
+            return;
+        }
+        
+        registrosProcesados.set(registroKey, true);
+        
         const ruta = registro.deposito ? registro.deposito.split('-')[0] : 'SIN_RUTA';
         const cola = obtenerColaRecoleccion(registro.deposito);
         const clave = `${ruta}-${cola}`;
         
-        if (!grupos[clave]) {
-            grupos[clave] = {
-                ruta: ruta,
-                cola: cola,
-                total: 0,
-                completado: 0,
-                recolector: registro.usuario
-            };
-        }
-        
-        // Sumar cantidad recolectada (usando cantidad_recolectada)
-        grupos[clave].completado += registro.cantidad_recolectada || 0;
-        
-        // Actualizar recolector
-        if (registro.usuario) {
-            grupos[clave].recolector = registro.usuario;
+        // Solo sumar si existe el grupo (está en la planificación)
+        if (grupos[clave]) {
+            // Sumar cantidad recolectada (usando cantidad_recolectada)
+            grupos[clave].completado += registro.cantidad_recolectada || 0;
+            
+            // Actualizar recolector (tomar el primero encontrado)
+            if (registro.usuario && !grupos[clave].recolector) {
+                grupos[clave].recolector = registro.usuario;
+            }
         }
     });
     
     return grupos;
 }
 
-// Función para agrupar registros de reposición por cola
+// Función para agrupar registros de reposición por cola - CORREGIDA
 function agruparReposicionPorCola(registrosRecoleccion, registrosReposicion) {
     const grupos = {};
     
+    // Usar mapas para evitar duplicados
+    const registrosRecoleccionProcesados = new Map();
+    const registrosReposicionProcesados = new Map();
+    
     // Procesar recolecciones para obtener lo picado (cantidad_recolectada)
     registrosRecoleccion.forEach(registro => {
+        const registroKey = `${registro.deposito}_${registro.upc}_${registro.timestamp}`;
+        if (registrosRecoleccionProcesados.has(registroKey)) return;
+        registrosRecoleccionProcesados.set(registroKey, true);
+        
         const cola = obtenerColaReposicion(registro.deposito_destino);
         
-        if (!cola || cola === 'OTROS') return; // Saltar si no hay cola válida
+        if (!cola || cola === 'OTROS') return;
         
         if (!grupos[cola]) {
             grupos[cola] = {
@@ -947,15 +961,19 @@ function agruparReposicionPorCola(registrosRecoleccion, registrosReposicion) {
             };
         }
         
-        // Sumar cantidad picada (lo que se ha recolectado)
+        // Sumar cantidad picada
         grupos[cola].total += registro.cantidad_recolectada || 0;
     });
     
     // Procesar reposiciones para obtener lo repuesto
     registrosReposicion.forEach(registro => {
+        const registroKey = `${registro.deposito}_${registro.upc}_${registro.timestamp}`;
+        if (registrosReposicionProcesados.has(registroKey)) return;
+        registrosReposicionProcesados.set(registroKey, true);
+        
         const cola = registro.cola;
         
-        if (!cola || cola === 'OTROS') return; // Saltar si no hay cola válida
+        if (!cola || cola === 'OTROS') return;
         
         if (!grupos[cola]) {
             grupos[cola] = {
@@ -970,7 +988,7 @@ function agruparReposicionPorCola(registrosRecoleccion, registrosReposicion) {
         grupos[cola].completado += registro.cantidad || 0;
         
         // Actualizar recolector
-        if (registro.usuario) {
+        if (registro.usuario && !grupos[cola].recolector) {
             grupos[cola].recolector = registro.usuario;
         }
     });
@@ -982,7 +1000,8 @@ function calcularRutasCompletadasRecoleccion(grupos) {
     let completadas = 0;
     Object.values(grupos).forEach(grupo => {
         const porcentaje = grupo.total > 0 ? Math.round((grupo.completado / grupo.total) * 100) : 0;
-        if (porcentaje === 100) completadas++;
+        // Corregido: solo completada si es exactamente 100% o menos pero no más
+        if (porcentaje >= 100) completadas++;
     });
     return completadas;
 }
@@ -991,7 +1010,7 @@ function calcularRutasCompletadasReposicion(grupos) {
     let completadas = 0;
     Object.values(grupos).forEach(grupo => {
         const porcentaje = grupo.total > 0 ? Math.round((grupo.completado / grupo.total) * 100) : 0;
-        if (porcentaje === 100) completadas++;
+        if (porcentaje >= 100) completadas++;
     });
     return completadas;
 }
@@ -1055,13 +1074,11 @@ function actualizarTablaEstadoRutas() {
         // Ordenar grupos por ruta y cola
         const gruposOrdenados = Object.values(grupos).sort((a, b) => {
             if (moduloActual === 'recoleccion') {
-                // Ordenar por ruta y luego por cola
                 if (a.ruta !== b.ruta) {
                     return a.ruta.localeCompare(b.ruta);
                 }
                 return a.cola.localeCompare(b.cola);
             } else {
-                // Ordenar solo por cola para reposición
                 return a.cola.localeCompare(b.cola);
             }
         });
@@ -1070,8 +1087,8 @@ function actualizarTablaEstadoRutas() {
             const porcentaje = grupo.total > 0 ? Math.round((grupo.completado / grupo.total) * 100) : 0;
             let estadoClass, estadoText;
             
-            // Determinar estado
-            if (porcentaje === 100) {
+            // Determinar estado CORREGIDO
+            if (porcentaje >= 100) {
                 estadoClass = 'status-completed';
                 estadoText = 'COMPLETADA';
             } else if (porcentaje > 0) {
@@ -1090,14 +1107,14 @@ function actualizarTablaEstadoRutas() {
                     <td>${grupo.cola}</td>
                     <td class="${estadoClass}">${estadoText}</td>
                     <td>${grupo.recolector || '-'}</td>
-                    <td>${grupo.completado}/${grupo.total}</td>
+                    <td>${Math.min(grupo.completado, grupo.total)}/${grupo.total}</td>
                 `;
             } else {
                 row.innerHTML = `
                     <td>${grupo.cola}</td>
                     <td class="${estadoClass}">${estadoText}</td>
                     <td>${grupo.recolector || '-'}</td>
-                    <td>${grupo.completado}/${grupo.total}</td>
+                    <td>${Math.min(grupo.completado, grupo.total)}/${grupo.total}</td>
                 `;
             }
             tbody.appendChild(row);
@@ -1147,5 +1164,3 @@ function mostrarMensaje(mensaje, esExito) {
         statusDiv.style.display = 'none';
     }, 5000);
 }
-
-// NOTA: Se eliminó la actualización automática cada 2 minutos como se solicitó
