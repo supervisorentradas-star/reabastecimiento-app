@@ -1,4 +1,4 @@
-// ================= CONFIGURACIÓN =================
+// Configuración de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
     authDomain: "reabastecimiento-d71a1.firebaseapp.com",
@@ -9,249 +9,99 @@ const firebaseConfig = {
     appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
 };
 
-// ================= INICIALIZAR FIREBASE =================
 const app = firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// ================= VARIABLES GLOBALES =================
+// Variables globales
+let usuarioActual = localStorage.getItem('usuarioSokso');
 let datosReposicion = {};
-let colasDisponibles = [];
+let fechaArchivoActual = null;
+let colasData = {};
+let reposicionesData = {};
+let colaActual = '';
+let depositosConTallas = [];
 let depositoActual = null;
-let usuarioActual = null;
-let colaSeleccionada = null;
-let escaneosReposicion = {};
-let ultimaActualizacion = null;
-let sesionActiva = null;
-let escaneosPendientes = [];
-let colaEnUsoRef = null;
+let tallaActual = null;
+let depositoActualIndex = -1;
+let tallaActualIndex = -1;
+let escaneosTemporales = {};
+let depositoEscaneadoCorrectamente = false;
+let sessionId = null;
 let estaSincronizando = false;
 let colasEnUso = {};
-let escaneosConsolidados = {};
-let sessionId = null;
-
-// VARIABLES PARA GESTIÓN DE DEPÓSITOS
-let itemActualKey = null;
+let heartBeatInterval = null;
+let sesionActiva = null;
 let depositosExpandidos = {};
 
-// ================= INICIALIZACIÓN =================
-document.addEventListener('DOMContentLoaded', function() {
-    inicializarEventListeners();
-    inicializarAplicacion();
-});
+// =============================================
+// FUNCIONES AUXILIARES
+// =============================================
 
-function inicializarEventListeners() {
-    document.getElementById('refreshButtonVentana1').addEventListener('click', cargarDatosReposicion);
-    document.getElementById('refreshButtonVentana2').addEventListener('click', cargarDatosReposicion);
-    document.getElementById('siguienteDepositoBtn').addEventListener('click', siguienteDeposito);
-    document.getElementById('volverAColasBtn').addEventListener('click', volverAColas);
-    document.getElementById('volverAlPrincipalBtn').addEventListener('click', volverAlPrincipal);
-    document.getElementById('volverAlPrincipalBtnVentana2').addEventListener('click', volverAlPrincipal);
-    
-    document.getElementById('depositoInput').addEventListener('input', function(e) {
-        const deposito = e.target.value.trim();
-        if (deposito) {
-            validarDeposito(deposito);
-        }
-    });
-
-    document.getElementById('upcInput').addEventListener('input', function(e) {
-        const upc = e.target.value.trim();
-        if (upc.length >= 8) {
-            validarUPC(upc);
-        }
-    });
-}
-
-async function inicializarAplicacion() {
-    console.log("🔧 INICIANDO MÓDULO DE REPOSICIÓN...");
-    inicializarFirebase();
-    inicializarListenersTiempoReal();
-    verificarSesionActiva();
-    
-    escaneosPendientes = JSON.parse(localStorage.getItem('escaneosPendientes') || '[]');
-    escaneosConsolidados = JSON.parse(localStorage.getItem('escaneosConsolidados') || '{}');
-    
-    setTimeout(() => {
-        cargarDatosReposicion();
-    }, 1000);
-
-    setInterval(sincronizarEscaneosPendientes, 30000);
-    setInterval(limpiarColasAbandonadas, 60000);
-}
-
-// ================= CONEXIÓN FIREBASE =================
-function inicializarFirebase() {
-    try {
-        const connectedRef = database.ref(".info/connected");
-        connectedRef.on("value", function(snap) {
-            if (snap.val() === true) {
-                document.getElementById('firebaseIndicator').className = 'connection-indicator connected';
-                document.getElementById('firebaseIndicatorVentana2').className = 'connection-indicator connected';
-                sincronizarEscaneosPendientes();
-            } else {
-                document.getElementById('firebaseIndicator').className = 'connection-indicator disconnected';
-                document.getElementById('firebaseIndicatorVentana2').className = 'connection-indicator disconnected';
-            }
-        });
-
-    } catch (error) {
-        console.error("Error inicializando Firebase:", error);
-    }
-}
-
-function inicializarListenersTiempoReal() {
-    database.ref('colasEnUso').on('value', (snapshot) => {
-        colasEnUso = snapshot.val() || {};
-        actualizarListaColas();
-        
-        if (colaSeleccionada && colasEnUso[colaSeleccionada] && colasEnUso[colaSeleccionada].usuario !== usuarioActual) {
-            mostrarError(`La cola ${colaSeleccionada} ha sido tomada por ${colasEnUso[colaSeleccionada].usuario}.`, 'ventana2');
-            limpiarSesionActiva();
-            mostrarVentanaColas();
-        }
-    });
-}
-
-// ================= ESTRUCTURA DE DATOS =================
-async function procesarDatosReposicion(recoleccionData, reposicionesData) {
-    const nuevosDatosReposicion = {};
-    const nuevasColasDisponibles = [];
-    const fechaActual = obtenerFechaActual();
-    
-    console.log("📅 Filtrando por fecha actual:", fechaActual);
-    
-    let registrosProcesados = 0;
-    let registrosConColaReposicion = 0;
-
-    Object.values(recoleccionData).forEach(registro => {
-        try {
-            registrosProcesados++;
-            
-            const fechaRegistro = normalizarFecha(registro.fecha);
-            if (fechaRegistro !== fechaActual) {
-                return;
-            }
-
-            const depositoDestino = registro.deposito_destino;
-            const colaReposicion = registro.cola_reposicion;
-            const cantidad = parseInt(registro.cantidad_recolectada) || parseInt(registro.recolectado) || 0;
-            const descripcion = registro.descripcion;
-            const upc = registro.upc;
-            
-            if (depositoDestino && colaReposicion && cantidad > 0) {
-                registrosConColaReposicion++;
-                
-                if (!nuevosDatosReposicion[colaReposicion]) {
-                    nuevosDatosReposicion[colaReposicion] = {
-                        depositos: {},
-                        cantidadTotal: 0,
-                        nombre: `Cola ${colaReposicion}`
-                    };
-                    
-                    if (!nuevasColasDisponibles.includes(colaReposicion)) {
-                        nuevasColasDisponibles.push(colaReposicion);
-                    }
-                }
-                
-                if (!nuevosDatosReposicion[colaReposicion].depositos[depositoDestino]) {
-                    nuevosDatosReposicion[colaReposicion].depositos[depositoDestino] = {
-                        items: {},
-                        cantidadTotal: 0,
-                        cantidadEscaneada: 0,
-                        completado: false
-                    };
-                }
-                
-                const deposito = nuevosDatosReposicion[colaReposicion].depositos[depositoDestino];
-                
-                if (!deposito.items[upc]) {
-                    deposito.items[upc] = {
-                        upc: upc,
-                        articulo: descripcion,
-                        cantidad: 0,
-                        cantidadEscaneada: 0,
-                        completado: false
-                    };
-                }
-                
-                deposito.items[upc].cantidad += cantidad;
-                deposito.cantidadTotal += cantidad;
-                nuevosDatosReposicion[colaReposicion].cantidadTotal += cantidad;
-            }
-        } catch (error) {
-            console.error("❌ Error procesando registro:", error, registro);
-        }
-    });
-    
-    if (reposicionesData) {
-        console.log("📊 Procesando escaneos existentes de reposiciones...");
-        
-        Object.values(reposicionesData).forEach(escaneo => {
-            try {
-                const fechaEscaneo = normalizarFecha(escaneo.fecha);
-                if (fechaEscaneo !== fechaActual) {
-                    return;
-                }
-
-                const cola = escaneo.cola;
-                const deposito = escaneo.deposito;
-                const upc = escaneo.upc;
-                
-                if (cola && deposito && upc && nuevosDatosReposicion[cola] && nuevosDatosReposicion[cola].depositos[deposito]) {
-                    const depositoData = nuevosDatosReposicion[cola].depositos[deposito];
-                    
-                    if (depositoData.items[upc]) {
-                        depositoData.items[upc].cantidadEscaneada = (depositoData.items[upc].cantidadEscaneada || 0) + 1;
-                        depositoData.cantidadEscaneada = (depositoData.cantidadEscaneada || 0) + 1;
-                        
-                        if (depositoData.items[upc].cantidadEscaneada > depositoData.items[upc].cantidad) {
-                            depositoData.items[upc].cantidadEscaneada = depositoData.items[upc].cantidad;
-                        }
-                        if (depositoData.cantidadEscaneada > depositoData.cantidadTotal) {
-                            depositoData.cantidadEscaneada = depositoData.cantidadTotal;
-                        }
-                        
-                        depositoData.items[upc].completado = depositoData.items[upc].cantidadEscaneada >= depositoData.items[upc].cantidad;
-                        depositoData.completado = depositoData.cantidadEscaneada >= depositoData.cantidadTotal;
-                    }
-                }
-            } catch (error) {
-                console.error("❌ Error procesando escaneo existente:", error, escaneo);
-            }
-        });
-    }
-    
-    datosReposicion = nuevosDatosReposicion;
-    colasDisponibles = nuevasColasDisponibles.sort(ordenarColas);
-    
-    console.log("📊 RESUMEN PROCESAMIENTO:", {
-        registrosProcesados,
-        registrosConColaReposicion,
-        colasDisponibles: colasDisponibles,
-        depositosProcesados: Object.keys(nuevosDatosReposicion).reduce((acc, cola) => acc + Object.keys(nuevosDatosReposicion[cola].depositos).length, 0)
-    });
-    
-    ultimaActualizacion = new Date();
-    actualizarInfoCache();
-    actualizarListaColas();
-    
-    if (document.getElementById('ventanaReposicion') && !document.getElementById('ventanaReposicion').classList.contains('hidden')) {
-        actualizarListaDepositos();
-        if (depositoActual && itemActualKey) {
-            actualizarInterfazDeposito();
-        } else {
-            seleccionarPrimerDepositoPendiente();
-        }
-    }
-}
-
-// ================= FUNCIONES DE APOYO =================
 function obtenerFechaActual() {
-    const ahora = new Date();
-    const dia = String(ahora.getDate()).padStart(2, '0');
-    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-    const año = ahora.getFullYear();
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const año = hoy.getFullYear();
     return `${dia}/${mes}/${año}`;
+}
+
+function mostrarLoading(mostrar) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = mostrar ? 'flex' : 'none';
+}
+
+function mostrarMensaje(mensaje, esExito) {
+    const statusDiv = document.getElementById('statusMessage');
+    if (statusDiv) {
+        statusDiv.textContent = mensaje;
+        statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+        statusDiv.style.display = 'block';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function mostrarMensajeDetalle(mensaje, esExito) {
+    const statusDiv = document.getElementById('statusMessageDetalle');
+    if (statusDiv) {
+        statusDiv.textContent = mensaje;
+        statusDiv.className = esExito ? 'status-message success-message' : 'status-message error-message';
+        statusDiv.style.display = 'block';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function mostrarColaOcupadaModal() {
+    const modal = document.getElementById('colaOcupadaModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarColaOcupadaModal() {
+    const modal = document.getElementById('colaOcupadaModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function mostrarSesionRecuperadaModal() {
+    const modal = document.getElementById('sesionRecuperadaModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarSesionRecuperadaModal() {
+    const modal = document.getElementById('sesionRecuperadaModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function mostrarPantallaExito() {
+    const successScreen = document.getElementById('successScreen');
+    if (successScreen) {
+        successScreen.style.display = 'flex';
+        setTimeout(() => {
+            successScreen.style.display = 'none';
+        }, 1000);
+    }
 }
 
 function normalizarFecha(fecha) {
@@ -280,661 +130,391 @@ function normalizarFecha(fecha) {
     return null;
 }
 
-function ordenarColas(a, b) {
-    const numA = parseInt(a.replace(/\D/g, '')) || 0;
-    const numB = parseInt(b.replace(/\D/g, '')) || 0;
-    return numA - numB;
+function generarSessionId() {
+    return `${usuarioActual}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// FUNCIÓN MEJORADA PARA ORDENAR DEPÓSITOS
-function ordenarDepositos(a, b) {
-    // Separar las partes del depósito: P01-001-A -> [P01, 001, A]
-    const partesA = a.split('-');
-    const partesB = b.split('-');
-    
-    // Comparar la primera parte (P01 vs P01)
-    if (partesA[0] !== partesB[0]) {
-        return partesA[0].localeCompare(partesB[0]);
-    }
-    
-    // Comparar la segunda parte numérica (001 vs 002)
-    const numA = parseInt(partesA[1]) || 0;
-    const numB = parseInt(partesB[1]) || 0;
-    if (numA !== numB) {
-        return numA - numB;
-    }
-    
-    // Comparar la tercera parte (A vs B)
-    if (partesA[2] && partesB[2]) {
-        return partesA[2].localeCompare(partesB[2]);
-    }
-    
-    return 0;
-}
+// =============================================
+// FUNCIONES PARA LA VISTA DE LISTA DE COLAS
+// =============================================
 
-// ================= INTERFAZ DE COLAS =================
-function mostrarVentanaColas() {
-    document.getElementById('ventanaColas').classList.remove('hidden');
-    document.getElementById('ventanaReposicion').classList.add('hidden');
-    cargarDatosReposicion();
-}
-
-function mostrarVentanaReposicion() {
-    document.getElementById('ventanaColas').classList.add('hidden');
-    document.getElementById('ventanaReposicion').classList.remove('hidden');
-    actualizarListaDepositos();
-    seleccionarPrimerDepositoPendiente();
-    document.getElementById('depositoInput').focus();
-}
-
-function actualizarListaColas() {
-    const container = document.getElementById('rutasContainer');
-    container.innerHTML = '';
-    
-    if (colasDisponibles.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 20px; color: #7f8c8d; grid-column: 1 / -1;">
-                <p>No hay colas activas para reponer hoy</p>
-                <p style="font-size: 10px; margin-top: 8px;">
-                    Fecha actual: ${obtenerFechaActual()}
-                </p>
-            </div>
-        `;
-        return;
-    }
-    
-    colasDisponibles.forEach(cola => {
-        const datosCola = datosReposicion[cola];
-        
-        if (!datosCola) return;
-        
-        let cantidadEscaneadaCola = 0;
-        let cantidadTotalCola = 0;
-        
-        if (datosCola && datosCola.depositos) {
-            for (let deposito in datosCola.depositos) {
-                cantidadEscaneadaCola += datosCola.depositos[deposito].cantidadEscaneada || 0;
-                cantidadTotalCola += datosCola.depositos[deposito].cantidadTotal || 0;
-            }
-        }
-        
-        const colaCompletada = cantidadEscaneadaCola >= cantidadTotalCola;
-        
-        const div = document.createElement('div');
-        
-        const colaEstaEnUso = colasEnUso[cola];
-        const estaEnUsoPorOtro = colaEstaEnUso && colaEstaEnUso.usuario !== usuarioActual;
-        
-        div.className = `cola-button ${estaEnUsoPorOtro ? 'disabled' : ''} ${colaCompletada ? 'completed' : ''}`;
-        
-        div.innerHTML = `
-            <strong>COLA ${cola}</strong><br>
-            <span style="font-size: 11px;">
-                ${cantidadEscaneadaCola}/${cantidadTotalCola} unidades
-            </span>
-            ${colaCompletada ? '<br><small style="color:#27ae60;">COMPLETADA</small>' : ''}
-            ${estaEnUsoPorOtro ? '<br><small style="color:#e74c3c;">EN USO</small>' : ''}
-        `;
-        
-        if (!estaEnUsoPorOtro && !colaCompletada) {
-            div.onclick = () => seleccionarCola(cola);
-        } else if (colaCompletada) {
-            div.title = 'Esta cola ya está completada';
-        } else {
-            div.title = `Esta cola está siendo trabajada por ${colaEstaEnUso.usuario}`;
-        }
-        
-        container.appendChild(div);
-    });
-}
-
-// ================= GESTIÓN DE DEPÓSITOS MEJORADA =================
-function actualizarListaDepositos() {
-    const grid = document.getElementById('depositosGrid');
-    grid.innerHTML = '';
-    
-    if (!colaSeleccionada || !datosReposicion[colaSeleccionada]) return;
-    
-    // OBTENER DEPÓSITOS ORDENADOS CORRELATIVAMENTE
-    const depositosCola = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
-    
-    depositosCola.forEach(deposito => {
-        const depositoData = datosReposicion[colaSeleccionada].depositos[deposito];
-        const items = depositoData.items;
-        const itemKeys = Object.keys(items);
-        
-        let estadoClase = '';
-        if (depositoData.completado) {
-            estadoClase = 'completado';
-        } else if (depositoData.cantidadEscaneada > 0) {
-            estadoClase = 'parcial';
-        } else {
-            estadoClase = 'pendiente';
-        }
-        
-        // RESALTAR DEPÓSITO ACTUAL
-        if (deposito === depositoActual) {
-            estadoClase += ' deposito-activo';
-        }
-        
-        const estaExpandido = depositosExpandidos[deposito] || false;
-        
-        const depositoGroup = document.createElement('div');
-        depositoGroup.className = 'deposito-group';
-        depositoGroup.id = `deposito-${deposito.replace(/\s+/g, '-')}`;
-        
-        const headerRow = document.createElement('div');
-        headerRow.className = `deposito-header-row ${estaExpandido ? 'expanded' : ''} ${estadoClase}`;
-        headerRow.innerHTML = `
-            <div class="expand-icon ${estaExpandido ? 'expanded' : ''}">▶</div>
-            <div>
-                <strong>${deposito}</strong>
-                <span class="talla-info">${itemKeys.length} tallas</span>
-            </div>
-            <div>${depositoData.cantidadTotal}</div>
-            <div>${depositoData.cantidadEscaneada}</div>
-        `;
-        
-        headerRow.onclick = (e) => {
-            if (!e.target.classList.contains('status-indicator')) {
-                toggleExpandirDeposito(deposito);
-            }
-        };
-        
-        const itemsContainer = document.createElement('div');
-        itemsContainer.className = `deposito-items ${estaExpandido ? 'expanded' : ''}`;
-        
-        itemKeys.forEach(itemKey => {
-            const item = items[itemKey];
-            const itemSeleccionado = (deposito === depositoActual && itemKey === itemActualKey);
-            const itemCompletado = item.completado;
-            const itemEstadoClase = itemCompletado ? 'completed' : 'pendiente';
-            
-            const itemRow = document.createElement('div');
-            itemRow.className = `deposito-item-row ${itemSeleccionado ? 'selected' : ''} ${itemEstadoClase}`;
-            
-            itemRow.innerHTML = `
-                <div>
-                    <span class="status-indicator ${itemCompletado ? 'status-completed' : (itemSeleccionado ? 'status-selected' : 'status-pending')}"></span>
-                </div>
-                <div>
-                    <small>${item.articulo}</small>
-                </div>
-                <div>${item.cantidad}</div>
-                <div>${item.cantidadEscaneada}</div>
-            `;
-            
-            itemRow.onclick = () => seleccionarItem(deposito, itemKey);
-            itemsContainer.appendChild(itemRow);
-        });
-        
-        depositoGroup.appendChild(headerRow);
-        depositoGroup.appendChild(itemsContainer);
-        grid.appendChild(depositoGroup);
-    });
-}
-
-function toggleExpandirDeposito(deposito) {
-    depositosExpandidos[deposito] = !depositosExpandidos[deposito];
-    actualizarListaDepositos();
-}
-
-// FUNCIÓN PARA SELECCIONAR ITEM DESDE LA LISTA - CORREGIDA
-function seleccionarItem(deposito, itemKey) {
-    depositoActual = deposito;
-    itemActualKey = itemKey;
-    
-    // NO AUTORELLENAR EL CAMPO DE DEPÓSITO - DEBE ESCANEARSE
-    // document.getElementById('depositoInput').value = ''; // Esto se mantiene vacío
-    
-    actualizarInterfazDeposito();
-    document.getElementById('upcInput').disabled = false;
-    document.getElementById('depositoInput').focus(); // Enfocar el campo para escanear
-    
-    // ACTUALIZAR LA LISTA PARA MOSTRAR EL DEPÓSITO SELECCIONADO
-    actualizarListaDepositos();
-}
-
-function obtenerItemActual() {
-    if (!depositoActual || !itemActualKey || !colaSeleccionada) return null;
-    
-    const depositoData = datosReposicion[colaSeleccionada].depositos[depositoActual];
-    return depositoData ? depositoData.items[itemActualKey] : null;
-}
-
-function actualizarInterfazDeposito() {
-    const itemActual = obtenerItemActual();
-    
-    if (!itemActual) {
-        document.getElementById('currentDeposito').textContent = '-';
-        document.getElementById('currentArticulo').textContent = '-';
-        document.getElementById('counterSolicitada').textContent = '0';
-        document.getElementById('counterRepuesta').textContent = '0';
-        document.getElementById('counterPendiente').textContent = '0';
-        return;
-    }
-    
-    const pendiente = Math.max(0, itemActual.cantidad - itemActual.cantidadEscaneada);
-    
-    document.getElementById('currentDeposito').textContent = depositoActual;
-    document.getElementById('currentArticulo').textContent = itemActual.articulo;
-    document.getElementById('counterSolicitada').textContent = itemActual.cantidad;
-    document.getElementById('counterRepuesta').textContent = itemActual.cantidadEscaneada;
-    document.getElementById('counterPendiente').textContent = pendiente;
-    
-    actualizarListaDepositos();
-}
-
-function seleccionarPrimerDepositoPendiente() {
-    if (!colaSeleccionada || !datosReposicion[colaSeleccionada]) return;
-    
-    const depositosCola = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
-    
-    for (let deposito of depositosCola) {
-        const depositoData = datosReposicion[colaSeleccionada].depositos[deposito];
-        const items = depositoData.items;
-        const itemKeys = Object.keys(items);
-        
-        for (let itemKey of itemKeys) {
-            const item = items[itemKey];
-            if (!item.completado && item.cantidadEscaneada < item.cantidad) {
-                depositoActual = deposito;
-                itemActualKey = itemKey;
-                actualizarInterfazDeposito();
-                return;
-            }
-        }
-    }
-    
-    if (depositosCola.length > 0) {
-        depositoActual = depositosCola[0];
-        const primerItemKey = Object.keys(datosReposicion[colaSeleccionada].depositos[depositoActual].items)[0];
-        itemActualKey = primerItemKey;
-        actualizarInterfazDeposito();
-    }
-}
-
-// ================= SISTEMA DE ESCANEO =================
-function validarDeposito(deposito) {
-    if (!colaSeleccionada || !datosReposicion[colaSeleccionada].depositos[deposito]) {
-        mostrarError('Depósito incorrecto. Escanea un depósito válido para esta cola.', 'ventana2');
-        document.getElementById('depositoInput').classList.add('error');
-        document.getElementById('depositoInput').value = '';
-        return;
-    }
-    
-    const depositoData = datosReposicion[colaSeleccionada].depositos[deposito];
-    const items = depositoData.items;
-    const itemKeys = Object.keys(items);
-    
-    for (let itemKey of itemKeys) {
-        const item = items[itemKey];
-        if (!item.completado && item.cantidadEscaneada < item.cantidad) {
-            depositoActual = deposito;
-            itemActualKey = itemKey;
-            
-            actualizarInterfazDeposito();
-            document.getElementById('depositoInput').value = deposito;
-            document.getElementById('depositoInput').classList.remove('error');
-            document.getElementById('upcInput').disabled = false;
-            document.getElementById('upcInput').focus();
-            return;
-        }
-    }
-    
-    mostrarError('Este depósito ya está completado.', 'ventana2');
-    document.getElementById('depositoInput').value = '';
-}
-
-async function validarUPC(upc) {
-    if (!depositoActual || !colaSeleccionada || !itemActualKey) return;
-    
-    const itemActual = obtenerItemActual();
-    if (!itemActual) return;
-    
-    if (itemActual.completado) {
-        mostrarError('Esta talla ya ha sido completada.', 'ventana2');
-        document.getElementById('upcInput').value = '';
-        return;
-    }
-    
-    if (upc !== itemActual.upc) {
-        mostrarError('UPC incorrecto. Escanea el código de la talla actual.', 'ventana2');
-        document.getElementById('upcInput').classList.add('error');
-        document.getElementById('upcInput').value = '';
-        return;
-    }
-    
-    document.getElementById('upcInput').classList.remove('error');
-    
-    await registrarEscaneoIndividual(upc);
-    document.getElementById('upcInput').value = '';
-    mostrarEscaneoExitoso();
-    
-    const nuevoItemActual = obtenerItemActual();
-    if (nuevoItemActual.cantidadEscaneada >= nuevoItemActual.cantidad) {
-        nuevoItemActual.completado = true;
-        mostrarCompletado();
-        setTimeout(() => {
-            siguienteItem();
-        }, 1000);
-    }
-}
-
-function siguienteItem() {
-    if (!depositoActual || !colaSeleccionada) return;
-    
-    const depositoData = datosReposicion[colaSeleccionada].depositos[depositoActual];
-    const items = depositoData.items;
-    const itemKeys = Object.keys(items);
-    const currentIndex = itemKeys.indexOf(itemActualKey);
-    
-    for (let i = currentIndex + 1; i < itemKeys.length; i++) {
-        const itemKey = itemKeys[i];
-        const item = items[itemKey];
-        if (!item.completado && item.cantidadEscaneada < item.cantidad) {
-            itemActualKey = itemKey;
-            actualizarInterfazDeposito();
-            return;
-        }
-    }
-    
-    siguienteDeposito();
-}
-
-// ================= REGISTRO EN FIREBASE =================
-async function registrarEscaneoIndividual(upc) {
-    if (!depositoActual || !colaSeleccionada || !itemActualKey) return;
-    
-    const itemActual = obtenerItemActual();
-    const depositoData = datosReposicion[colaSeleccionada].depositos[depositoActual];
-    const fechaHora = new Date();
-    
-    const escaneo = {
-        usuario: usuarioActual,
-        cola: colaSeleccionada,
-        deposito: depositoActual,
-        upc: upc,
-        descripcion: itemActual.articulo,
-        cantidad: 1,
-        fecha: fechaHora.toLocaleDateString(),
-        hora: fechaHora.toLocaleTimeString(),
-        timestamp: fechaHora.getTime(),
-        sessionId: sessionId
-    };
-    
-    try {
-        const saveIndicator = document.getElementById('saveIndicator');
-        if (saveIndicator) {
-            saveIndicator.textContent = 'Guardando...';
-        }
-        
-        const registroKey = database.ref().child('reposiciones').push().key;
-        await database.ref(`reposiciones/${registroKey}`).set(escaneo);
-        
-        const nuevaCantidadEscaneada = itemActual.cantidadEscaneada + 1;
-        itemActual.cantidadEscaneada = Math.min(nuevaCantidadEscaneada, itemActual.cantidad);
-        depositoData.cantidadEscaneada = Math.min(depositoData.cantidadEscaneada + 1, depositoData.cantidadTotal);
-        
-        itemActual.completado = itemActual.cantidadEscaneada >= itemActual.cantidad;
-        depositoData.completado = depositoData.cantidadEscaneada >= depositoData.cantidadTotal;
-        
-        if (saveIndicator) {
-            saveIndicator.textContent = '✅ Guardado';
-            setTimeout(() => {
-                saveIndicator.textContent = '';
-            }, 2000);
-        }
-        
-        actualizarInterfazDeposito();
-        actualizarListaColas();
-        
-    } catch (error) {
-        console.error('Error guardando escaneo individual:', error);
-        
-        escaneosPendientes.push(escaneo);
-        localStorage.setItem('escaneosPendientes', JSON.stringify(escaneosPendientes));
-        
-        mostrarError('Error de conexión. Escaneo guardado localmente.', 'ventana2');
-        
-        const saveIndicator = document.getElementById('saveIndicator');
-        if (saveIndicator) {
-            saveIndicator.textContent = '❌ Error';
-        }
-    }
-}
-
-// ================= FUNCIONES PRINCIPALES =================
-async function siguienteDeposito() {
-    if (!colaSeleccionada) return;
-    
-    const depositos = Object.keys(datosReposicion[colaSeleccionada].depositos).sort(ordenarDepositos);
-    const currentIndex = depositos.indexOf(depositoActual);
-    
-    for (let i = currentIndex + 1; i < depositos.length; i++) {
-        const deposito = depositos[i];
-        const depositoData = datosReposicion[colaSeleccionada].depositos[deposito];
-        const items = depositoData.items;
-        const itemKeys = Object.keys(items);
-        
-        for (let itemKey of itemKeys) {
-            const item = items[itemKey];
-            if (!item.completado && item.cantidadEscaneada < item.cantidad) {
-                depositoActual = deposito;
-                itemActualKey = itemKey;
-                
-                // LIMPIAR EL CAMPO DE DEPÓSITO AL CAMBIAR
-                document.getElementById('depositoInput').value = '';
-                
-                actualizarInterfazDeposito();
-                return;
-            }
-        }
-    }
-    
-    mostrarFinDeCola();
-}
-
-// ================= FUNCIONES DE NAVEGACIÓN =================
-async function volverAColas() {
-    await sincronizarEscaneosPendientes();
-    
-    await liberarColaEnUso(colaSeleccionada);
-    
-    limpiarSesionActiva();
-    
-    mostrarVentanaColas();
-}
-
-async function volverAlPrincipal() {
-    await sincronizarEscaneosPendientes();
-    
-    if (colaSeleccionada) {
-        await liberarColaEnUso(colaSeleccionada);
-    }
-    window.location.href = 'index.html';
-}
-
-// ================= FUNCIONES AUXILIARES =================
-async function cargarDatosReposicion() {
-    try {
-        console.log("📥 CARGANDO DATOS DE RECOLECCIÓN Y REPOSICIÓN...");
-        
-        const [recoleccionSnapshot, reposicionesSnapshot] = await Promise.all([
-            database.ref('recolecciones').once('value'),
-            database.ref('reposiciones').once('value')
-        ]);
-        
-        const recoleccionData = recoleccionSnapshot.val();
-        const reposicionesData = reposicionesSnapshot.val();
-        
-        if (!recoleccionData) {
-            mostrarMensaje('No se encontraron datos en recolecciones', 'warning');
-            return;
-        }
-        
-        await procesarDatosReposicion(recoleccionData, reposicionesData);
-        
-    } catch (error) {
-        console.error('❌ ERROR CRÍTICO:', error);
-        mostrarError('Error cargando datos: ' + error.message);
-    }
-}
-
-async function seleccionarCola(cola) {
-    const verificacion = await verificarIntegridadCola(cola);
-    if (!verificacion.valida) {
-        mostrarError(`No se puede acceder a la cola: ${verificacion.motivo}`);
-        return;
-    }
-    
-    const exito = await marcarColaComoEnUso(cola);
-    if (!exito) {
-        mostrarError('La cola fue tomada por otro usuario justo ahora.');
-        return;
-    }
-    
-    const datosCola = datosReposicion[cola];
-    if (!datosCola) {
-        mostrarError('No se encontraron datos para esta cola.');
-        await liberarColaEnUso(cola);
-        return;
-    }
-    
-    let cantidadEscaneadaCola = 0;
-    let cantidadTotalCola = 0;
-    
-    if (datosCola.depositos) {
-        for (let deposito in datosCola.depositos) {
-            cantidadEscaneadaCola += datosCola.depositos[deposito].cantidadEscaneada || 0;
-            cantidadTotalCola += datosCola.depositos[deposito].cantidadTotal || 0;
-        }
-    }
-    
-    if (cantidadEscaneadaCola >= cantidadTotalCola) {
-        mostrarError('Esta cola ya está completada.', 'ventana1');
-        await liberarColaEnUso(cola);
-        return;
-    }
-    
-    colaSeleccionada = cola;
-    guardarSesionActiva();
-    
-    document.getElementById('tituloCola').textContent = `COLA: ${cola}`;
-    mostrarVentanaReposicion();
-}
-
-function actualizarInfoCache() {
-    const infoDiv = document.getElementById('cacheInfo');
-    const infoDivVentana2 = document.getElementById('cacheInfoVentana2');
-    
-    if (ultimaActualizacion) {
-        const infoText = `Última actualización: ${ultimaActualizacion.toLocaleTimeString()} | ${colasDisponibles.length} colas | Escaneos pendientes: ${escaneosPendientes.length}`;
-        
-        if (infoDiv) infoDiv.textContent = infoText;
-        if (infoDivVentana2) infoDivVentana2.textContent = infoText;
-    }
-}
-
-function mostrarEscaneoExitoso() {
-    const upcInput = document.getElementById('upcInput');
-    upcInput.classList.add('scan-success');
-    setTimeout(() => {
-        upcInput.classList.remove('scan-success');
-    }, 1000);
-}
-
-function mostrarCompletado() {
-    const overlay = document.getElementById('completionOverlay');
-    overlay.classList.add('show');
-    setTimeout(() => {
-        overlay.classList.remove('show');
-    }, 1000);
-}
-
-function mostrarFinDeCola() {
-    const overlay = document.getElementById('finColaOverlay');
-    overlay.classList.add('show');
-    setTimeout(() => {
-        overlay.classList.remove('show');
-    }, 3000);
-}
-
-function mostrarError(mensaje, ventana = 'ventana1') {
-    const containerId = ventana === 'ventana2' ? 'messageContainerVentana2' : 'messageContainer';
-    const container = document.getElementById(containerId);
-    
-    if (container) {
-        container.innerHTML = `<div class="error-message">${mensaje}</div>`;
-        setTimeout(() => {
-            container.innerHTML = '';
-        }, 3000);
-    }
-}
-
-function mostrarMensaje(mensaje, tipo = 'success', ventana = 'ventana1') {
-    const containerId = ventana === 'ventana2' ? 'messageContainerVentana2' : 'messageContainer';
-    const container = document.getElementById(containerId);
-    
-    if (container) {
-        const clase = tipo === 'success' ? 'warning-message' : 'error-message';
-        container.innerHTML = `<div class="${clase}">${mensaje}</div>`;
-        setTimeout(() => {
-            container.innerHTML = '';
-        }, 3000);
-    }
-}
-
-// ================= GESTIÓN DE SESIÓN Y FIREBASE =================
-async function verificarSesionActiva() {
-    usuarioActual = localStorage.getItem('usuarioSokso') || 'Usuario';
-    document.getElementById('usuarioHeader').textContent = usuarioActual;
-    
+window.addEventListener('load', function() {
     if (!usuarioActual) {
         window.location.href = 'index.html';
         return;
     }
     
-    sessionId = generarSessionId();
+    const totalUnidades = document.getElementById('totalUnidades');
+    if (totalUnidades) totalUnidades.textContent = `Colas: 0`;
+    
+    verificarConexionFirebase();
+    inicializarEventosSalida();
+    cargarDatosDesdeCache();
+    
+    mostrarVistaListaColas();
+});
+
+function inicializarEventosSalida() {
+    window.addEventListener('beforeunload', manejarSalida);
+    window.addEventListener('pagehide', manejarSalida);
+    window.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            manejarSalidaSuave();
+        }
+    });
+    
+    heartBeatInterval = setInterval(mantenerSesionActiva, 30000);
+}
+
+async function manejarSalida() {
+    if (colaActual) {
+        await liberarColaEnUso(colaActual);
+    }
+    clearInterval(heartBeatInterval);
+}
+
+async function manejarSalidaSuave() {
+    if (colaActual && colasEnUso[colaActual] && colasEnUso[colaActual].usuario === usuarioActual) {
+        await actualizarTimestampCola(colaActual);
+    }
+}
+
+async function mantenerSesionActiva() {
+    if (colaActual && colasEnUso[colaActual] && colasEnUso[colaActual].usuario === usuarioActual) {
+        await actualizarTimestampCola(colaActual);
+    }
+}
+
+async function actualizarTimestampCola(cola) {
+    try {
+        await database.ref(`colasEnUso/${cola}`).update({
+            timestamp: Date.now(),
+            lastHeartbeat: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error actualizando timestamp:', error);
+    }
+}
+
+function verificarConexionFirebase() {
+    const connectedRef = database.ref(".info/connected");
+    connectedRef.on("value", function(snap) {
+        const estado = snap.val() === true ? 'connected' : 'disconnected';
+        const indicator = document.getElementById('firebaseIndicator');
+        const indicatorDetalle = document.getElementById('firebaseIndicatorDetalle');
+        
+        if (indicator) indicator.className = `connection-indicator ${estado}`;
+        if (indicatorDetalle) indicatorDetalle.className = `connection-indicator ${estado}`;
+        
+        if (estado === 'connected') {
+            console.log('Conectado a Firebase');
+        }
+    });
+}
+
+function cargarDatosDesdeCache() {
+    const cache = localStorage.getItem('cacheReposicion');
+    if (cache) {
+        try {
+            const datos = JSON.parse(cache);
+            datosReposicion = datos;
+            console.log('Datos cargados desde cache:', datosReposicion);
+            procesarDatosColas();
+        } catch (error) {
+            console.error('Error parseando cache:', error);
+        }
+    }
     
     const sesionGuardada = localStorage.getItem('sesionReposicionActiva');
     if (sesionGuardada) {
         try {
             sesionActiva = JSON.parse(sesionGuardada);
-            colaSeleccionada = sesionActiva.cola;
+            colaActual = sesionActiva.cola;
+            sessionId = sesionActiva.sessionId || generarSessionId();
             
-            await cargarDatosReposicion();
-            
-            const verificacion = await verificarIntegridadCola(colaSeleccionada);
-            if (!verificacion.valida) {
-                mostrarError(`No se puede retomar la sesión: ${verificacion.motivo}`, 'ventana2');
-                limpiarSesionActiva();
-                mostrarVentanaColas();
-                return;
-            }
-            
-            const exito = await marcarColaComoEnUso(colaSeleccionada);
-            if (!exito) {
-                mostrarError('No se pudo retomar el control de la cola.', 'ventana2');
-                limpiarSesionActiva();
-                mostrarVentanaColas();
-                return;
-            }
-            
-            mostrarVentanaReposicion();
-            
+            setTimeout(() => {
+                verificarSesionActiva();
+            }, 1000);
         } catch (error) {
-            console.error('Error recuperando sesión:', error);
-            limpiarSesionActiva();
+            console.error('Error parseando sesión:', error);
         }
+    } else {
+        sessionId = generarSessionId();
+    }
+    
+    cargarReposicionesDesdeFirebase();
+}
+
+async function cargarReposicionesDesdeFirebase() {
+    mostrarLoading(true);
+    
+    try {
+        const [recoleccionSnapshot, reposicionesSnapshot, colasEnUsoSnapshot] = await Promise.all([
+            database.ref('recolecciones').once('value'),
+            database.ref('reposiciones').once('value'),
+            database.ref('colasEnUso').once('value')
+        ]);
+        
+        const recoleccionData = recoleccionSnapshot.val();
+        const reposicionesData = reposicionesSnapshot.val();
+        const colasEnUsoData = colasEnUsoSnapshot.val();
+        
+        if (recoleccionData) {
+            procesarDatosRecoleccion(recoleccionData, reposicionesData || {});
+        }
+        
+        if (colasEnUsoData) {
+            colasEnUso = colasEnUsoData;
+        }
+        
+        iniciarListenerColasEnUso();
+        
+        mostrarLoading(false);
+        mostrarMensaje('Datos cargados correctamente', true);
+    } catch (error) {
+        console.error('Error cargando datos:', error);
+        mostrarMensaje('Error cargando datos: ' + error.message, false);
+        mostrarLoading(false);
     }
 }
 
-function generarSessionId() {
-    return `${usuarioActual}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+function iniciarListenerColasEnUso() {
+    database.ref('colasEnUso').on('value', (snapshot) => {
+        colasEnUso = snapshot.val() || {};
+        actualizarVistaColas();
+        
+        if (colaActual && colasEnUso[colaActual] && 
+            colasEnUso[colaActual].usuario !== usuarioActual) {
+            mostrarColaOcupadaModal();
+            volverAColasForzado();
+        }
+    });
 }
 
-async function marcarColaComoEnUso(cola) {
+function procesarDatosRecoleccion(recoleccionData, reposicionesData) {
+    const nuevosDatosReposicion = {};
+    const fechaActual = obtenerFechaActual();
+    
+    console.log('Procesando datos de recolección para fecha:', fechaActual);
+    
+    const datosAgrupados = {};
+    
+    // Procesar datos de recolección
+    Object.values(recoleccionData).forEach(registro => {
+        try {
+            const fechaRegistro = normalizarFecha(registro.fecha);
+            if (fechaRegistro !== fechaActual) return;
+            
+            const cola = registro.cola_reposicion;
+            const deposito = registro.deposito_destino;
+            const upc = registro.upc;
+            const cantidad = parseInt(registro.cantidad_recolectada) || parseInt(registro.recolectado) || 0;
+            const descripcion = registro.descripcion;
+            
+            if (!cola || !deposito || !upc || cantidad <= 0) return;
+            
+            if (!datosAgrupados[cola]) {
+                datosAgrupados[cola] = {};
+            }
+            
+            if (!datosAgrupados[cola][deposito]) {
+                datosAgrupados[cola][deposito] = {
+                    totalPlanificado: 0,
+                    totalRepuesto: 0,
+                    tallas: {}
+                };
+            }
+            
+            if (!datosAgrupados[cola][deposito].tallas[upc]) {
+                datosAgrupados[cola][deposito].tallas[upc] = {
+                    upc: upc,
+                    articulo: descripcion || 'Sin descripción',
+                    cantidadPlanificada: 0,
+                    cantidadRepuesta: 0,
+                    completado: false
+                };
+            }
+            
+            datosAgrupados[cola][deposito].tallas[upc].cantidadPlanificada += cantidad;
+            datosAgrupados[cola][deposito].totalPlanificado += cantidad;
+        } catch (error) {
+            console.error('Error procesando registro:', error, registro);
+        }
+    });
+    
+    // Procesar datos de reposiciones
+    Object.values(reposicionesData).forEach(escaneo => {
+        try {
+            const fechaEscaneo = normalizarFecha(escaneo.fecha);
+            if (fechaEscaneo !== fechaActual) return;
+            
+            const cola = escaneo.cola;
+            const deposito = escaneo.deposito;
+            const upc = escaneo.upc;
+            const cantidad = parseInt(escaneo.cantidad) || 1;
+            
+            if (datosAgrupados[cola] && datosAgrupados[cola][deposito]) {
+                const depositoData = datosAgrupados[cola][deposito];
+                
+                if (depositoData.tallas[upc]) {
+                    const nuevoTotal = depositoData.tallas[upc].cantidadRepuesta + cantidad;
+                    const maxPermitido = depositoData.tallas[upc].cantidadPlanificada;
+                    
+                    if (nuevoTotal <= maxPermitido) {
+                        depositoData.tallas[upc].cantidadRepuesta = nuevoTotal;
+                        depositoData.totalRepuesto += cantidad;
+                        depositoData.tallas[upc].completado = nuevoTotal >= maxPermitido;
+                    } else {
+                        const ajuste = maxPermitido - depositoData.tallas[upc].cantidadRepuesta;
+                        if (ajuste > 0) {
+                            depositoData.tallas[upc].cantidadRepuesta = maxPermitido;
+                            depositoData.totalRepuesto += ajuste;
+                            depositoData.tallas[upc].completado = true;
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error procesando escaneo:', error, escaneo);
+        }
+    });
+    
+    // Convertir a la estructura final
+    Object.keys(datosAgrupados).forEach(cola => {
+        if (!nuevosDatosReposicion[cola]) {
+            nuevosDatosReposicion[cola] = {
+                depositos: {},
+                totalPlanificado: 0,
+                totalRepuesto: 0
+            };
+        }
+        
+        Object.keys(datosAgrupados[cola]).forEach(deposito => {
+            const depositoData = datosAgrupados[cola][deposito];
+            
+            nuevosDatosReposicion[cola].depositos[deposito] = {
+                totalPlanificado: depositoData.totalPlanificado,
+                totalRepuesto: depositoData.totalRepuesto,
+                completado: depositoData.totalRepuesto >= depositoData.totalPlanificado,
+                tallas: Object.values(depositoData.tallas)
+            };
+            
+            nuevosDatosReposicion[cola].totalPlanificado += depositoData.totalPlanificado;
+            nuevosDatosReposicion[cola].totalRepuesto += depositoData.totalRepuesto;
+        });
+    });
+    
+    datosReposicion = nuevosDatosReposicion;
+    localStorage.setItem('cacheReposicion', JSON.stringify(datosReposicion));
+    
+    const totalUnidades = document.getElementById('totalUnidades');
+    if (totalUnidades) totalUnidades.textContent = `Colas: ${Object.keys(datosReposicion).length}`;
+    
+    procesarDatosColas();
+}
+
+function procesarDatosColas() {
+    colasData = {};
+    
+    const colasOrdenadas = Object.keys(datosReposicion).sort((a, b) => {
+        const numA = parseInt(a.replace(/\D/g, '')) || 0;
+        const numB = parseInt(b.replace(/\D/g, '')) || 0;
+        return numA - numB;
+    });
+    
+    colasOrdenadas.forEach(cola => {
+        const datosCola = datosReposicion[cola];
+        if (!datosCola) return;
+        
+        colasData[cola] = {
+            totalPlanificado: datosCola.totalPlanificado || 0,
+            totalRepuesto: datosCola.totalRepuesto || 0,
+            depositos: datosCola.depositos || {}
+        };
+    });
+    
+    actualizarVistaColas();
+}
+
+function actualizarVistaColas() {
+    const grid = document.getElementById('colasGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    
+    if (Object.keys(colasData).length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #666;">No hay colas activas para reponer hoy</div>';
+        return;
+    }
+    
+    Object.keys(colasData).forEach(cola => {
+        const button = document.createElement('button');
+        button.className = 'cola-button';
+        
+        const data = colasData[cola];
+        const porcentaje = data.totalPlanificado > 0 ? (data.totalRepuesto / data.totalPlanificado) * 100 : 0;
+        
+        if (porcentaje >= 100) {
+            button.classList.add('completo');
+        }
+        
+        const colaEnUso = colasEnUso[cola];
+        const estaEnUsoPorOtro = colaEnUso && colaEnUso.usuario !== usuarioActual;
+        
+        if (estaEnUsoPorOtro) {
+            button.classList.add('disabled');
+        }
+        
+        button.textContent = `${cola} ${data.totalRepuesto}/${data.totalPlanificado}`;
+        
+        if (!estaEnUsoPorOtro && porcentaje < 100) {
+            button.onclick = () => seleccionarCola(cola);
+        } else if (estaEnUsoPorOtro) {
+            button.title = `En uso por: ${colaEnUso.usuario}`;
+        } else {
+            button.title = 'Cola completada';
+        }
+        
+        grid.appendChild(button);
+    });
+}
+
+async function seleccionarCola(cola) {
+    if (colasEnUso[cola] && colasEnUso[cola].usuario !== usuarioActual) {
+        mostrarColaOcupadaModal();
+        return;
+    }
+    
+    const exito = await tomarColaEnUso(cola);
+    if (!exito) {
+        mostrarMensaje('No se pudo acceder a la cola. Intenta nuevamente.', false);
+        return;
+    }
+    
+    colaActual = cola;
+    depositosConTallas = [];
+    depositoActual = null;
+    tallaActual = null;
+    depositoActualIndex = -1;
+    tallaActualIndex = -1;
+    escaneosTemporales = {};
+    depositoEscaneadoCorrectamente = false;
+    depositosExpandidos = {};
+    
+    guardarSesionActiva();
+    
+    mostrarVistaDetalleCola();
+    
+    // Pequeño retardo para asegurar que el DOM esté listo
+    setTimeout(() => {
+        const currentColaDisplay = document.getElementById('currentColaDisplay');
+        if (currentColaDisplay) currentColaDisplay.textContent = cola;
+        
+        inicializarDetalleCola();
+    }, 50);
+}
+
+async function tomarColaEnUso(cola) {
     try {
         const colaRef = database.ref(`colasEnUso/${cola}`);
         
@@ -955,75 +535,672 @@ async function marcarColaComoEnUso(cola) {
                 };
             }
             
-            return;
+            return currentData;
         });
         
-        if (resultado.committed) {
-            console.log(`✅ Cola ${cola} tomada exitosamente por ${usuarioActual}`);
-            
-            if (colaEnUsoRef) {
-                colaEnUsoRef.off();
-            }
-            
-            colaEnUsoRef = database.ref(`colasEnUso/${cola}`);
-            colaEnUsoRef.on('value', (snapshot) => {
-                if (!snapshot.exists()) {
-                    mostrarError('La cola ha sido liberada.', 'ventana2');
-                    limpiarSesionActiva();
-                    mostrarVentanaColas();
-                }
-            });
-            
-            return true;
-        } else {
-            console.log(`❌ Cola ${cola} ya está en uso por otro usuario`);
-            return false;
-        }
-        
+        return resultado.committed;
     } catch (error) {
-        console.error("Error en transacción de cola:", error);
+        console.error('Error tomando cola:', error);
         return false;
     }
 }
 
-async function verificarIntegridadCola(cola) {
-    try {
-        const colaSnapshot = await database.ref(`colasEnUso/${cola}`).once('value');
-        const datosCola = colaSnapshot.val();
-        
-        if (!datosCola) {
-            return { valida: true, motivo: 'Cola libre' };
-        }
-        
-        const tiempoExpiracion = 10 * 60 * 1000;
-        if (Date.now() - datosCola.timestamp > tiempoExpiracion) {
-            return { valida: true, motivo: 'Cola liberada por expiración' };
-        }
-        
-        if (datosCola.usuario === usuarioActual && datosCola.sessionId === sessionId) {
-            return { valida: true, motivo: 'Cola pertenece al usuario actual' };
-        }
-        
-        return { 
-            valida: false, 
-            motivo: `Cola en uso por ${datosCola.usuario}` 
-        };
-        
-    } catch (error) {
-        console.error("Error verificando integridad de cola:", error);
-        return { valida: false, motivo: 'Error de verificación' };
-    }
-}
-
 function guardarSesionActiva() {
-    if (colaSeleccionada && usuarioActual) {
+    if (colaActual && usuarioActual) {
         sesionActiva = {
             usuario: usuarioActual,
-            cola: colaSeleccionada,
-            timestamp: new Date().getTime(),
+            cola: colaActual,
+            timestamp: Date.now(),
             sessionId: sessionId
         };
         localStorage.setItem('sesionReposicionActiva', JSON.stringify(sesionActiva));
+    }
+}
+
+async function verificarSesionActiva() {
+    if (!sesionActiva) return;
+    
+    if (colasEnUso[colaActual] && colasEnUso[colaActual].usuario === usuarioActual) {
+        mostrarSesionRecuperadaModal();
+    } else {
+        limpiarSesionActiva();
+    }
+}
+
+async function retomarSesion() {
+    cerrarSesionRecuperadaModal();
+    
+    await actualizarTimestampCola(colaActual);
+    
+    const currentColaDisplay = document.getElementById('currentColaDisplay');
+    if (currentColaDisplay) currentColaDisplay.textContent = colaActual;
+    
+    mostrarVistaDetalleCola();
+    setTimeout(() => {
+        inicializarDetalleCola();
+    }, 50);
+}
+
+async function liberarYContinuar() {
+    await liberarColaEnUso(colaActual);
+    limpiarSesionActiva();
+    colaActual = '';
+    cerrarSesionRecuperadaModal();
+    mostrarVistaListaColas();
+}
+
+function cargarDatosReposicion() {
+    cargarReposicionesDesdeFirebase();
+    mostrarMensaje('Datos actualizados', true);
+}
+
+function volverAlPrincipal() {
+    window.location.href = 'index.html';
+}
+
+// =============================================
+// FUNCIONES PARA LA VISTA DE DETALLE DE COLA
+// =============================================
+
+function mostrarVistaListaColas() {
+    const vistaLista = document.getElementById('vistaListaColas');
+    const vistaDetalle = document.getElementById('vistaDetalleCola');
+    
+    if (vistaLista) vistaLista.style.display = 'flex';
+    if (vistaDetalle) vistaDetalle.style.display = 'none';
+}
+
+function mostrarVistaDetalleCola() {
+    const vistaLista = document.getElementById('vistaListaColas');
+    const vistaDetalle = document.getElementById('vistaDetalleCola');
+    
+    if (vistaLista) vistaLista.style.display = 'none';
+    if (vistaDetalle) vistaDetalle.style.display = 'flex';
+}
+
+function inicializarDetalleCola() {
+    if (!colaActual || !colasData[colaActual]) {
+        mostrarMensajeDetalle('No se ha seleccionado una cola válida', false);
+        setTimeout(() => mostrarVistaListaColas(), 2000);
+        return;
+    }
+    
+    prepararDepositosConTallas();
+    inicializarInterfazDetalle();
+    
+    if (depositosConTallas.length > 0) {
+        let primerDepositoPendiente = -1;
+        let primerTallaPendiente = -1;
+        
+        for (let i = 0; i < depositosConTallas.length; i++) {
+            const deposito = depositosConTallas[i];
+            if (!deposito.completado && deposito.tallas && deposito.tallas.length > 0) {
+                for (let j = 0; j < deposito.tallas.length; j++) {
+                    const talla = deposito.tallas[j];
+                    if (!talla.completado && talla.cantidadRepuesta < talla.cantidadPlanificada) {
+                        primerDepositoPendiente = i;
+                        primerTallaPendiente = j;
+                        break;
+                    }
+                }
+                if (primerDepositoPendiente !== -1) break;
+            }
+        }
+        
+        if (primerDepositoPendiente !== -1 && primerTallaPendiente !== -1) {
+            establecerDepositoYTallActual(primerDepositoPendiente, primerTallaPendiente);
+        } else {
+            if (depositosConTallas.length > 0 && depositosConTallas[0].tallas.length > 0) {
+                establecerDepositoYTallActual(0, 0);
+            }
+        }
+    }
+}
+
+function prepararDepositosConTallas() {
+    depositosConTallas = [];
+    
+    if (!colasData[colaActual] || !colasData[colaActual].depositos) {
+        console.error('No hay datos para la cola:', colaActual);
+        return;
+    }
+    
+    Object.keys(colasData[colaActual].depositos).forEach(depositoKey => {
+        const depositoData = colasData[colaActual].depositos[depositoKey];
+        
+        const tallasOrdenadas = depositoData.tallas ? [...depositoData.tallas].sort((a, b) => {
+            return a.articulo.localeCompare(b.articulo);
+        }) : [];
+        
+        depositosConTallas.push({
+            deposito: depositoKey,
+            totalPlanificado: depositoData.totalPlanificado || 0,
+            totalRepuesto: depositoData.totalRepuesto || 0,
+            completado: depositoData.completado || false,
+            tallas: tallasOrdenadas
+        });
+    });
+    
+    depositosConTallas.sort((a, b) => {
+        const partesA = a.deposito.split('-');
+        const partesB = b.deposito.split('-');
+        
+        if (partesA[0] !== partesB[0]) {
+            return partesA[0].localeCompare(partesB[0]);
+        }
+        
+        const numA = parseInt(partesA[1]) || 0;
+        const numB = parseInt(partesB[1]) || 0;
+        if (numA !== numB) {
+            return numA - numB;
+        }
+        
+        if (partesA[2] && partesB[2]) {
+            return partesA[2].localeCompare(partesB[2]);
+        }
+        
+        return 0;
+    });
+    
+    console.log('Depósitos con tallas preparados para cola', colaActual, ':', depositosConTallas);
+}
+
+function inicializarInterfazDetalle() {
+    actualizarListaDepositosConTallas();
+    
+    const depositoInput = document.getElementById('depositoInput');
+    const upcInput = document.getElementById('upcInput');
+    
+    if (depositoInput) {
+        depositoInput.addEventListener('input', function(e) {
+            const deposito = this.value.trim();
+            if (deposito.length >= 5) {
+                validarDeposito(deposito);
+            }
+        });
+    }
+    
+    if (upcInput) {
+        upcInput.addEventListener('input', function(e) {
+            const upc = this.value.trim();
+            if (upc.length >= 10) {
+                setTimeout(() => {
+                    procesarEscaneoUPC(upc);
+                    this.value = '';
+                }, 100);
+            }
+        });
+    }
+    
+    setTimeout(() => {
+        if (depositoInput) {
+            depositoInput.focus();
+            depositoInput.select();
+        }
+    }, 100);
+}
+
+function establecerDepositoYTallActual(depositoIndex, tallaIndex) {
+    if (depositoIndex < 0 || depositoIndex >= depositosConTallas.length) return;
+    if (tallaIndex < 0 || tallaIndex >= depositosConTallas[depositoIndex].tallas.length) return;
+    
+    depositoActual = depositosConTallas[depositoIndex];
+    tallaActual = depositoActual.tallas[tallaIndex];
+    depositoActualIndex = depositoIndex;
+    tallaActualIndex = tallaIndex;
+    depositoEscaneadoCorrectamente = false;
+    
+    console.log('Depósito y talla establecidos como actuales:', { depositoActual, tallaActual });
+    
+    // Actualizar interfaz de forma segura
+    const elementos = {
+        'currentDepositoDisplay': depositoActual.deposito,
+        'currentArticuloDisplay': tallaActual.articulo || 'Artículo',
+        'currentTallaDisplay': tallaActual.articulo,
+        'cantidadTotal': tallaActual.cantidadPlanificada,
+        'cantidadLeida': tallaActual.cantidadRepuesta,
+        'cantidadPendiente': tallaActual.cantidadPlanificada - tallaActual.cantidadRepuesta
+    };
+    
+    Object.keys(elementos).forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.textContent = elementos[id];
+        }
+    });
+    
+    const depositoInput = document.getElementById('depositoInput');
+    const upcInput = document.getElementById('upcInput');
+    
+    if (depositoInput && upcInput) {
+        depositoInput.value = '';
+        depositoInput.className = 'scan-input cursor-blink';
+        depositoInput.disabled = false;
+        upcInput.value = '';
+        upcInput.disabled = true;
+        upcInput.className = 'scan-input';
+        
+        setTimeout(() => {
+            depositoInput.focus();
+            depositoInput.select();
+        }, 50);
+    }
+    
+    actualizarInfoSiguienteDeposito();
+    actualizarListaDepositosConTallas();
+    
+    mostrarMensajeDetalle(`Listo para escanear depósito: ${depositoActual.deposito}`, true);
+}
+
+function actualizarInfoSiguienteDeposito() {
+    const nextInfo = document.getElementById('nextDepositoInfo');
+    if (!nextInfo) return;
+    
+    for (let i = depositoActualIndex + 1; i < depositosConTallas.length; i++) {
+        if (!depositosConTallas[i].completado) {
+            const nextDeposito = depositosConTallas[i];
+            nextInfo.textContent = `Siguiente depósito: ${nextDeposito.deposito}`;
+            return;
+        }
+    }
+    
+    nextInfo.textContent = 'Último depósito de la cola';
+}
+
+function validarDeposito(deposito) {
+    console.log('Validando depósito escaneado:', deposito);
+    console.log('Depósito esperado:', depositoActual ? depositoActual.deposito : 'Ninguno');
+    
+    if (!depositoActual) {
+        mostrarMensajeDetalle('Primero selecciona un depósito', false);
+        return;
+    }
+    
+    if (deposito === depositoActual.deposito) {
+        depositoEscaneadoCorrectamente = true;
+        const depositoInput = document.getElementById('depositoInput');
+        const upcInput = document.getElementById('upcInput');
+        
+        if (depositoInput && upcInput) {
+            depositoInput.className = 'scan-input deposito-escaneado';
+            depositoInput.disabled = true;
+            
+            upcInput.disabled = false;
+            upcInput.className = 'scan-input cursor-blink';
+            
+            setTimeout(() => {
+                upcInput.focus();
+                upcInput.select();
+            }, 50);
+        }
+        
+        mostrarMensajeDetalle(`Depósito ${deposito} escaneado correctamente`, true);
+        
+        setTimeout(() => {
+            if (depositoInput) depositoInput.value = '';
+        }, 300);
+    } else {
+        mostrarMensajeDetalle(`ERROR: Depósito incorrecto. Se esperaba: ${depositoActual.deposito}`, false);
+        const depositoInput = document.getElementById('depositoInput');
+        if (depositoInput) {
+            depositoInput.value = '';
+            setTimeout(() => {
+                depositoInput.focus();
+                depositoInput.select();
+            }, 50);
+        }
+    }
+}
+
+async function procesarEscaneoUPC(upc) {
+    if (!depositoActual || !tallaActual) {
+        mostrarMensajeDetalle('Primero escanea un depósito válido', false);
+        return;
+    }
+    
+    if (!depositoEscaneadoCorrectamente) {
+        mostrarMensajeDetalle('Primero debes escanear el depósito correctamente', false);
+        return;
+    }
+    
+    console.log('Procesando UPC:', upc);
+    console.log('UPC esperado:', tallaActual.upc);
+    
+    // Validar que el UPC corresponde a la talla actual
+    if (tallaActual.upc !== upc) {
+        mostrarMensajeDetalle('Código UPC no válido para esta talla', false);
+        const upcInput = document.getElementById('upcInput');
+        if (upcInput) {
+            upcInput.value = '';
+            setTimeout(() => {
+                upcInput.focus();
+                upcInput.select();
+            }, 50);
+        }
+        return;
+    }
+    
+    // Verificar que no se exceda la cantidad planificada
+    const nuevoTotal = tallaActual.cantidadRepuesta + 1;
+    
+    if (nuevoTotal > tallaActual.cantidadPlanificada) {
+        mostrarMensajeDetalle(`¡Cantidad excedida! Máximo: ${tallaActual.cantidadPlanificada}`, false);
+        const upcInput = document.getElementById('upcInput');
+        if (upcInput) {
+            upcInput.value = '';
+            setTimeout(() => {
+                upcInput.focus();
+                upcInput.select();
+            }, 50);
+        }
+        return;
+    }
+    
+    // GUARDADO INMEDIATO EN FIREBASE
+    try {
+        await guardarEscaneoIndividual();
+        
+        // Actualizar datos locales
+        tallaActual.cantidadRepuesta = nuevoTotal;
+        
+        // Actualizar totales del depósito
+        depositoActual.totalRepuesto += 1;
+        
+        // Actualizar colasData
+        if (colasData[colaActual] && colasData[colaActual].depositos[depositoActual.deposito]) {
+            colasData[colaActual].depositos[depositoActual.deposito].totalRepuesto = depositoActual.totalRepuesto;
+            colasData[colaActual].totalRepuesto += 1;
+        }
+        
+        // Actualizar interfaz
+        const cantidadLeida = document.getElementById('cantidadLeida');
+        const cantidadPendiente = document.getElementById('cantidadPendiente');
+        
+        if (cantidadLeida) cantidadLeida.textContent = nuevoTotal;
+        if (cantidadPendiente) cantidadPendiente.textContent = tallaActual.cantidadPlanificada - nuevoTotal;
+        
+        // Verificar si se completó la cantidad requerida
+        if (nuevoTotal >= tallaActual.cantidadPlanificada) {
+            tallaActual.completado = true;
+            depositoActual.completado = depositoActual.totalRepuesto >= depositoActual.totalPlanificado;
+            
+            if (colasData[colaActual] && colasData[colaActual].depositos[depositoActual.deposito]) {
+                colasData[colaActual].depositos[depositoActual.deposito].completado = depositoActual.completado;
+            }
+            
+            actualizarListaDepositosConTallas();
+            
+            mostrarMensajeDetalle('¡Cantidad completada!', true);
+            mostrarPantallaExito();
+            
+            // Pasar automáticamente a la siguiente talla después de un breve delay
+            setTimeout(() => {
+                siguienteTalla();
+            }, 1000);
+        } else {
+            mostrarMensajeDetalle(`Escaneo guardado: ${nuevoTotal} de ${tallaActual.cantidadPlanificada}`, true);
+            
+            // Continuar escaneando
+            const upcInput = document.getElementById('upcInput');
+            if (upcInput) {
+                upcInput.value = '';
+                setTimeout(() => {
+                    upcInput.focus();
+                    upcInput.select();
+                }, 50);
+            }
+        }
+        
+    } catch (error) {
+        mostrarMensajeDetalle('Error al guardar en Firebase: ' + error.message, false);
+        const upcInput = document.getElementById('upcInput');
+        if (upcInput) {
+            upcInput.value = '';
+            setTimeout(() => {
+                upcInput.focus();
+                upcInput.select();
+            }, 50);
+        }
+    }
+}
+
+async function guardarEscaneoIndividual() {
+    const ref = database.ref('reposiciones');
+    const now = new Date();
+    const fecha = now.toLocaleDateString('es-ES');
+    const hora = now.toLocaleTimeString('es-ES', { hour12: false });
+    
+    const newRef = ref.push();
+    await newRef.set({
+        usuario: usuarioActual,
+        cola: colaActual,
+        deposito: depositoActual.deposito,
+        descripcion: tallaActual.articulo,
+        upc: tallaActual.upc,
+        cantidad: 1,
+        fecha: fecha,
+        hora: hora,
+        timestamp: now.getTime(),
+        sessionId: sessionId
+    });
+    
+    console.log('Escaneo guardado en Firebase para:', tallaActual.articulo);
+}
+
+function actualizarListaDepositosConTallas() {
+    const lista = document.getElementById('depositosList');
+    if (!lista) return;
+    
+    lista.innerHTML = '';
+    
+    if (depositosConTallas.length === 0) {
+        lista.innerHTML = '<div style="padding: 10px; text-align: center; color: #666;">No hay depósitos para esta cola</div>';
+        return;
+    }
+    
+    depositosConTallas.forEach((deposito, depositoIndex) => {
+        const estaExpandido = depositosExpandidos[depositoIndex] || false;
+        const esActivo = depositoActual && deposito.deposito === depositoActual.deposito;
+        
+        let estadoClase = '';
+        if (deposito.completado) {
+            estadoClase = 'completado';
+        } else if (deposito.totalRepuesto > 0) {
+            estadoClase = 'parcial';
+        } else {
+            estadoClase = 'pendiente';
+        }
+        
+        if (esActivo) {
+            estadoClase += ' activo';
+        }
+        
+        const depositoGroup = document.createElement('div');
+        depositoGroup.className = 'deposito-con-tallas';
+        depositoGroup.id = `deposito-${depositoIndex}`;
+        
+        const headerRow = document.createElement('div');
+        headerRow.className = `deposito-header-row ${estaExpandido ? 'expanded' : ''} ${estadoClase}`;
+        headerRow.innerHTML = `
+            <div class="expand-icon ${estaExpandido ? 'expanded' : ''}">▶</div>
+            <div>
+                <strong>${deposito.deposito}</strong>
+                <span class="talla-info">${deposito.tallas.length} tallas</span>
+            </div>
+            <div>${deposito.totalPlanificado}</div>
+            <div>${deposito.totalRepuesto}</div>
+        `;
+        
+        headerRow.onclick = (e) => {
+            if (!e.target.classList.contains('status-indicator')) {
+                toggleExpandirDeposito(depositoIndex);
+            }
+        };
+        
+        const tallasContainer = document.createElement('div');
+        tallasContainer.className = `tallas-container ${estaExpandido ? 'expanded' : ''}`;
+        
+        if (deposito.tallas && deposito.tallas.length > 0) {
+            deposito.tallas.forEach((talla, tallaIndex) => {
+                const esTallaSeleccionada = esActivo && tallaActual && talla.upc === tallaActual.upc;
+                const tallaCompletada = talla.completado;
+                const tallaEstadoClase = tallaCompletada ? 'completada' : 'pendiente';
+                
+                const tallaRow = document.createElement('div');
+                tallaRow.className = `talla-item ${esTallaSeleccionada ? 'seleccionada' : ''} ${tallaEstadoClase}`;
+                
+                tallaRow.innerHTML = `
+                    <div>
+                        <span class="status-indicator ${tallaCompletada ? 'status-completed' : (esTallaSeleccionada ? 'status-selected' : 'status-pending')}"></span>
+                    </div>
+                    <div>
+                        <small>${talla.articulo}</small>
+                    </div>
+                    <div>${talla.cantidadPlanificada}</div>
+                    <div>${talla.cantidadRepuesta}</div>
+                `;
+                
+                tallaRow.onclick = () => seleccionarTalla(depositoIndex, tallaIndex);
+                tallasContainer.appendChild(tallaRow);
+            });
+        }
+        
+        depositoGroup.appendChild(headerRow);
+        depositoGroup.appendChild(tallasContainer);
+        lista.appendChild(depositoGroup);
+    });
+}
+
+function toggleExpandirDeposito(depositoIndex) {
+    depositosExpandidos[depositoIndex] = !depositosExpandidos[depositoIndex];
+    actualizarListaDepositosConTallas();
+}
+
+function seleccionarTalla(depositoIndex, tallaIndex) {
+    establecerDepositoYTallActual(depositoIndex, tallaIndex);
+    mostrarMensajeDetalle(`Talla seleccionada: ${depositosConTallas[depositoIndex].tallas[tallaIndex].articulo}`, true);
+}
+
+function siguienteTalla() {
+    if (depositoActual && depositoActual.tallas) {
+        for (let i = tallaActualIndex + 1; i < depositoActual.tallas.length; i++) {
+            const talla = depositoActual.tallas[i];
+            if (!talla.completado && talla.cantidadRepuesta < talla.cantidadPlanificada) {
+                establecerDepositoYTallActual(depositoActualIndex, i);
+                return;
+            }
+        }
+    }
+    
+    siguienteDeposito();
+}
+
+function siguienteDeposito() {
+    let siguienteDepositoIndex = -1;
+    let siguienteTallaIndex = -1;
+    const startIndex = depositoActual ? depositoActualIndex + 1 : 0;
+    
+    for (let i = startIndex; i < depositosConTallas.length; i++) {
+        const deposito = depositosConTallas[i];
+        if (!deposito.completado && deposito.tallas && deposito.tallas.length > 0) {
+            for (let j = 0; j < deposito.tallas.length; j++) {
+                const talla = deposito.tallas[j];
+                if (!talla.completado && talla.cantidadRepuesta < talla.cantidadPlanificada) {
+                    siguienteDepositoIndex = i;
+                    siguienteTallaIndex = j;
+                    break;
+                }
+            }
+            if (siguienteDepositoIndex !== -1) break;
+        }
+    }
+    
+    if (siguienteDepositoIndex !== -1 && siguienteTallaIndex !== -1) {
+        establecerDepositoYTallActual(siguienteDepositoIndex, siguienteTallaIndex);
+        mostrarMensajeDetalle(`Siguiente: ${depositosConTallas[siguienteDepositoIndex].deposito}`, true);
+    } else {
+        mostrarMensajeDetalle('¡Todos los depósitos completados!', true);
+        mostrarPantallaExito();
+        
+        // Actualizar interfaz a valores por defecto
+        const elementos = {
+            'currentDepositoDisplay': '----',
+            'currentArticuloDisplay': '----',
+            'currentTallaDisplay': '----',
+            'cantidadTotal': '0',
+            'cantidadLeida': '0',
+            'cantidadPendiente': '0'
+        };
+        
+        Object.keys(elementos).forEach(id => {
+            const elemento = document.getElementById(id);
+            if (elemento) elemento.textContent = elementos[id];
+        });
+        
+        depositoActual = null;
+        tallaActual = null;
+        depositoActualIndex = -1;
+        tallaActualIndex = -1;
+        depositoEscaneadoCorrectamente = false;
+        
+        actualizarListaDepositosConTallas();
+        
+        setTimeout(() => {
+            procesarDatosColas();
+        }, 1000);
+    }
+}
+
+async function volverAColas() {
+    // Guardar cualquier cambio pendiente (si hay un escaneo en proceso)
+    if (depositoEscaneadoCorrectamente) {
+        const upcInput = document.getElementById('upcInput');
+        if (upcInput && upcInput.value.trim().length >= 10) {
+            await procesarEscaneoUPC(upcInput.value.trim());
+        }
+    }
+    
+    // Liberar la cola
+    await liberarColaEnUso(colaActual);
+    
+    // Limpiar estado
+    limpiarSesionActiva();
+    colaActual = '';
+    depositosConTallas = [];
+    depositoActual = null;
+    tallaActual = null;
+    depositoActualIndex = -1;
+    tallaActualIndex = -1;
+    escaneosTemporales = {};
+    depositoEscaneadoCorrectamente = false;
+    depositosExpandidos = {};
+    
+    mostrarVistaListaColas();
+}
+
+async function volverAColasForzado() {
+    await liberarColaEnUso(colaActual);
+    limpiarSesionActiva();
+    colaActual = '';
+    mostrarVistaListaColas();
+}
+
+async function liberarColaEnUso(cola) {
+    if (!cola) return;
+    
+    try {
+        const colaRef = database.ref(`colasEnUso/${cola}`);
+        const snapshot = await colaRef.once('value');
+        
+        if (snapshot.exists()) {
+            const colaData = snapshot.val();
+            if (colaData.usuario === usuarioActual && colaData.sessionId === sessionId) {
+                await colaRef.remove();
+                console.log(`✅ Cola ${cola} liberada por ${usuarioActual}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error liberando cola:', error);
     }
 }
 
@@ -1032,84 +1209,14 @@ function limpiarSesionActiva() {
     sesionActiva = null;
 }
 
-async function liberarColaEnUso(cola) {
-    if (colaEnUsoRef) {
-        colaEnUsoRef.off();
-        colaEnUsoRef = null;
-    }
-    
-    if (cola) {
-        try {
-            const colaEnUsoSnapshot = await database.ref(`colasEnUso/${cola}`).once('value');
-            if (colaEnUsoSnapshot.exists() && 
-                colaEnUsoSnapshot.val().usuario === usuarioActual && 
-                colaEnUsoSnapshot.val().sessionId === sessionId) {
-                await database.ref(`colasEnUso/${cola}`).remove();
-            }
-        } catch (error) {
-            console.error("Error liberando cola:", error);
+// Manejar teclas especiales
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        if (document.getElementById('colaOcupadaModal')?.style.display === 'flex') {
+            cerrarColaOcupadaModal();
+        }
+        if (document.getElementById('sesionRecuperadaModal')?.style.display === 'flex') {
+            cerrarSesionRecuperadaModal();
         }
     }
-}
-
-async function sincronizarEscaneosPendientes() {
-    if (escaneosPendientes.length === 0 || estaSincronizando) return;
-    
-    estaSincronizando = true;
-    
-    try {
-        const escaneosABorrar = [];
-        
-        for (let i = 0; i < escaneosPendientes.length; i++) {
-            const escaneo = escaneosPendientes[i];
-            
-            try {
-                const registroKey = database.ref().child('reposiciones').push().key;
-                await database.ref(`reposiciones/${registroKey}`).set(escaneo);
-                
-                escaneosABorrar.push(i);
-                
-            } catch (error) {
-                console.error(`Error sincronizando escaneo ${i}:`, error);
-            }
-        }
-        
-        escaneosABorrar.reverse().forEach(index => {
-            escaneosPendientes.splice(index, 1);
-        });
-        
-        localStorage.setItem('escaneosPendientes', JSON.stringify(escaneosPendientes));
-        actualizarInterfazDeposito();
-        actualizarListaColas();
-        actualizarInfoCache();
-        
-        if (escaneosPendientes.length === 0) {
-            console.log('✅ Todos los escaneos pendientes sincronizados');
-        }
-        
-    } catch (error) {
-        console.error('Error general sincronizando escaneos pendientes:', error);
-    } finally {
-        estaSincronizando = false;
-    }
-}
-
-async function limpiarColasAbandonadas() {
-    const ahora = Date.now();
-    const tiempoMaximoInactividad = 10 * 60 * 1000;
-    
-    try {
-        const colasSnapshot = await database.ref('colasEnUso').once('value');
-        const colas = colasSnapshot.val() || {};
-        
-        for (const cola in colas) {
-            const colaData = colas[cola];
-            if (ahora - colaData.timestamp > tiempoMaximoInactividad) {
-                await database.ref(`colasEnUso/${cola}`).remove();
-                console.log(`🔄 Cola ${cola} liberada por inactividad`);
-            }
-        }
-    } catch (error) {
-        console.error("Error limpiando colas abandonadas:", error);
-    }
-}
+});

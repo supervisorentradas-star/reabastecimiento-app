@@ -13,7 +13,7 @@
         }
         body {
             background-color: white;
-            padding: 8px;
+            padding: 5px;
             color: #8a0bd2;
             height: 100vh;
             overflow: hidden;
@@ -23,30 +23,34 @@
             margin: 0 auto;
             background: white;
             border-radius: 6px;
-            padding: 12px;
+            padding: 8px;
             height: calc(100vh - 16px);
             display: flex;
             flex-direction: column;
             gap: 6px;
+            border: 1px solid #8a0bd2;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
-            padding-bottom: 4px;
-            border-bottom: 2px solid #8a0bd2;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #8a0bd2;
             flex-shrink: 0;
-            height: 40px;
         }
-        .header-left, .header-center, .header-right {
+        h1 {
+            color: rgb(138, 11, 210);
+            font-size: 14px;
+            line-height: 1.2;
+        }
+        .header-buttons {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .connection-indicator {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
         }
         .connected {
@@ -58,220 +62,399 @@
         .checking {
             background-color: #f39c12;
         }
-        .refresh-button {
-            padding: 6px 12px;
+        .unidades-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #8a0bd2;
+        }
+        .unidades-info span {
+            font-weight: bold;
             font-size: 12px;
-            background: gray;
+        }
+        .update-button {
+            background: #808080;
             color: white;
             border: none;
-            border-radius: 6px;
+            padding: 6px 12px;
+            border-radius: 4px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
         }
-        
-        .data-section {
+        .back-button {
+            background: rgb(175, 80, 229);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin-bottom: 4px;
             flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        .cola-button {
+            background: rgb(138, 11, 210);
+            color: white;
+            border: none;
+            padding: 4px 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 9px;
+            font-weight: bold;
+            transition: all 0.3s;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            gap: 6px;
-        }
-        
-        .cola-button {
-            padding: 12px;
-            border: 2px solid #8a0bd2;
-            border-radius: 6px;
-            background: #8a0bd2;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            transition: all 0.3s;
-            margin: 4px;
+            min-height: 32px;
         }
         .cola-button:hover {
-            background: #af50e5;
-            border-color: #af50e5;
+            background: rgb(120, 10, 180);
+        }
+        .cola-button.completo {
+            background: #27ae60;
         }
         .cola-button.disabled {
             opacity: 0.5;
             cursor: not-allowed;
             background: #f8f9fa;
             color: #6c757d;
-            border-color: #6c757d;
         }
-        .cola-button.completed {
-            background: #27ae60 !important;
-            border-color: #27ae60 !important;
-        }
-        .cola-button.completed:hover {
-            background: #219652 !important;
-            border-color: #219652 !important;
-        }
-        
         .footer {
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 2px solid #8a0bd2;
-            display: flex;
-            justify-content: space-between;
+            text-align: center;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid rgb(138, 11, 210);
             flex-shrink: 0;
-            height: 50px;
         }
-        .back-button {
-            background: #af50e5;
-            color: white;
+        .credit {
+            font-size: 8px;
+            color: #aaa;
+            text-align: center;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 280px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal h3 {
+            color: rgb(138, 11, 210);
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .modal input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .modal-button {
+            padding: 8px;
             border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
         }
-
-        /* Estilos para la ventana 2 - MEJORADOS PARA MC9300 */
-        .hidden {
-            display: none;
+        .modal-button.success {
+            background: rgb(138, 11, 210);
+            color: white;
         }
-        
-        .current-deposito {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 6px;
+        .modal-button.warning {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .status-message {
+            padding: 4px;
+            border-radius: 3px;
+            margin: 5px 0;
             text-align: center;
-            border: 1px solid #ddd;
+            font-weight: bold;
+            display: none;
+            font-size: 9px;
             flex-shrink: 0;
-            min-height: 120px;
         }
-        .deposito-header {
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Estilos para la vista de detalle de cola */
+        .header-info {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .current-deposito {
+            text-align: center;
+            margin: 10px 0;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-weight: bold;
             font-size: 16px;
-            font-weight: bold;
-            color: #8a0bd2;
-            margin-bottom: 6px;
         }
-        .articulo-info {
+        .current-articulo {
+            text-align: center;
+            margin-bottom: 10px;
             font-size: 14px;
-            color: #000000;
-            margin-bottom: 8px;
             font-weight: bold;
         }
-        .counters {
+        .contadores {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin: 10px 0;
-        }
-        .counter-box {
-            background: white;
-            padding: 8px;
-            border-radius: 6px;
+            gap: 5px;
+            margin-bottom: 10px;
             text-align: center;
+        }
+        .contador-item {
+            padding: 8px;
+            border-radius: 4px;
+            background: #f8f9fa;
             border: 1px solid #ddd;
         }
-        .counter-label {
-            font-size: 10px;
+        .contador-label {
+            font-size: 11px;
             font-weight: bold;
-            color: #7f8c8d;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
-        .counter-value {
-            font-size: 14px;
+        .contador-valor {
+            font-size: 16px;
             font-weight: bold;
-            color: #8a0bd2;
+            color: rgb(138, 11, 210);
         }
-        
-        .scan-section {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            text-align: center;
-            border: 1px dashed #bdc3c7;
-            flex-shrink: 0;
-            min-height: 180px;
-        }
-        .scan-section h3 {
-            font-size: 12px;
-            margin-bottom: 6px;
-            color: #8a0bd2;
+        .scan-inputs {
+            margin-bottom: 10px;
         }
         .scan-input {
             width: 100%;
             padding: 10px;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             font-size: 14px;
-            border: 2px solid #8a0bd2;
-            border-radius: 6px;
             text-align: center;
-            margin-bottom: 6px;
-            background: white;
+            transition: background-color 0.3s;
         }
-        .scan-input.error {
-            border-color: #e74c3c;
-            background-color: #fdf2f2;
+        .scan-input.deposito-escaneado {
+            background-color: #27ae60 !important;
+            color: white;
         }
-        
-        .controls {
+        .scan-input.cursor-blink {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { border-color: #ddd; box-shadow: 0 0 5px rgba(138, 11, 210, 0); }
+            50% { border-color: rgb(138, 11, 210); box-shadow: 0 0 5px rgba(138, 11, 210, 0.5); }
+        }
+        .action-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 8px;
+            gap: 5px;
+            margin-bottom: 10px;
         }
-        button {
+        .action-button {
             padding: 10px;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
+            cursor: pointer;
             font-size: 11px;
             font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
         }
-        .btn-warning {
-            background: #f39c12;
+        .action-button.primary {
+            background: rgb(138, 11, 210);
             color: white;
         }
-        .btn-info {
-            background: #3498db;
-            color: white;
+        .action-button.secondary {
+            background: #f0f0f0;
+            color: #333;
         }
-        
-        .depositos-list-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            /* ALTURA FIJA PARA SCROLL - MÁS ALTA */
-            height: 350px;
-            min-height: 350px;
-        }
-        .depositos-list-header {
-            background: #8a0bd2;
-            color: white;
-            font-weight: bold;
-            border-radius: 4px 4px 0 0;
-            padding: 8px;
-            font-size: 10px;
-            flex-shrink: 0;
-        }
-        .depositos-list-content {
+        .depositos-list {
             flex: 1;
             overflow-y: auto;
-            overflow-x: hidden;
-            padding: 4px;
-            /* GARANTIZAR QUE EL SCROLL FUNCIONE - ESTILOS MEJORADOS */
-            min-height: 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+            margin-bottom: 10px;
+            max-height: 200px;
+        }
+        .deposito-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .deposito-item:hover {
+            background-color: #f0f0f0;
+        }
+        .deposito-header {
+            font-weight: bold;
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+        }
+        .deposito-completo {
+            background: #d4edda;
+        }
+        .deposito-activo {
+            background: #d4e6f1;
+            border: 2px solid rgb(138, 11, 210);
+        }
+        .success-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
-            /* FORZAR SCROLL VISIBLE */
-            overflow-y: scroll !important;
+            background: rgba(39, 174, 96, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            animation: fadeInOut 1s ease-in-out;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
         }
         
-        /* NUEVOS ESTILOS PARA LISTA EXPANDIBLE */
-        .deposito-group {
+        /* Clases para mostrar/ocultar vistas */
+        .vista-lista-colas {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .vista-detalle-cola {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+        .next-deposito-info {
+            text-align: center;
+            margin: 5px 0;
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* Modal de cola ocupada */
+        .modal-cola-ocupada {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-content-ocupada {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 300px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-content-ocupada h3 {
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        .modal-content-ocupada p {
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            font-weight: bold;
+            color: rgb(138, 11, 210);
+            font-size: 16px;
+        }
+        .sync-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid rgb(138, 11, 210);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Información de usuario */
+        .usuario-info {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* Estilos para depósito con tallas */
+        .deposito-con-tallas {
             border: 1px solid #e0e0e0;
             border-radius: 4px;
             margin-bottom: 4px;
@@ -279,13 +462,13 @@
         }
         .deposito-header-row {
             display: grid;
-            grid-template-columns: 20px 1fr 40px 40px;
-            gap: 8px;
+            grid-template-columns: 20px 2fr 1fr 1fr;
+            gap: 5px;
             padding: 8px;
             align-items: center;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 11px;
+            font-size: 10px;
             border-bottom: 1px solid #e0e0e0;
         }
         .deposito-header-row:hover {
@@ -307,39 +490,43 @@
             background: #d1ecf1;
             border-left: 4px solid #3498db;
         }
-        .deposito-items {
+        .deposito-header-row.activo {
+            background: #d4e6f1;
+            border: 2px solid rgb(138, 11, 210);
+        }
+        .tallas-container {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease-out;
         }
-        .deposito-items.expanded {
+        .tallas-container.expanded {
             max-height: 500px;
             overflow-y: auto;
         }
-        .deposito-item-row {
+        .talla-item {
             display: grid;
-            grid-template-columns: 20px 1fr 40px 40px;
-            gap: 8px;
+            grid-template-columns: 20px 2fr 1fr 1fr;
+            gap: 5px;
             padding: 6px 8px 6px 28px;
             border-bottom: 1px solid #f8f9fa;
             align-items: center;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 10px;
+            font-size: 9px;
             background: white;
         }
-        .deposito-item-row:hover {
+        .talla-item:hover {
             background: #f8f9fa;
         }
-        .deposito-item-row.selected {
+        .talla-item.seleccionada {
             background: #8a0bd2 !important;
             color: white !important;
         }
-        .deposito-item-row.completed {
+        .talla-item.completada {
             background: #d4edda;
             color: #155724;
         }
-        .deposito-item-row.pendiente {
+        .talla-item.pendiente {
             background: #fff3cd;
             color: #856404;
         }
@@ -375,301 +562,195 @@
             font-size: 9px;
             color: #7f8c8d;
             text-align: center;
-            margin-top: 6px;
-            flex-shrink: 0;
+            margin-top: 4px;
         }
         
-        .completion-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(40, 167, 69, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s;
-        }
-        .completion-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        .completion-message {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: bold;
-            color: #155724;
-            font-size: 18px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        
-        .fin-cola-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s;
-        }
-        .fin-cola-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        .fin-cola-message {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: bold;
-            color: #155724;
-            font-size: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 8px;
-            border-radius: 4px;
-            margin: 4px 0;
-            text-align: center;
-            font-size: 12px;
-            border: 1px solid #f5c6cb;
-        }
-        .warning-message {
-            background: #fff3cd;
-            color: #856404;
-            padding: 8px;
-            border-radius: 4px;
-            margin: 4px 0;
-            text-align: center;
-            font-size: 12px;
-            border: 1px solid #ffeaa7;
-        }
-        
-        .save-indicator {
-            font-size: 10px;
-            color: #27ae60;
-            margin-left: 5px;
-        }
-        
-        .scan-success {
-            animation: scan-success 1s;
-        }
-        @keyframes scan-success {
-            0% { background-color: #d4edda; }
-            100% { background-color: white; }
-        }
-
-        /* SCROLLBAR MEJORADO - MÁS VISIBLE Y FUNCIONAL */
-        .depositos-list-content::-webkit-scrollbar {
-            width: 14px;
-            background-color: #f5f5f5;
-        }
-        .depositos-list-content::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-        .depositos-list-content::-webkit-scrollbar-thumb {
-            background: #8a0bd2;
-            border-radius: 8px;
-            border: 3px solid #f1f1f1;
-        }
-        .depositos-list-content::-webkit-scrollbar-thumb:hover {
-            background: #af50e5;
-        }
-        .depositos-list-content::-webkit-scrollbar-thumb:active {
-            background: #6a0894;
-        }
-        
-        /* Para Firefox */
-        .depositos-list-content {
-            scrollbar-width: thin;
-            scrollbar-color: #8a0bd2 #f1f1f1;
-        }
-        
-        .deposito-items.expanded::-webkit-scrollbar {
-            width: 8px;
-        }
-        .deposito-items.expanded::-webkit-scrollbar-track {
-            background: #f8f9fa;
-            border-radius: 4px;
-        }
-        .deposito-items.expanded::-webkit-scrollbar-thumb {
-            background: #bdc3c7;
-            border-radius: 4px;
-        }
-        
+        /* Información de talla */
         .talla-info {
             font-size: 9px;
             color: #7f8c8d;
             margin-left: 4px;
         }
-
-        /* GARANTIZAR QUE EL SCROLL FUNCIONE */
-        .scroll-fix {
-            min-height: 0;
-            overflow: auto;
+        
+        /* SCROLLBAR mejorado */
+        .depositos-list::-webkit-scrollbar {
+            width: 14px;
+            background-color: #f5f5f5;
         }
-
-        /* ESTILO PARA DEPÓSITO ACTIVO EN LA LISTA */
-        .deposito-activo {
-            background-color: #e8f5e8 !important;
-            border-left: 4px solid #27ae60 !important;
+        .depositos-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .depositos-list::-webkit-scrollbar-thumb {
+            background: #8a0bd2;
+            border-radius: 8px;
+            border: 3px solid #f1f1f1;
+        }
+        .depositos-list::-webkit-scrollbar-thumb:hover {
+            background: #af50e5;
+        }
+        
+        /* Para Firefox */
+        .depositos-list {
+            scrollbar-width: thin;
+            scrollbar-color: #8a0bd2 #f1f1f1;
+        }
+        
+        /* Scroll para tallas */
+        .tallas-container.expanded::-webkit-scrollbar {
+            width: 8px;
+        }
+        .tallas-container.expanded::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .tallas-container.expanded::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 4px;
+        }
+        
+        /* Título de talla actual */
+        .current-talla {
+            text-align: center;
+            margin: 5px 0;
+            font-size: 12px;
+            color: #666;
+            font-weight: bold;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
-    <!-- Overlay para completado -->
-    <div class="completion-overlay" id="completionOverlay">
-        <div class="completion-message">
-            ✅ COMPLETADO<br>
-            <span style="font-size: 14px;">Pasando al siguiente...</span>
-        </div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="sync-indicator"></div>
+        Sincronizando con Firebase...
     </div>
-
-    <!-- Overlay para fin de cola -->
-    <div class="fin-cola-overlay" id="finColaOverlay">
-        <div class="fin-cola-message">
-            🏁 FIN DE LA COLA<br>
-            <span style="font-size: 14px;">No hay más depósitos por reponer</span>
-        </div>
-    </div>
-
+    
     <div class="container">
-        <!-- VENTANA 1: SELECCIÓN DE COLAS -->
-        <div id="ventanaColas">
+        <!-- VISTA LISTA DE COLAS -->
+        <div id="vistaListaColas" class="vista-lista-colas">
             <div class="header">
-                <div class="header-left">
-                    <span>Reposición</span>
-                </div>
-                <div class="header-center">
-                    <span id="usuarioHeader">Usuario</span>
-                </div>
-                <div class="header-right">
+                <h1>REPOSICIÓN</h1>
+                <div class="header-buttons">
                     <div id="firebaseIndicator" class="connection-indicator checking"></div>
                 </div>
             </div>
-
-            <div class="data-section">
-                <div id="messageContainer"></div>
-
-                <h3 style="font-size: 14px; margin-bottom: 10px; text-align: center; color: #8a0bd2;">SELECCIONA UNA COLA PARA REPONER:</h3>
-                <div id="rutasContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; flex: 1;">
-                    <!-- Las colas se cargarán aquí dinámicamente -->
-                </div>
-
-                <div class="cache-info" id="cacheInfo">
-                    Última actualización: No disponible
-                </div>
+            
+            <div id="statusMessage" class="status-message"></div>
+            
+            <div class="unidades-info">
+                <button class="update-button" onclick="cargarDatosReposicion()">🔄 Actualizar</button>
+                <span id="totalUnidades">Colas: 0</span>
+                <button class="back-button" onclick="volverAlPrincipal()">🚪 Volver</button>
             </div>
-
+            
+            <div class="buttons-grid" id="colasGrid">
+                <!-- Los botones de colas se generarán dinámicamente -->
+            </div>
+            
+            <div class="cache-info" id="cacheInfo">
+                Última actualización: No disponible
+            </div>
+            
             <div class="footer">
-                <button class="refresh-button" id="refreshButtonVentana1">🔄 Actualizar</button>
-                <button class="back-button" id="volverAlPrincipalBtn">🚪 Interfaz Principal</button>
+                <div class="credit">By: James J</div>
             </div>
         </div>
 
-        <!-- VENTANA 2: DETALLE DE COLA (OCULTA INICIALMENTE) -->
-        <div class="hidden" id="ventanaReposicion">
+        <!-- VISTA DETALLE DE COLA -->
+        <div id="vistaDetalleCola" class="vista-detalle-cola">
             <div class="header">
-                <div class="header-left">
-                    <span id="tituloCola">COLA: </span>
+                <div class="header-info">
+                    <div>COLA: <span id="currentColaDisplay"></span></div>
                 </div>
-                <div class="header-center">
-                    <button class="refresh-button" id="refreshButtonVentana2">↻</button>
-                </div>
-                <div class="header-right">
-                    <span id="saveIndicator" class="save-indicator"></span>
-                    <div id="firebaseIndicatorVentana2" class="connection-indicator checking"></div>
+                <div class="header-buttons">
+                    <div id="firebaseIndicatorDetalle" class="connection-indicator checking"></div>
                 </div>
             </div>
-
-            <div class="data-section">
-                <div id="messageContainerVentana2"></div>
-
-                <div class="current-deposito" id="currentDepositoSection">
-                    <div class="deposito-header" id="currentDeposito">-</div>
-                    <div class="articulo-info" id="currentArticulo">-</div>
-                    
-                    <div class="counters">
-                        <div class="counter-box">
-                            <div class="counter-label">CANTIDAD</div>
-                            <div class="counter-value" id="counterSolicitada">0</div>
-                        </div>
-                        <div class="counter-box">
-                            <div class="counter-label">LEÍDA</div>
-                            <div class="counter-value" id="counterRepuesta">0</div>
-                        </div>
-                        <div class="counter-box">
-                            <div class="counter-label">PENDIENTE</div>
-                            <div class="counter-value" id="counterPendiente">0</div>
-                        </div>
-                    </div>
+            
+            <div id="statusMessageDetalle" class="status-message"></div>
+            
+            <div class="current-deposito" id="currentDepositoDisplay">
+                ----
+            </div>
+            <div class="current-articulo" id="currentArticuloDisplay">
+                ----
+            </div>
+            <div class="current-talla" id="currentTallaDisplay">
+                ----
+            </div>
+            
+            <div class="contadores">
+                <div class="contador-item">
+                    <div class="contador-label">CANTIDAD</div>
+                    <div class="contador-valor" id="cantidadTotal">0</div>
                 </div>
-
-                <div class="scan-section" id="scanSection">
-                    <h3>ESCANEAR DEPÓSITO</h3>
-                    <input type="text" 
-                           id="depositoInput" 
-                           class="scan-input" 
-                           placeholder="Escanea el código del depósito" 
-                           autocomplete="off"
-                           value="">
-                    
-                    <h3>ESCANEAR CÓDIGO UPC</h3>
-                    <input type="text" 
-                           id="upcInput" 
-                           class="scan-input" 
-                           placeholder="Escanea el código UPC del producto" 
-                           autocomplete="off"
-                           disabled>
-                    
-                    <div class="controls">
-                        <button class="btn-warning" id="siguienteDepositoBtn">⏭️ SIGUIENTE</button>
-                        <button class="btn-info" id="volverAColasBtn">↩️ COLAS</button>
-                    </div>
+                <div class="contador-item">
+                    <div class="contador-label">LEÍDA</div>
+                    <div class="contador-valor" id="cantidadLeida">0</div>
                 </div>
-
-                <div class="depositos-list-container">
-                    <div class="depositos-list-header">
-                        <div style="display: grid; grid-template-columns: 20px 1fr 40px 40px; gap: 8px;">
-                            <div></div>
-                            <div>DEPÓSITO - ARTÍCULO</div>
-                            <div>TOTAL</div>
-                            <div>HECHO</div>
-                        </div>
-                    </div>
-                    <div class="depositos-list-content scroll-fix" id="depositosGrid">
-                        <!-- Los depósitos se cargarán aquí dinámicamente EN ORDEN -->
-                    </div>
-                </div>
-
-                <div class="cache-info" id="cacheInfoVentana2">
-                    Última actualización: No disponible
+                <div class="contador-item">
+                    <div class="contador-label">PENDIENTE</div>
+                    <div class="contador-valor" id="cantidadPendiente">0</div>
                 </div>
             </div>
-
+            
+            <div class="scan-inputs">
+                <input type="text" class="scan-input cursor-blink" id="depositoInput" placeholder="SCANEAR DEPOSITO" autocomplete="off">
+                <input type="text" class="scan-input" id="upcInput" placeholder="SCANEAR CÓDIGO UPC" autocomplete="off" disabled>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-button primary" onclick="siguienteDeposito()">SIG DEPOSITO</button>
+                <button class="action-button secondary" onclick="volverAColas()">VOLVER A COLAS</button>
+            </div>
+            
+            <div class="depositos-list">
+                <div class="deposito-item deposito-header">
+                    <div>Lista de Depositos con Tallas</div>
+                    <div>TOTAL</div>
+                    <div>HECHO</div>
+                </div>
+                <div id="depositosList">
+                    <!-- Los depósitos con tallas se cargarán dinámicamente -->
+                </div>
+            </div>
+            
+            <div class="cache-info" id="cacheInfoDetalle">
+                Última actualización: No disponible
+            </div>
+            
             <div class="footer">
-                <button class="back-button" id="volverAlPrincipalBtnVentana2">🚪 Interfaz Principal</button>
+                <div class="credit">By: James J</div>
             </div>
         </div>
+    </div>
+
+    <!-- Modal para cola ocupada -->
+    <div id="colaOcupadaModal" class="modal-cola-ocupada">
+        <div class="modal-content-ocupada">
+            <h3>COLA EN USO</h3>
+            <p>Esta cola está siendo utilizada por otro usuario. Intenta con otra cola o espera a que se libere.</p>
+            <button onclick="cerrarColaOcupadaModal()" class="modal-button success" style="width: 100%;">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- Modal para sesión recuperada -->
+    <div id="sesionRecuperadaModal" class="modal">
+        <div class="modal-content">
+            <h3>SESIÓN RECUPERADA</h3>
+            <p>Se detectó una sesión previa en esta cola. ¿Deseas retomar la sesión?</p>
+            <div class="modal-buttons">
+                <button onclick="retomarSesion()" class="modal-button success">Retomar</button>
+                <button onclick="liberarYContinuar()" class="modal-button warning">Liberar y Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="successScreen" class="success-screen">
+        ¡ÉXITO!
     </div>
 
     <script src="funcionalidad_reposicion.js"></script>
