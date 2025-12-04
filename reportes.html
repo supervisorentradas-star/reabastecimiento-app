@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reportes - SOKSO</title>
     <style>
+        /* ESTILOS (MANTENIDOS IGUAL) */
         * {
             box-sizing: border-box;
             font-family: Arial, sans-serif;
@@ -131,11 +132,11 @@
             background-color: #f9f9f9;
         }
         tr.duplicate-row {
-            background-color: #ffcccc !important; /* Rojo claro para duplicados */
+            background-color: #ffcccc !important;
             border-left: 4px solid #e74c3c;
         }
         tr.excess-duplicate {
-            background-color: #ff9999 !important; /* Rojo más intenso para exceso */
+            background-color: #ff9999 !important;
             font-weight: bold;
             border-left: 4px solid #c0392b;
         }
@@ -286,6 +287,22 @@
             font-size: 12px;
             font-weight: bold;
         }
+        .tab-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 5px;
+            display: inline-block;
+        }
+        .tab-status.clean {
+            background-color: #27ae60;
+        }
+        .tab-status.pending {
+            background-color: #f39c12;
+        }
+        .tab-status.error {
+            background-color: #e74c3c;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -305,18 +322,24 @@
         </div>
         
         <div class="tabs">
-            <button class="tab-button active" data-tab="recoleccion">RECOLECCIÓN</button>
-            <button class="tab-button" data-tab="reposiciones">REPOSICIÓN</button>
-            <button class="tab-button" data-tab="devoluciones">DEVOLUCIONES</button>
+            <button class="tab-button active" data-tab="recoleccion">
+                RECOLECCIÓN <span id="tabStatusRecoleccion" class="tab-status clean"></span>
+            </button>
+            <button class="tab-button" data-tab="reposiciones">
+                REPOSICIÓN <span id="tabStatusReposiciones" class="tab-status clean"></span>
+            </button>
+            <button class="tab-button" data-tab="devoluciones">
+                DEVOLUCIONES <span id="tabStatusDevoluciones" class="tab-status clean"></span>
+            </button>
         </div>
         
         <div class="filter-controls">
             <div class="filter-checkbox">
-                <input type="checkbox" id="showOnlyDuplicates" onchange="filterDuplicates()">
+                <input type="checkbox" id="showOnlyDuplicates">
                 <label for="showOnlyDuplicates">Mostrar solo duplicados</label>
             </div>
             <div class="filter-checkbox">
-                <input type="checkbox" id="showExcessOnly" onchange="filterDuplicates()">
+                <input type="checkbox" id="showExcessOnly">
                 <label for="showExcessOnly">Mostrar solo exceso a eliminar</label>
             </div>
         </div>
@@ -333,21 +356,13 @@
         
         <div class="table-container">
             <table id="dataTable">
-                <thead id="tableHeader">
-                    <!-- Las cabeceras se generan dinámicamente -->
-                </thead>
-                <tbody id="tableBody">
-                    <!-- Los datos se generan dinámicamente -->
-                </tbody>
-                <tfoot id="tableFooter">
-                    <!-- Los totales se generan dinámicamente -->
-                </tfoot>
+                <thead id="tableHeader"></thead>
+                <tbody id="tableBody"></tbody>
+                <tfoot id="tableFooter"></tfoot>
             </table>
         </div>
         
-        <div class="summary" id="summaryContainer">
-            <!-- Los resúmenes se generan dinámicamente -->
-        </div>
+        <div class="summary" id="summaryContainer"></div>
         
         <div class="actions">
             <button class="action-button primary" onclick="goToMain()">🚪 Interfaz Principal</button>
@@ -359,7 +374,9 @@
     </div>
 
     <script>
-        // Configuración de Firebase
+        // ==============================================
+        // CONFIGURACIÓN DE FIREBASE
+        // ==============================================
         const firebaseConfig = {
             apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
             authDomain: "reabastecimiento-d71a1.firebaseapp.com",
@@ -370,70 +387,79 @@
             appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
         };
 
-        // Inicializar Firebase
+        // ==============================================
+        // INICIALIZACIÓN Y VARIABLES GLOBALES
+        // ==============================================
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Variables globales
         let currentTab = 'recoleccion';
-        let allData = {
+        let allData = { recoleccion: [], reposiciones: [], devoluciones: [] };
+        let filteredData = { recoleccion: [], reposiciones: [], devoluciones: [] };
+        let sortConfig = { column: null, direction: 'asc' };
+        
+        // Variables mejoradas para gestión de duplicados por pestaña
+        let duplicateData = {
             recoleccion: [],
             reposiciones: [],
             devoluciones: []
         };
-        let filteredData = {
+        
+        let duplicateKeys = {
             recoleccion: [],
             reposiciones: [],
             devoluciones: []
         };
-        let sortConfig = {
-            column: null,
-            direction: 'asc'
+        
+        let duplicateSummary = {
+            recoleccion: {},
+            reposiciones: {},
+            devoluciones: {}
         };
         
-        // Variables para gestión de duplicados
-        let duplicateData = []; // Registros identificados como duplicados
-        let duplicateKeys = []; // Claves de Firebase de los registros duplicados
-        let duplicateSummary = {}; // Resumen por clave única
-        let isDuplicateAnalysis = false; // Indica si se ha realizado análisis de duplicados
+        let isDuplicateAnalysis = false;
         
-        // Encabezados de cada reporte
         const headers = {
             recoleccion: ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad_recolectada', 'cantidad_planificada', 'no_encontrados', 'tipoRecoleccion', 'deposito_destino', 'hora', 'cola_reposicion', 'fecha'],
             reposiciones: ['usuario', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad', 'fecha', 'hora'],
             devoluciones: ['usuario', 'cola', 'deposito', 'descripcion', 'upc', 'cantidad', 'fecha', 'hora']
         };
 
-        // Inicializar la aplicación
-        window.addEventListener('load', function() {
+        // ==============================================
+        // INICIALIZACIÓN DE LA APLICACIÓN
+        // ==============================================
+        document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
         });
 
         function initializeApp() {
-            // Verificar conexión a Firebase
+            console.log('🔄 Inicializando aplicación...');
             verificarConexionFirebase();
-            
-            // Cargar datos iniciales
-            loadData();
-            
-            // Configurar eventos
             setupEventListeners();
+            loadData();
         }
 
+        // ==============================================
+        // FUNCIONES DE CONEXIÓN Y EVENTOS
+        // ==============================================
         function verificarConexionFirebase() {
             const connectedRef = database.ref(".info/connected");
             connectedRef.on("value", function(snap) {
                 const indicator = document.getElementById('firebaseIndicator');
-                if (snap.val() === true) {
-                    indicator.style.backgroundColor = '#27ae60';
-                } else {
-                    indicator.style.backgroundColor = '#e74c3c';
+                if (indicator) {
+                    if (snap.val() === true) {
+                        indicator.style.backgroundColor = '#27ae60';
+                    } else {
+                        indicator.style.backgroundColor = '#e74c3c';
+                    }
                 }
             });
         }
 
         function setupEventListeners() {
-            // Eventos para los tabs
+            console.log('🔧 Configurando eventos...');
+            
+            // Configurar eventos de pestañas
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', function() {
                     // Quitar clase active de todos los tabs
@@ -455,21 +481,36 @@
                 });
             });
             
-            // Evento para el filtro de fecha
-            document.getElementById('dateFilter').addEventListener('change', function() {
-                filterData();
-                renderTable();
-            });
+            // Configurar filtros
+            const dateFilter = document.getElementById('dateFilter');
+            const searchFilter = document.getElementById('searchFilter');
             
-            // Evento para el filtro de búsqueda
-            document.getElementById('searchFilter').addEventListener('input', function() {
-                filterData();
-                renderTable();
-            });
+            if (dateFilter) {
+                dateFilter.addEventListener('change', function() {
+                    filterData();
+                    renderTable();
+                });
+            }
+            
+            if (searchFilter) {
+                searchFilter.addEventListener('input', function() {
+                    filterData();
+                    renderTable();
+                });
+            }
+            
+            // Configurar checkboxes
+            document.getElementById('showOnlyDuplicates').addEventListener('change', filterDuplicates);
+            document.getElementById('showExcessOnly').addEventListener('change', filterDuplicates);
         }
 
+        // ==============================================
+        // FUNCIONES DE CARGA DE DATOS
+        // ==============================================
         function loadData() {
-            // Cargar datos de recolección (incluyendo las claves de Firebase)
+            console.log('📥 Cargando datos...');
+            
+            // Cargar datos de recolección
             database.ref('recolecciones').once('value').then(snapshot => {
                 const data = snapshot.val();
                 if (data) {
@@ -477,14 +518,18 @@
                         firebaseKey: key, 
                         ...value 
                     }));
+                    console.log(`✅ Recolecciones cargadas: ${allData.recoleccion.length} registros`);
                 } else {
                     allData.recoleccion = [];
+                    console.log('ℹ️ No hay datos en recolecciones');
                 }
+                updateTabStatus('recoleccion');
                 filterData();
                 renderTable();
             }).catch(error => {
-                console.error('Error cargando datos de recolección:', error);
+                console.error('❌ Error cargando recolecciones:', error);
                 allData.recoleccion = [];
+                updateTabStatus('recoleccion', 'error');
                 filterData();
                 renderTable();
             });
@@ -493,15 +538,22 @@
             database.ref('reposiciones').once('value').then(snapshot => {
                 const data = snapshot.val();
                 if (data) {
-                    allData.reposiciones = Object.values(data);
+                    allData.reposiciones = Object.entries(data).map(([key, value]) => ({ 
+                        firebaseKey: key, 
+                        ...value 
+                    }));
+                    console.log(`✅ Reposiciones cargadas: ${allData.reposiciones.length} registros`);
                 } else {
                     allData.reposiciones = [];
+                    console.log('ℹ️ No hay datos en reposiciones');
                 }
+                updateTabStatus('reposiciones');
                 filterData();
                 renderTable();
             }).catch(error => {
-                console.error('Error cargando datos de reposiciones:', error);
+                console.error('❌ Error cargando reposiciones:', error);
                 allData.reposiciones = [];
+                updateTabStatus('reposiciones', 'error');
                 filterData();
                 renderTable();
             });
@@ -510,123 +562,122 @@
             database.ref('reposicion_devol').once('value').then(snapshot => {
                 const data = snapshot.val();
                 if (data) {
-                    allData.devoluciones = Object.values(data);
+                    allData.devoluciones = Object.entries(data).map(([key, value]) => ({ 
+                        firebaseKey: key, 
+                        ...value 
+                    }));
+                    console.log(`✅ Devoluciones cargadas: ${allData.devoluciones.length} registros`);
                 } else {
                     allData.devoluciones = [];
+                    console.log('ℹ️ No hay datos en reposicion_devol');
                 }
+                updateTabStatus('devoluciones');
                 filterData();
                 renderTable();
             }).catch(error => {
-                console.error('Error cargando datos de devoluciones:', error);
+                console.error('❌ Error cargando devoluciones:', error);
                 allData.devoluciones = [];
+                updateTabStatus('devoluciones', 'error');
                 filterData();
                 renderTable();
             });
         }
 
-        // FUNCIÓN MEJORADA: IDENTIFICAR DUPLICADOS POR DEPOSITO_UPC_ARTICULO_FECHA
+        // ==============================================
+        // FUNCIONES DE ANÁLISIS DE DUPLICADOS
+        // ==============================================
         async function identificarDuplicados() {
             try {
-                if (currentTab !== 'recoleccion') {
-                    showStatusMessage('⚠️ Esta función solo está disponible en la pestaña RECOLECCIÓN', 'warning');
-                    return;
+                console.log(`🔍 Iniciando análisis de duplicados para: ${currentTab}`);
+                
+                switch(currentTab) {
+                    case 'recoleccion':
+                        await analizarDuplicadosRecoleccion();
+                        break;
+                    case 'reposiciones':
+                        await analizarDuplicadosReposicion();
+                        break;
+                    case 'devoluciones':
+                        await analizarDuplicadosDevolucion();
+                        break;
+                    default:
+                        showStatusMessage('❌ Pestaña no válida', 'error');
                 }
                 
-                showStatusMessage('🔍 Buscando duplicados... Esto puede tomar unos momentos.', 'warning');
+            } catch (error) {
+                console.error('Error en identificarDuplicados:', error);
+                showStatusMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // 1. ANÁLISIS DE RECOLECCIÓN (YA EXISTENTE - MEJORADO)
+        async function analizarDuplicadosRecoleccion() {
+            try {
+                showStatusMessage('🔍 Analizando duplicados en RECOLECCIÓN...', 'warning');
                 
-                // Cargar datos de recoleccion_rutas para comparar
+                // Cargar datos de planificación
                 const rutasSnapshot = await database.ref('recoleccion_rutas').once('value');
-                const rutasData = rutasSnapshot.val();
+                const rutasData = rutasSnapshot.val() || {};
                 
-                if (!rutasData) {
+                if (!rutasData || Object.keys(rutasData).length === 0) {
                     showStatusMessage('❌ No hay datos en recoleccion_rutas para comparar', 'error');
                     return;
                 }
                 
-                // 1. PROCESAR recoleccion_rutas - PLANIFICACIÓN ORIGINAL
+                // Procesar planificación
                 const planificacion = {};
-                let totalRegistrosRutas = 0;
-                
                 Object.values(rutasData).forEach(registro => {
                     try {
-                        // Extraer datos del registro
                         const deposito = registro.DEPOSITO || registro.deposito || '';
                         const upc = registro['CODIGO UPC'] || registro.upc || registro.UPC || '';
                         const articulo = registro.ARTICULO || registro.articulo || registro.DESCRIPCION || registro.descripcion || '';
                         const fechaRaw = registro.FECHA || registro.fecha || '';
                         const cantidad = parseInt(registro.CANTIDAD || registro.cantidad || 0);
                         
-                        // Validar datos mínimos
-                        if (!deposito || !upc || !fechaRaw || cantidad <= 0) {
-                            return;
-                        }
+                        if (!deposito || !upc || !fechaRaw || cantidad <= 0) return;
                         
-                        // Formatear fecha
                         const fecha = formatDateToDDMMYYYY(fechaRaw);
-                        
-                        // Crear clave única: deposito_upc_articulo_fecha
                         const claveUnica = `${deposito}_${upc}_${articulo}_${fecha}`;
                         
                         if (!planificacion[claveUnica]) {
                             planificacion[claveUnica] = {
-                                deposito: deposito,
-                                upc: upc,
-                                articulo: articulo,
-                                fecha: fecha,
                                 cantidad_planificada: 0,
-                                registros_rutas: []
+                                detalles: []
                             };
                         }
                         
                         planificacion[claveUnica].cantidad_planificada += cantidad;
-                        planificacion[claveUnica].registros_rutas.push({
-                            cantidad: cantidad,
-                            registro_original: registro
-                        });
-                        
-                        totalRegistrosRutas++;
+                        planificacion[claveUnica].detalles.push({ deposito, upc, articulo, fecha, cantidad });
                         
                     } catch (error) {
-                        console.warn('Error procesando registro de recoleccion_rutas:', error, registro);
+                        console.warn('Error procesando registro de planificación:', error);
                     }
                 });
                 
-                console.log(`📊 Procesados ${totalRegistrosRutas} registros de recoleccion_rutas`);
-                console.log(`📊 ${Object.keys(planificacion).length} claves únicas en planificación`);
-                
-                // 2. PROCESAR recolecciones - REGISTROS DE RECOLECCIÓN
+                // Procesar recolecciones
                 const recoleccionesAgrupadas = {};
-                duplicateData = [];
-                duplicateKeys = [];
-                duplicateSummary = {};
-                isDuplicateAnalysis = true;
+                duplicateData.recoleccion = [];
+                duplicateKeys.recoleccion = [];
+                duplicateSummary.recoleccion = {};
                 
                 filteredData.recoleccion.forEach(registro => {
                     try {
-                        // Extraer datos del registro
                         const deposito = registro.deposito || '';
                         const upc = registro.upc || '';
                         const articulo = registro.descripcion || '';
                         const fechaRaw = registro.fecha || registro.fechaSistema || '';
                         
-                        // Validar datos mínimos
-                        if (!deposito || !upc || !fechaRaw) {
-                            return;
-                        }
+                        if (!deposito || !upc || !fechaRaw) return;
                         
-                        // Formatear fecha
                         const fecha = formatDateToDDMMYYYY(fechaRaw);
-                        const cantidad_recolectada = parseInt(registro.cantidad_recolectada || 0);
-                        
-                        // Crear clave única: deposito_upc_articulo_fecha
                         const claveUnica = `${deposito}_${upc}_${articulo}_${fecha}`;
+                        const cantidad_recolectada = parseInt(registro.cantidad_recolectada || 0);
                         
                         if (!recoleccionesAgrupadas[claveUnica]) {
                             recoleccionesAgrupadas[claveUnica] = {
                                 registros: [],
                                 total_recolectado: 0,
-                                cantidad_planificada: planificacion[claveUnica] ? planificacion[claveUnica].cantidad_planificada : 0,
-                                detalles: planificacion[claveUnica] || null
+                                cantidad_planificada: planificacion[claveUnica] ? planificacion[claveUnica].cantidad_planificada : 0
                             };
                         }
                         
@@ -634,60 +685,52 @@
                             firebaseKey: registro.firebaseKey,
                             registro: registro,
                             cantidad_recolectada: cantidad_recolectada,
-                            timestamp: registro.timestamp || (registro.hora ? new Date(registro.hora).getTime() : Date.now())
+                            timestamp: registro.timestamp || Date.now()
                         });
                         
                         recoleccionesAgrupadas[claveUnica].total_recolectado += cantidad_recolectada;
                         
                     } catch (error) {
-                        console.warn('Error procesando registro de recolecciones:', error, registro);
+                        console.warn('Error procesando registro de recolección:', error);
                     }
                 });
                 
-                console.log(`📊 Procesados ${filteredData.recoleccion.length} registros de recolecciones`);
-                console.log(`📊 ${Object.keys(recoleccionesAgrupadas).length} claves únicas en recolecciones`);
-                
-                // 3. IDENTIFICAR DUPLICADOS (donde total_recolectado > cantidad_planificada)
-                let totalDuplicados = 0;
+                // Identificar duplicados
                 let totalExceso = 0;
                 let clavesConExceso = 0;
                 
                 for (const claveUnica in recoleccionesAgrupadas) {
                     const grupo = recoleccionesAgrupadas[claveUnica];
                     
-                    // Solo considerar claves que existen en planificación
-                    if (grupo.detalles && grupo.total_recolectado > grupo.cantidad_planificada && grupo.cantidad_planificada > 0) {
-                        // Calcular exceso
+                    if (grupo.cantidad_planificada > 0 && grupo.total_recolectado > grupo.cantidad_planificada) {
                         const exceso = grupo.total_recolectado - grupo.cantidad_planificada;
                         totalExceso += exceso;
                         clavesConExceso++;
                         
-                        // Ordenar registros por timestamp (más reciente primero para eliminar después)
-                        grupo.registros.sort((a, b) => b.timestamp - a.timestamp); // Más reciente primero
+                        // Ordenar por timestamp (más reciente primero)
+                        grupo.registros.sort((a, b) => b.timestamp - a.timestamp);
                         
-                        // Identificar cuáles registros son duplicados (exceso)
+                        // Identificar registros a eliminar
                         let cantidadPorEliminar = exceso;
-                        const registrosDuplicados = [];
-                        
                         for (const registroInfo of grupo.registros) {
                             if (cantidadPorEliminar <= 0) break;
                             
                             const cantidadRegistro = registroInfo.cantidad_recolectada;
                             if (cantidadRegistro > 0) {
                                 const excesoAEliminar = Math.min(cantidadRegistro, cantidadPorEliminar);
-                                registrosDuplicados.push({
+                                duplicateData.recoleccion.push({
                                     ...registroInfo.registro,
                                     firebaseKey: registroInfo.firebaseKey,
                                     exceso_a_eliminar: excesoAEliminar,
                                     porcentaje_exceso: ((excesoAEliminar / cantidadRegistro) * 100).toFixed(1) + '%'
                                 });
+                                duplicateKeys.recoleccion.push(registroInfo.firebaseKey);
                                 cantidadPorEliminar -= cantidadRegistro;
-                                totalDuplicados++;
                             }
                         }
                         
                         // Agregar a resumen
-                        duplicateSummary[claveUnica] = {
+                        duplicateSummary.recoleccion[claveUnica] = {
                             clave: claveUnica,
                             deposito: grupo.registros[0]?.registro.deposito || '',
                             upc: grupo.registros[0]?.registro.upc || '',
@@ -696,86 +739,376 @@
                             cantidad_planificada: grupo.cantidad_planificada,
                             total_recolectado: grupo.total_recolectado,
                             exceso: exceso,
-                            registros_duplicados: registrosDuplicados.length,
-                            registros_totales: grupo.registros.length,
+                            registros_duplicados: duplicateData.recoleccion.filter(d => d.firebaseKey.startsWith(claveUnica)).length,
                             porcentaje_exceso: ((exceso / grupo.cantidad_planificada) * 100).toFixed(1) + '%'
                         };
-                        
-                        // Agregar registros duplicados a la lista global
-                        registrosDuplicados.forEach(registro => {
-                            duplicateData.push(registro);
-                            duplicateKeys.push(registro.firebaseKey);
-                        });
                     }
                 }
                 
-                // 4. MOSTRAR RESULTADOS
-                if (duplicateData.length === 0) {
-                    showStatusMessage('✅ No se encontraron duplicados. Todos los registros están dentro de lo planificado.', 'success');
+                // Mostrar resultados
+                if (duplicateData.recoleccion.length === 0) {
+                    showStatusMessage('✅ No se encontraron duplicados en RECOLECCIÓN', 'success');
                     document.getElementById('eliminarDuplicadosBtn').disabled = true;
                     document.getElementById('duplicateInfo').classList.remove('show');
+                    updateTabStatus('recoleccion', 'clean');
                 } else {
-                    showStatusMessage(`⚠️ Se encontraron ${duplicateData.length} registros duplicados en ${clavesConExceso} claves únicas (Exceso total: ${totalExceso} unidades)`, 'warning');
+                    showStatusMessage(`⚠️ RECOLECCIÓN: ${duplicateData.recoleccion.length} registros duplicados (${clavesConExceso} claves, Exceso: ${totalExceso} unidades)`, 'warning');
                     document.getElementById('eliminarDuplicadosBtn').disabled = false;
-                    
-                    // Mostrar resumen de duplicados
                     mostrarResumenDuplicados();
-                    
-                    // Resaltar duplicados en la tabla
                     highlightDuplicates();
-                    
-                    // Aplicar filtros si están activos
                     filterDuplicates();
+                    updateTabStatus('recoleccion', 'pending');
                 }
                 
-                console.log(`✅ Análisis completado: ${duplicateData.length} duplicados, ${clavesConExceso} claves con exceso, ${totalExceso} unidades en exceso`);
+                isDuplicateAnalysis = true;
+                console.log(`✅ Análisis RECOLECCIÓN completado: ${duplicateData.recoleccion.length} duplicados`);
                 
             } catch (error) {
-                console.error('Error identificando duplicados:', error);
-                showStatusMessage(`❌ Error identificando duplicados: ${error.message}`, 'error');
+                console.error('Error en análisis de recolección:', error);
+                showStatusMessage(`❌ Error analizando recolección: ${error.message}`, 'error');
             }
         }
 
-        // FUNCIÓN: ELIMINAR DUPLICADOS
+        // 2. ANÁLISIS DE REPOSICIÓN (NUEVO)
+        async function analizarDuplicadosReposicion() {
+            try {
+                showStatusMessage('🔍 Analizando duplicados en REPOSICIÓN...', 'warning');
+                
+                // Agrupar recolecciones por upc+descripcion+fecha
+                const recoleccionesAgrupadas = {};
+                allData.recoleccion.forEach(item => {
+                    try {
+                        const upc = item.upc || '';
+                        const descripcion = item.descripcion || '';
+                        const fecha = item.fecha || item.fechaSistema || '';
+                        
+                        if (!upc || !descripcion || !fecha) return;
+                        
+                        const claveUnica = `${upc}_${descripcion}_${formatDateToDDMMYYYY(fecha)}`;
+                        const cantidad = parseInt(item.cantidad_recolectada || 0);
+                        
+                        if (!recoleccionesAgrupadas[claveUnica]) {
+                            recoleccionesAgrupadas[claveUnica] = 0;
+                        }
+                        recoleccionesAgrupadas[claveUnica] += cantidad;
+                        
+                    } catch (error) {
+                        console.warn('Error procesando recolección para análisis de reposición:', error);
+                    }
+                });
+                
+                // Agrupar reposiciones por upc+descripcion+fecha
+                const reposicionesAgrupadas = {};
+                duplicateData.reposiciones = [];
+                duplicateKeys.reposiciones = [];
+                duplicateSummary.reposiciones = {};
+                
+                filteredData.reposiciones.forEach(item => {
+                    try {
+                        const upc = item.upc || '';
+                        const descripcion = item.descripcion || '';
+                        const fecha = item.fecha || '';
+                        
+                        if (!upc || !descripcion || !fecha) return;
+                        
+                        const claveUnica = `${upc}_${descripcion}_${formatDateToDDMMYYYY(fecha)}`;
+                        const cantidad = parseInt(item.cantidad || 0);
+                        
+                        if (!reposicionesAgrupadas[claveUnica]) {
+                            reposicionesAgrupadas[claveUnica] = {
+                                registros: [],
+                                total_reposicion: 0
+                            };
+                        }
+                        
+                        reposicionesAgrupadas[claveUnica].registros.push({
+                            firebaseKey: item.firebaseKey,
+                            registro: item,
+                            cantidad: cantidad,
+                            timestamp: item.timestamp || Date.now()
+                        });
+                        
+                        reposicionesAgrupadas[claveUnica].total_reposicion += cantidad;
+                        
+                    } catch (error) {
+                        console.warn('Error procesando reposición:', error);
+                    }
+                });
+                
+                // Identificar duplicados
+                let totalExceso = 0;
+                let clavesConExceso = 0;
+                
+                for (const claveUnica in reposicionesAgrupadas) {
+                    const grupo = reposicionesAgrupadas[claveUnica];
+                    const recoleccionTotal = recoleccionesAgrupadas[claveUnica] || 0;
+                    
+                    if (grupo.total_reposicion > recoleccionTotal) {
+                        const exceso = grupo.total_reposicion - recoleccionTotal;
+                        totalExceso += exceso;
+                        clavesConExceso++;
+                        
+                        // Ordenar por timestamp (más reciente primero)
+                        grupo.registros.sort((a, b) => b.timestamp - a.timestamp);
+                        
+                        // Identificar registros a eliminar
+                        let cantidadPorEliminar = exceso;
+                        for (const registroInfo of grupo.registros) {
+                            if (cantidadPorEliminar <= 0) break;
+                            
+                            const cantidadRegistro = registroInfo.cantidad;
+                            if (cantidadRegistro > 0) {
+                                const excesoAEliminar = Math.min(cantidadRegistro, cantidadPorEliminar);
+                                duplicateData.reposiciones.push({
+                                    ...registroInfo.registro,
+                                    firebaseKey: registroInfo.firebaseKey,
+                                    exceso_a_eliminar: excesoAEliminar,
+                                    porcentaje_exceso: ((excesoAEliminar / cantidadRegistro) * 100).toFixed(1) + '%'
+                                });
+                                duplicateKeys.reposiciones.push(registroInfo.firebaseKey);
+                                cantidadPorEliminar -= cantidadRegistro;
+                            }
+                        }
+                        
+                        // Agregar a resumen
+                        duplicateSummary.reposiciones[claveUnica] = {
+                            clave: claveUnica,
+                            upc: grupo.registros[0]?.registro.upc || '',
+                            descripcion: grupo.registros[0]?.registro.descripcion || '',
+                            fecha: grupo.registros[0]?.registro.fecha || '',
+                            total_recoleccion: recoleccionTotal,
+                            total_reposicion: grupo.total_reposicion,
+                            exceso: exceso,
+                            registros_duplicados: duplicateData.reposiciones.filter(d => d.firebaseKey.startsWith(claveUnica)).length,
+                            porcentaje_exceso: ((exceso / recoleccionTotal) * 100).toFixed(1) + '%'
+                        };
+                    }
+                }
+                
+                // Mostrar resultados
+                if (duplicateData.reposiciones.length === 0) {
+                    showStatusMessage('✅ No se encontraron duplicados en REPOSICIÓN', 'success');
+                    document.getElementById('eliminarDuplicadosBtn').disabled = true;
+                    document.getElementById('duplicateInfo').classList.remove('show');
+                    updateTabStatus('reposiciones', 'clean');
+                } else {
+                    showStatusMessage(`⚠️ REPOSICIÓN: ${duplicateData.reposiciones.length} registros duplicados (${clavesConExceso} claves, Exceso: ${totalExceso} unidades)`, 'warning');
+                    document.getElementById('eliminarDuplicadosBtn').disabled = false;
+                    mostrarResumenDuplicados();
+                    highlightDuplicates();
+                    filterDuplicates();
+                    updateTabStatus('reposiciones', 'pending');
+                }
+                
+                isDuplicateAnalysis = true;
+                console.log(`✅ Análisis REPOSICIÓN completado: ${duplicateData.reposiciones.length} duplicados`);
+                
+            } catch (error) {
+                console.error('Error en análisis de reposición:', error);
+                showStatusMessage(`❌ Error analizando reposición: ${error.message}`, 'error');
+            }
+        }
+
+        // 3. ANÁLISIS DE DEVOLUCIONES (NUEVO - INDEPENDIENTE)
+        async function analizarDuplicadosDevolucion() {
+            try {
+                showStatusMessage('🔍 Analizando duplicados en DEVOLUCIONES...', 'warning');
+                
+                // Cargar planificación de devoluciones
+                const devolucionesPlanificacionSnapshot = await database.ref('DEVOLUCIONES').once('value');
+                const devolucionesPlanificacionData = devolucionesPlanificacionSnapshot.val() || {};
+                
+                if (!devolucionesPlanificacionData || Object.keys(devolucionesPlanificacionData).length === 0) {
+                    showStatusMessage('❌ No hay datos en DEVOLUCIONES para comparar', 'error');
+                    return;
+                }
+                
+                // Agrupar DEVOLUCIONES (planificación) por upc+deposito+fecha
+                const planificacionDevoluciones = {};
+                Object.values(devolucionesPlanificacionData).forEach(registro => {
+                    try {
+                        const upc = registro['CODIGO UPC'] || registro.upc || '';
+                        const deposito = registro.deposito_destino || registro.deposito || '';
+                        const fechaRaw = registro.FECHA || registro.fecha || '';
+                        const cantidad = parseInt(registro.CANTIDAD || registro.cantidad || 0);
+                        
+                        if (!upc || !deposito || !fechaRaw || cantidad <= 0) return;
+                        
+                        const fecha = formatDateToDDMMYYYY(fechaRaw);
+                        const claveUnica = `${upc}_${deposito}_${fecha}`;
+                        
+                        if (!planificacionDevoluciones[claveUnica]) {
+                            planificacionDevoluciones[claveUnica] = 0;
+                        }
+                        planificacionDevoluciones[claveUnica] += cantidad;
+                        
+                    } catch (error) {
+                        console.warn('Error procesando planificación de devoluciones:', error);
+                    }
+                });
+                
+                // Agrupar reposicion_devol (datos reales) por upc+deposito+fecha
+                const devolucionesAgrupadas = {};
+                duplicateData.devoluciones = [];
+                duplicateKeys.devoluciones = [];
+                duplicateSummary.devoluciones = {};
+                
+                filteredData.devoluciones.forEach(item => {
+                    try {
+                        const upc = item.upc || '';
+                        const deposito = item.deposito || '';
+                        const fecha = item.fecha || '';
+                        
+                        if (!upc || !deposito || !fecha) return;
+                        
+                        const claveUnica = `${upc}_${deposito}_${formatDateToDDMMYYYY(fecha)}`;
+                        const cantidad = parseInt(item.cantidad || 0);
+                        
+                        if (!devolucionesAgrupadas[claveUnica]) {
+                            devolucionesAgrupadas[claveUnica] = {
+                                registros: [],
+                                total_devolucion: 0
+                            };
+                        }
+                        
+                        devolucionesAgrupadas[claveUnica].registros.push({
+                            firebaseKey: item.firebaseKey,
+                            registro: item,
+                            cantidad: cantidad,
+                            timestamp: item.timestamp || Date.now()
+                        });
+                        
+                        devolucionesAgrupadas[claveUnica].total_devolucion += cantidad;
+                        
+                    } catch (error) {
+                        console.warn('Error procesando devolución:', error);
+                    }
+                });
+                
+                // Identificar duplicados
+                let totalExceso = 0;
+                let clavesConExceso = 0;
+                
+                for (const claveUnica in devolucionesAgrupadas) {
+                    const grupo = devolucionesAgrupadas[claveUnica];
+                    const planificacionTotal = planificacionDevoluciones[claveUnica] || 0;
+                    
+                    if (planificacionTotal > 0 && grupo.total_devolucion > planificacionTotal) {
+                        const exceso = grupo.total_devolucion - planificacionTotal;
+                        totalExceso += exceso;
+                        clavesConExceso++;
+                        
+                        // Ordenar por timestamp (más reciente primero)
+                        grupo.registros.sort((a, b) => b.timestamp - a.timestamp);
+                        
+                        // Identificar registros a eliminar
+                        let cantidadPorEliminar = exceso;
+                        for (const registroInfo of grupo.registros) {
+                            if (cantidadPorEliminar <= 0) break;
+                            
+                            const cantidadRegistro = registroInfo.cantidad;
+                            if (cantidadRegistro > 0) {
+                                const excesoAEliminar = Math.min(cantidadRegistro, cantidadPorEliminar);
+                                duplicateData.devoluciones.push({
+                                    ...registroInfo.registro,
+                                    firebaseKey: registroInfo.firebaseKey,
+                                    exceso_a_eliminar: excesoAEliminar,
+                                    porcentaje_exceso: ((excesoAEliminar / cantidadRegistro) * 100).toFixed(1) + '%'
+                                });
+                                duplicateKeys.devoluciones.push(registroInfo.firebaseKey);
+                                cantidadPorEliminar -= cantidadRegistro;
+                            }
+                        }
+                        
+                        // Agregar a resumen
+                        duplicateSummary.devoluciones[claveUnica] = {
+                            clave: claveUnica,
+                            upc: grupo.registros[0]?.registro.upc || '',
+                            deposito: grupo.registros[0]?.registro.deposito || '',
+                            fecha: grupo.registros[0]?.registro.fecha || '',
+                            cantidad_planificada: planificacionTotal,
+                            total_devolucion: grupo.total_devolucion,
+                            exceso: exceso,
+                            registros_duplicados: duplicateData.devoluciones.filter(d => d.firebaseKey.startsWith(claveUnica)).length,
+                            porcentaje_exceso: ((exceso / planificacionTotal) * 100).toFixed(1) + '%'
+                        };
+                    }
+                }
+                
+                // Mostrar resultados
+                if (duplicateData.devoluciones.length === 0) {
+                    showStatusMessage('✅ No se encontraron duplicados en DEVOLUCIONES', 'success');
+                    document.getElementById('eliminarDuplicadosBtn').disabled = true;
+                    document.getElementById('duplicateInfo').classList.remove('show');
+                    updateTabStatus('devoluciones', 'clean');
+                } else {
+                    showStatusMessage(`⚠️ DEVOLUCIONES: ${duplicateData.devoluciones.length} registros duplicados (${clavesConExceso} claves, Exceso: ${totalExceso} unidades)`, 'warning');
+                    document.getElementById('eliminarDuplicadosBtn').disabled = false;
+                    mostrarResumenDuplicados();
+                    highlightDuplicates();
+                    filterDuplicates();
+                    updateTabStatus('devoluciones', 'pending');
+                }
+                
+                isDuplicateAnalysis = true;
+                console.log(`✅ Análisis DEVOLUCIONES completado: ${duplicateData.devoluciones.length} duplicados`);
+                
+            } catch (error) {
+                console.error('Error en análisis de devoluciones:', error);
+                showStatusMessage(`❌ Error analizando devoluciones: ${error.message}`, 'error');
+            }
+        }
+
+        // ==============================================
+        // FUNCIÓN DE ELIMINACIÓN MEJORADA
+        // ==============================================
         async function eliminarDuplicados() {
             try {
-                if (duplicateData.length === 0) {
-                    showStatusMessage('❌ No hay duplicados identificados para eliminar', 'error');
+                const currentDuplicates = duplicateData[currentTab];
+                const currentDuplicateKeys = duplicateKeys[currentTab];
+                
+                if (currentDuplicates.length === 0) {
+                    showStatusMessage(`❌ No hay duplicados identificados en ${currentTab.toUpperCase()}`, 'error');
                     return;
                 }
                 
-                // Confirmar eliminación
-                const confirmacion = confirm(`¿Estás seguro de eliminar ${duplicateData.length} registros duplicados?\n\nTotal exceso: ${duplicateData.reduce((sum, r) => sum + (r.exceso_a_eliminar || 0), 0)} unidades\n\nEsta acción NO se puede deshacer.`);
+                const totalExceso = currentDuplicates.reduce((sum, r) => sum + (r.exceso_a_eliminar || 0), 0);
+                const confirmacion = confirm(`¿Estás seguro de eliminar ${currentDuplicates.length} registros duplicados en ${currentTab.toUpperCase()}?\n\nTotal exceso: ${totalExceso} unidades\n\nEsta acción NO se puede deshacer.`);
                 
-                if (!confirmacion) {
-                    return;
-                }
+                if (!confirmacion) return;
                 
-                showStatusMessage('🗑️ Eliminando duplicados...', 'warning');
+                showStatusMessage(`🗑️ Eliminando duplicados en ${currentTab.toUpperCase()}...`, 'warning');
                 
-                // Eliminar registros duplicados de Firebase
                 let eliminados = 0;
                 let errores = 0;
                 let unidadesEliminadas = 0;
                 
-                for (const duplicado of duplicateData) {
+                // Determinar la ruta de Firebase según la pestaña
+                let firebasePath;
+                switch(currentTab) {
+                    case 'recoleccion': firebasePath = 'recolecciones'; break;
+                    case 'reposiciones': firebasePath = 'reposiciones'; break;
+                    case 'devoluciones': firebasePath = 'reposicion_devol'; break;
+                    default: return;
+                }
+                
+                for (const duplicado of currentDuplicates) {
                     try {
-                        // Obtener la clave actual del registro
                         const registroKey = duplicado.firebaseKey;
                         
                         if (registroKey) {
-                            // Verificar si debemos eliminar completamente o solo reducir la cantidad
-                            const cantidadActual = parseInt(duplicado.cantidad_recolectada || 0);
+                            const cantidadActual = parseInt(duplicado.cantidad || duplicado.cantidad_recolectada || 0);
                             const excesoAEliminar = duplicado.exceso_a_eliminar || 0;
                             
                             if (excesoAEliminar >= cantidadActual) {
                                 // Eliminar registro completo
-                                await database.ref(`recolecciones/${registroKey}`).remove();
+                                await database.ref(`${firebasePath}/${registroKey}`).remove();
                                 console.log(`✅ Eliminado registro completo: ${registroKey}`);
                             } else {
-                                // Actualizar cantidad (reducir el exceso)
+                                // Actualizar cantidad
                                 const nuevaCantidad = cantidadActual - excesoAEliminar;
-                                await database.ref(`recolecciones/${registroKey}/cantidad_recolectada`).set(nuevaCantidad);
+                                const campoCantidad = currentTab === 'recoleccion' ? 'cantidad_recolectada' : 'cantidad';
+                                await database.ref(`${firebasePath}/${registroKey}/${campoCantidad}`).set(nuevaCantidad);
                                 console.log(`✅ Actualizado registro ${registroKey}: ${cantidadActual} → ${nuevaCantidad}`);
                             }
                             
@@ -789,28 +1122,31 @@
                 }
                 
                 // Actualizar datos locales
-                allData.recoleccion = allData.recoleccion.filter(registro => {
-                    const duplicado = duplicateData.find(d => d.firebaseKey === registro.firebaseKey);
+                allData[currentTab] = allData[currentTab].filter(registro => {
+                    const duplicado = currentDuplicates.find(d => d.firebaseKey === registro.firebaseKey);
                     if (duplicado) {
                         const excesoAEliminar = duplicado.exceso_a_eliminar || 0;
-                        const cantidadActual = parseInt(registro.cantidad_recolectada || 0);
+                        const cantidadActual = parseInt(registro.cantidad || registro.cantidad_recolectada || 0);
                         
                         if (excesoAEliminar >= cantidadActual) {
-                            return false; // Eliminar registro completo
+                            return false;
                         } else {
-                            // Actualizar cantidad en datos locales
-                            registro.cantidad_recolectada = cantidadActual - excesoAEliminar;
-                            return true; // Mantener registro con cantidad actualizada
+                            // Actualizar cantidad localmente
+                            if (currentTab === 'recoleccion') {
+                                registro.cantidad_recolectada = cantidadActual - excesoAEliminar;
+                            } else {
+                                registro.cantidad = cantidadActual - excesoAEliminar;
+                            }
+                            return true;
                         }
                     }
-                    return true; // Mantener registros no duplicados
+                    return true;
                 });
                 
-                // Resetear variables de duplicados
-                duplicateData = [];
-                duplicateKeys = [];
-                duplicateSummary = {};
-                isDuplicateAnalysis = false;
+                // Resetear variables
+                duplicateData[currentTab] = [];
+                duplicateKeys[currentTab] = [];
+                duplicateSummary[currentTab] = {};
                 
                 // Actualizar interfaz
                 filterData();
@@ -819,50 +1155,58 @@
                 document.getElementById('duplicateInfo').classList.remove('show');
                 document.getElementById('showOnlyDuplicates').checked = false;
                 document.getElementById('showExcessOnly').checked = false;
+                updateTabStatus(currentTab, 'clean');
                 
                 if (errores === 0) {
-                    showStatusMessage(`✅ Se procesaron ${eliminados} registros duplicados (${unidadesEliminadas} unidades eliminadas)`, 'success');
+                    showStatusMessage(`✅ Se procesaron ${eliminados} registros (${unidadesEliminadas} unidades eliminadas)`, 'success');
                 } else {
                     showStatusMessage(`⚠️ Se procesaron ${eliminados} registros, pero hubo ${errores} errores`, 'warning');
                 }
                 
             } catch (error) {
                 console.error('Error eliminando duplicados:', error);
-                showStatusMessage(`❌ Error eliminando duplicados: ${error.message}`, 'error');
+                showStatusMessage(`❌ Error: ${error.message}`, 'error');
             }
         }
 
-        // FUNCIÓN: MOSTRAR RESUMEN DE DUPLICADOS
+        // ==============================================
+        // FUNCIONES AUXILIARES MEJORADAS
+        // ==============================================
         function mostrarResumenDuplicados() {
             const duplicateInfoDiv = document.getElementById('duplicateInfo');
             const duplicateListDiv = document.getElementById('duplicateList');
+            
+            const currentSummary = duplicateSummary[currentTab];
+            if (!currentSummary || Object.keys(currentSummary).length === 0) {
+                duplicateInfoDiv.classList.remove('show');
+                return;
+            }
             
             let html = '';
             let totalExceso = 0;
             let totalRegistrosDuplicados = 0;
             
             // Ordenar por exceso descendente
-            const clavesOrdenadas = Object.keys(duplicateSummary).sort((a, b) => {
-                return duplicateSummary[b].exceso - duplicateSummary[a].exceso;
+            const clavesOrdenadas = Object.keys(currentSummary).sort((a, b) => {
+                return currentSummary[b].exceso - currentSummary[a].exceso;
             });
             
-            for (const claveUnica of clavesOrdenadas.slice(0, 20)) { // Mostrar solo los 20 primeros
-                const resumen = duplicateSummary[claveUnica];
+            for (const claveUnica of clavesOrdenadas.slice(0, 20)) {
+                const resumen = currentSummary[claveUnica];
                 totalExceso += resumen.exceso;
-                totalRegistrosDuplicados += resumen.registros_duplicados;
+                totalRegistrosDuplicados += resumen.registros_duplicados || 0;
                 
                 html += `
                     <div class="duplicate-item">
                         <div style="flex: 1;">
-                            <strong>${resumen.deposito}</strong><br>
-                            <small>UPC: ${resumen.upc.substring(0, 15)}...</small><br>
-                            <small>Artículo: ${resumen.articulo.substring(0, 20)}...</small><br>
-                            <small>Fecha: ${resumen.fecha} | Planif: ${resumen.cantidad_planificada} | Recol: ${resumen.total_recolectado}</small>
+                            <strong>${resumen.deposito || resumen.upc || 'Sin identificar'}</strong><br>
+                            <small>${currentTab === 'devoluciones' ? 'Depósito: ' + (resumen.deposito || 'N/A') : 'Artículo: ' + (resumen.articulo || resumen.descripcion || 'N/A')}</small><br>
+                            <small>Fecha: ${resumen.fecha} | Planif: ${resumen.cantidad_planificada || resumen.total_recoleccion || 'N/A'} | Recol: ${resumen.total_recolectado || resumen.total_reposicion || resumen.total_devolucion || 'N/A'}</small>
                         </div>
                         <div style="color: #e74c3c; font-weight: bold; text-align: right;">
                             +${resumen.exceso}<br>
-                            <small>(${resumen.registros_duplicados} reg.)</small><br>
-                            <small>${resumen.porcentaje_exceso}</small>
+                            <small>(${resumen.registros_duplicados || 0} reg.)</small><br>
+                            <small>${resumen.porcentaje_exceso || '0%'}</small>
                         </div>
                     </div>
                 `;
@@ -893,61 +1237,35 @@
                 </div>
                 <div class="summary-item">
                     <div class="summary-label">UNIDADES A ELIMINAR</div>
-                    <div class="summary-value duplicate-count">${duplicateData.reduce((sum, r) => sum + (r.exceso_a_eliminar || 0), 0)}</div>
+                    <div class="summary-value duplicate-count">${duplicateData[currentTab].reduce((sum, r) => sum + (r.exceso_a_eliminar || 0), 0)}</div>
                 </div>
             `;
             
-            // Agregar al resumen existente
-            const existingSummary = summaryContainer.innerHTML;
-            summaryContainer.innerHTML = duplicateSummaryHtml + existingSummary;
-            
+            summaryContainer.innerHTML = duplicateSummaryHtml + summaryContainer.innerHTML;
             duplicateInfoDiv.classList.add('show');
         }
 
-        // FUNCIÓN: RESALTAR DUPLICADOS EN LA TABLA
         function highlightDuplicates() {
             const tableBody = document.getElementById('tableBody');
             const rows = tableBody.querySelectorAll('tr');
+            const currentDuplicateKeys = duplicateKeys[currentTab];
             
-            // Limpiar resaltado anterior
             rows.forEach(row => {
                 row.classList.remove('duplicate-row', 'excess-duplicate');
-            });
-            
-            // Resaltar filas duplicadas
-            rows.forEach(row => {
                 const registroKey = row.getAttribute('data-key');
                 
-                // Verificar si es un registro duplicado
-                if (duplicateKeys.includes(registroKey)) {
+                if (currentDuplicateKeys.includes(registroKey)) {
                     row.classList.add('excess-duplicate');
-                } 
-                // Verificar si pertenece a una clave con exceso
-                else {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 6) {
-                        const deposito = cells[3]?.textContent || '';
-                        const upc = cells[5]?.textContent || '';
-                        const articulo = cells[4]?.textContent || '';
-                        const fecha = cells[13]?.textContent || '';
-                        
-                        if (deposito && upc && articulo && fecha) {
-                            const claveUnica = `${deposito}_${upc}_${articulo}_${fecha}`;
-                            if (duplicateSummary[claveUnica]) {
-                                row.classList.add('duplicate-row');
-                            }
-                        }
-                    }
                 }
             });
         }
 
-        // FUNCIÓN: FILTRAR DUPLICADOS EN LA TABLA
         function filterDuplicates() {
             if (!isDuplicateAnalysis) return;
             
             const showOnlyDuplicates = document.getElementById('showOnlyDuplicates').checked;
             const showExcessOnly = document.getElementById('showExcessOnly').checked;
+            const currentDuplicateKeys = duplicateKeys[currentTab];
             
             const tableBody = document.getElementById('tableBody');
             const rows = tableBody.querySelectorAll('tr');
@@ -955,26 +1273,24 @@
             
             rows.forEach(row => {
                 const registroKey = row.getAttribute('data-key');
-                const isExcessDuplicate = duplicateKeys.includes(registroKey);
-                const isDuplicateRow = row.classList.contains('duplicate-row');
+                const isExcessDuplicate = currentDuplicateKeys.includes(registroKey);
                 
                 let shouldShow = true;
                 
                 if (showExcessOnly) {
                     shouldShow = isExcessDuplicate;
                 } else if (showOnlyDuplicates) {
-                    shouldShow = isDuplicateRow || isExcessDuplicate;
+                    shouldShow = isExcessDuplicate;
                 }
                 
                 row.style.display = shouldShow ? '' : 'none';
                 if (shouldShow) visibleRows++;
             });
             
-            // Actualizar mensaje si no hay filas visibles
-            if (visibleRows === 0) {
+            if (visibleRows === 0 && rows.length > 0) {
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
-                noDataCell.colSpan = headers.recoleccion.length;
+                noDataCell.colSpan = headers[currentTab].length;
                 noDataCell.textContent = 'No hay registros que coincidan con el filtro aplicado';
                 noDataCell.className = 'no-data';
                 noDataCell.style.textAlign = 'center';
@@ -985,7 +1301,6 @@
             }
         }
 
-        // FUNCIÓN: LIMPIAR RESALTADO DE DUPLICADOS
         function clearDuplicateHighlighting() {
             const tableBody = document.getElementById('tableBody');
             const rows = tableBody.querySelectorAll('tr');
@@ -995,7 +1310,6 @@
                 row.style.display = '';
             });
             
-            // Ocultar panel de duplicados y resetear filtros
             document.getElementById('duplicateInfo').classList.remove('show');
             document.getElementById('eliminarDuplicadosBtn').disabled = true;
             document.getElementById('showOnlyDuplicates').checked = false;
@@ -1004,28 +1318,35 @@
             isDuplicateAnalysis = false;
         }
 
-        // FUNCIÓN: MOSTRAR MENSAJE DE ESTADO
-        function showStatusMessage(message, type) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
-            statusDiv.className = `status-message status-${type}`;
-            statusDiv.style.display = 'block';
-            
-            // Ocultar automáticamente después de 5 segundos
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
+        function updateTabStatus(tab, status = 'clean') {
+            const statusElement = document.getElementById(`tabStatus${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            if (statusElement) {
+                statusElement.className = 'tab-status ' + status;
+            }
         }
 
-        // FUNCIONES EXISTENTES (modificadas para incluir data-key)
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            if (statusDiv) {
+                statusDiv.textContent = message;
+                statusDiv.className = `status-message status-${type}`;
+                statusDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // ==============================================
+        // FUNCIONES EXISTENTES (MODIFICADAS)
+        // ==============================================
         function formatDateToDDMMYYYY(dateString) {
             if (!dateString) return '';
             
-            // Si ya está en formato con barras
             if (dateString.includes('/')) {
                 const parts = dateString.split('/');
                 if (parts.length === 3) {
-                    // Normalizar día y mes a 2 dígitos
                     const day = parts[0].padStart(2, '0');
                     const month = parts[1].padStart(2, '0');
                     const year = parts[2];
@@ -1034,16 +1355,13 @@
                 return dateString;
             }
             
-            // Si está en formato YYYY-MM-DD (input type="date")
             if (dateString.includes('-')) {
                 const parts = dateString.split('-');
                 if (parts.length === 3) {
-                    // Formato YYYY-MM-DD
                     return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
                 }
             }
             
-            // Si es un timestamp o formato desconocido
             try {
                 const date = new Date(dateString);
                 if (!isNaN(date.getTime())) {
@@ -1059,39 +1377,44 @@
             return dateString;
         }
 
-        function datesMatch(filterDate, itemDate) {
-            if (!filterDate) return true;
-            if (!itemDate) return false;
-            
-            const filterFormatted = formatDateToDDMMYYYY(filterDate);
-            const itemFormatted = formatDateToDDMMYYYY(itemDate);
-            
-            return filterFormatted === itemFormatted;
-        }
-
         function filterData() {
-            const dateFilter = document.getElementById('dateFilter').value;
-            const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+            const dateFilterElement = document.getElementById('dateFilter');
+            const searchFilterElement = document.getElementById('searchFilter');
+            
+            // Verificar que los elementos existen
+            if (!dateFilterElement || !searchFilterElement) {
+                console.error('❌ Elementos de filtro no encontrados');
+                // Asignar datos sin filtrar como fallback
+                filteredData.recoleccion = allData.recoleccion || [];
+                filteredData.reposiciones = allData.reposiciones || [];
+                filteredData.devoluciones = allData.devoluciones || [];
+                return;
+            }
+            
+            const dateFilter = dateFilterElement.value;
+            const searchFilter = searchFilterElement.value.toLowerCase();
             
             Object.keys(allData).forEach(tab => {
-                filteredData[tab] = allData[tab].filter(item => {
+                filteredData[tab] = (allData[tab] || []).filter(item => {
+                    // Filtro por fecha
                     if (dateFilter) {
-                        const itemDate = item.fecha || item.fechaSistema;
-                        if (!datesMatch(dateFilter, itemDate)) {
+                        const itemDate = item.fecha || item.fechaSistema || '';
+                        const formattedFilter = formatDateToDDMMYYYY(dateFilter);
+                        const formattedItem = formatDateToDDMMYYYY(itemDate);
+                        if (formattedFilter !== formattedItem) {
                             return false;
                         }
                     }
                     
+                    // Filtro por búsqueda
                     if (searchFilter) {
-                        let match = false;
                         const searchFields = ['usuario', 'ruta', 'cola', 'deposito', 'descripcion', 'upc'];
                         for (const key of searchFields) {
                             if (item[key] && item[key].toString().toLowerCase().includes(searchFilter)) {
-                                match = true;
-                                break;
+                                return true;
                             }
                         }
-                        if (!match) return false;
+                        return false;
                     }
                     
                     return true;
@@ -1105,14 +1428,21 @@
             const tableFooter = document.getElementById('tableFooter');
             const summaryContainer = document.getElementById('summaryContainer');
             
+            if (!tableHeader || !tableBody || !tableFooter || !summaryContainer) {
+                console.error('❌ Elementos de tabla no encontrados');
+                return;
+            }
+            
+            // Limpiar contenido
             tableHeader.innerHTML = '';
             tableBody.innerHTML = '';
             tableFooter.innerHTML = '';
             summaryContainer.innerHTML = '';
             
-            const currentData = filteredData[currentTab];
-            const currentHeaders = headers[currentTab];
+            const currentData = filteredData[currentTab] || [];
+            const currentHeaders = headers[currentTab] || [];
             
+            // Crear encabezado
             const headerRow = document.createElement('tr');
             currentHeaders.forEach(header => {
                 const th = document.createElement('th');
@@ -1122,6 +1452,7 @@
             });
             tableHeader.appendChild(headerRow);
             
+            // Verificar si hay datos
             if (currentData.length === 0) {
                 const noDataRow = document.createElement('tr');
                 const noDataCell = document.createElement('td');
@@ -1133,6 +1464,7 @@
                 return;
             }
             
+            // Ordenar datos si es necesario
             if (sortConfig.column && currentHeaders.includes(sortConfig.column)) {
                 currentData.sort((a, b) => {
                     let aValue = a[sortConfig.column];
@@ -1154,11 +1486,9 @@
                 });
             }
             
-            // Crear filas con atributo data-key
+            // Crear filas
             currentData.forEach(item => {
                 const row = document.createElement('tr');
-                
-                // Agregar atributo data-key para identificar fácilmente el registro
                 if (item.firebaseKey) {
                     row.setAttribute('data-key', item.firebaseKey);
                 }
@@ -1195,7 +1525,7 @@
             
             const summaryHTML = `
                 <div class="summary-item">
-                    <div class="summary-label">REGISTROS</div>
+                    <div class="summary-label">LÍNEAS DE REGISTRO</div>
                     <div class="summary-value">${data.length}</div>
                 </div>
                 <div class="summary-item">
@@ -1213,6 +1543,40 @@
                 <div class="summary-item">
                     <div class="summary-label">EFICIENCIA</div>
                     <div class="summary-value">${totalPlanificado > 0 ? ((totalRecolectado / totalPlanificado) * 100).toFixed(1) + '%' : '0%'}</div>
+                </div>
+            `;
+            
+            container.innerHTML = summaryHTML;
+        }
+
+        function addReposicionesSummary(data, container) {
+            const totalCantidad = data.reduce((sum, item) => sum + (parseFloat(item.cantidad) || 0), 0);
+            
+            const summaryHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">LÍNEAS DE REGISTRO</div>
+                    <div class="summary-value">${data.length}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL REPOSICIONES</div>
+                    <div class="summary-value">${totalCantidad}</div>
+                </div>
+            `;
+            
+            container.innerHTML = summaryHTML;
+        }
+
+        function addDevolucionesSummary(data, container) {
+            const totalCantidad = data.reduce((sum, item) => sum + (parseFloat(item.cantidad) || 0), 0);
+            
+            const summaryHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">LÍNEAS DE REGISTRO</div>
+                    <div class="summary-value">${data.length}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">TOTAL DEVOLUCIONES</div>
+                    <div class="summary-value">${totalCantidad}</div>
                 </div>
             `;
             
@@ -1246,40 +1610,6 @@
             });
             
             footer.appendChild(totalsRow);
-        }
-
-        function addReposicionesSummary(data, container) {
-            const totalCantidad = data.reduce((sum, item) => sum + (parseFloat(item.cantidad) || 0), 0);
-            
-            const summaryHTML = `
-                <div class="summary-item">
-                    <div class="summary-label">TOTAL REPOSICIONES</div>
-                    <div class="summary-value">${totalCantidad}</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-label">REGISTROS</div>
-                    <div class="summary-value">${data.length}</div>
-                </div>
-            `;
-            
-            container.innerHTML = summaryHTML;
-        }
-
-        function addDevolucionesSummary(data, container) {
-            const totalCantidad = data.reduce((sum, item) => sum + (parseFloat(item.cantidad) || 0), 0);
-            
-            const summaryHTML = `
-                <div class="summary-item">
-                    <div class="summary-label">TOTAL DEVOLUCIONES</div>
-                    <div class="summary-value">${totalCantidad}</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-label">REGISTROS</div>
-                    <div class="summary-value">${data.length}</div>
-                </div>
-            `;
-            
-            container.innerHTML = summaryHTML;
         }
 
         function sortTable(column) {
