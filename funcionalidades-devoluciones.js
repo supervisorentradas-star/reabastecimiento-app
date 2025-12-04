@@ -23,10 +23,8 @@ let colaActual = '';
 let depositosCola = [];
 let depositoActual = null;
 let depositoActualIndex = -1;
-let escaneosTemporales = {};
 let contadorEscaneosActual = 0;
 let depositoEscaneadoCorrectamente = false;
-let escaneosPorDeposito = {}; // Para trackear escaneos por depósito específico
 
 // =============================================
 // FUNCIONES PARA LA VISTA DE LISTA DE COLAS
@@ -105,7 +103,6 @@ function cargarReposicionesDesdeFirebase() {
 function procesarDatosColas() {
     colasData = {};
     let totalUnidadesPlanificadas = 0;
-    let totalUnidadesRepuestas = 0;
 
     // Primero, procesar datos de DEVOLUCIONES para obtener las colas planificadas
     if (datosDevoluciones && datosDevoluciones.length > 0) {
@@ -144,46 +141,41 @@ function procesarDatosColas() {
     }
 
     // Luego, procesar datos de reposicion_devol para sumar lo ya repuesto
+    // SUMAR TODAS LAS REPOSICIONES SIN FILTRAR POR USUARIO O FECHA
     if (reposicionesData && Object.keys(reposicionesData).length > 0) {
         Object.keys(reposicionesData).forEach(key => {
             const item = reposicionesData[key];
             const cola = item.cola;
             const deposito = item.deposito;
             const upc = item.upc;
-            const cantidad = parseInt(item.cantidad) || 1; // Por defecto 1
             
             if (colasData[cola]) {
                 const keyDeposito = `${deposito}_${upc}`;
                 
                 if (colasData[cola].depositos[keyDeposito]) {
-                    // Verificar que no exceda la cantidad planificada
-                    const nuevoTotal = colasData[cola].depositos[keyDeposito].cantidadRepuesta + cantidad;
-                    const maxPermitido = colasData[cola].depositos[keyDeposito].cantidadPlanificada;
+                    // Incrementar la cantidad repuesta
+                    colasData[cola].depositos[keyDeposito].cantidadRepuesta += 1;
                     
-                    if (nuevoTotal <= maxPermitido) {
-                        colasData[cola].depositos[keyDeposito].cantidadRepuesta = nuevoTotal;
-                        colasData[cola].totalRepuesto += cantidad;
-                        totalUnidadesRepuestas += cantidad;
-                    } else {
-                        // Ajustar al máximo permitido
-                        const ajuste = maxPermitido - colasData[cola].depositos[keyDeposito].cantidadRepuesta;
-                        if (ajuste > 0) {
-                            colasData[cola].depositos[keyDeposito].cantidadRepuesta = maxPermitido;
-                            colasData[cola].totalRepuesto += ajuste;
-                            totalUnidadesRepuestas += ajuste;
-                        }
+                    // No permitir que exceda la cantidad planificada
+                    if (colasData[cola].depositos[keyDeposito].cantidadRepuesta > 
+                        colasData[cola].depositos[keyDeposito].cantidadPlanificada) {
+                        colasData[cola].depositos[keyDeposito].cantidadRepuesta = 
+                        colasData[cola].depositos[keyDeposito].cantidadPlanificada;
                     }
                 }
             }
         });
+        
+        // Recalcular totales
+        Object.keys(colasData).forEach(cola => {
+            let totalRepuesto = 0;
+            Object.keys(colasData[cola].depositos).forEach(keyDeposito => {
+                const deposito = colasData[cola].depositos[keyDeposito];
+                totalRepuesto += deposito.cantidadRepuesta;
+            });
+            colasData[cola].totalRepuesto = totalRepuesto;
+        });
     }
-
-    // Validar que totalRepuesto no exceda totalPlanificado
-    Object.keys(colasData).forEach(cola => {
-        if (colasData[cola].totalRepuesto > colasData[cola].totalPlanificado) {
-            colasData[cola].totalRepuesto = colasData[cola].totalPlanificado;
-        }
-    });
 
     // Actualizar el total de unidades
     document.getElementById('totalUnidades').textContent = `Unidades: ${totalUnidadesPlanificadas}`;
@@ -226,10 +218,8 @@ function irADetalleCola(cola) {
     depositosCola = [];
     depositoActual = null;
     depositoActualIndex = -1;
-    escaneosTemporales = {};
     contadorEscaneosActual = 0;
     depositoEscaneadoCorrectamente = false;
-    escaneosPorDeposito = {};
     
     localStorage.setItem('colaSeleccionada', cola);
     inicializarDetalleCola();
@@ -459,7 +449,6 @@ function inicializarDetalleCola() {
     
     // Establecer el primer depósito no completado como actual
     if (depositosCola.length > 0) {
-        // Buscar el primer depósito no completado en orden secuencial
         let primerIndexNoCompletado = -1;
         for (let i = 0; i < depositosCola.length; i++) {
             if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
@@ -497,21 +486,23 @@ function prepararDepositosParaCola() {
         });
     });
     
-    // Ordenar por depósito de manera natural (secuencial)
+    // Ordenar por depósito de manera natural (alfabética)
     depositosCola.sort((a, b) => {
-        // Extraer números del código de depósito para ordenación natural
+        // Extraer números para ordenación natural
         const extractNumbers = (str) => {
-            const matches = str.match(/\d+/g);
-            return matches ? matches.map(Number) : [];
+            return str.match(/\d+/g)?.map(Number) || [];
         };
         
         const aNums = extractNumbers(a.deposito);
         const bNums = extractNumbers(b.deposito);
         
-        // Comparar por cada número extraído
-        for (let i = 0; i < Math.min(aNums.length, bNums.length); i++) {
-            if (aNums[i] !== bNums[i]) {
-                return aNums[i] - bNums[i];
+        // Comparar parte por parte
+        const maxLength = Math.max(aNums.length, bNums.length);
+        for (let i = 0; i < maxLength; i++) {
+            const aNum = aNums[i] || 0;
+            const bNum = bNums[i] || 0;
+            if (aNum !== bNum) {
+                return aNum - bNum;
             }
         }
         
@@ -590,12 +581,6 @@ function establecerDepositoActual(index) {
     // Actualizar información del siguiente depósito
     actualizarInfoSiguienteDeposito();
     
-    // Inicializar contador de escaneos temporales para este depósito
-    const key = `${depositoActual.deposito}_${depositoActual.upc}`;
-    if (!escaneosTemporales[key]) {
-        escaneosTemporales[key] = 0;
-    }
-    
     // Actualizar lista para mostrar depósito activo
     actualizarListaDepositos();
     
@@ -609,16 +594,6 @@ function actualizarInfoSiguienteDeposito() {
             const nextDeposito = depositosCola[i];
             document.getElementById('nextDepositoInfo').textContent = 
                 `Siguiente: ${nextDeposito.deposito} - ${nextDeposito.articulo} (${nextDeposito.cantidadPlanificada})`;
-            return;
-        }
-    }
-    
-    // Si no encuentra después del actual, buscar desde el principio
-    for (let i = 0; i < depositoActualIndex; i++) {
-        if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
-            const nextDeposito = depositosCola[i];
-            document.getElementById('nextDepositoInfo').textContent = 
-                `Siguiente (ciclo): ${nextDeposito.deposito} - ${nextDeposito.articulo} (${nextDeposito.cantidadPlanificada})`;
             return;
         }
     }
@@ -714,13 +689,6 @@ function procesarEscaneoUPC(upc) {
     // Incrementar contador de escaneos temporales
     contadorEscaneosActual++;
     
-    // Actualizar cache temporal
-    const key = `${depositoActual.deposito}_${depositoActual.upc}`;
-    if (!escaneosPorDeposito[key]) {
-        escaneosPorDeposito[key] = 0;
-    }
-    escaneosPorDeposito[key]++;
-    
     // Actualizar interfaz - mostrar progreso actual
     const escaneadoTemporal = depositoActual.cantidadRepuesta + contadorEscaneosActual;
     const pendienteTemporal = depositoActual.cantidadPlanificada - escaneadoTemporal;
@@ -734,33 +702,30 @@ function procesarEscaneoUPC(upc) {
     if (escaneadoTemporal >= depositoActual.cantidadPlanificada) {
         mostrarMensajeDetalle('¡Cantidad completada! Guardando...', true);
         
-        // Mostrar pantalla de éxito antes de guardar
-        mostrarPantallaExito();
-        
-        // Guardar todos los escaneos acumulados después de mostrar éxito
-        setTimeout(() => {
-            guardarEscaneosAcumulados().then(() => {
-                // Actualizar datos locales
-                depositoActual.cantidadRepuesta += contadorEscaneosActual;
-                contadorEscaneosActual = 0;
-                
-                // Actualizar colasData para reflejar el cambio
-                const keyDeposito = `${depositoActual.deposito}_${depositoActual.upc}`;
-                if (colasData[colaActual] && colasData[colaActual].depositos[keyDeposito]) {
-                    colasData[colaActual].depositos[keyDeposito].cantidadRepuesta = depositoActual.cantidadRepuesta;
-                    colasData[colaActual].totalRepuesto += depositoActual.cantidadRepuesta;
-                }
-                
-                actualizarListaDepositos();
-                
-                // Pasar al siguiente depósito automáticamente después de 2 segundos
-                setTimeout(() => {
-                    siguienteDeposito();
-                }, 500);
-            }).catch(error => {
-                mostrarMensajeDetalle('Error al guardar: ' + error.message, false);
-            });
-        }, 500);
+        // Guardar todos los escaneos acumulados
+        guardarEscaneosAcumulados().then(() => {
+            // Actualizar datos locales
+            depositoActual.cantidadRepuesta = depositoActual.cantidadPlanificada;
+            contadorEscaneosActual = 0;
+            
+            // Actualizar colasData para reflejar el cambio
+            const keyDeposito = `${depositoActual.deposito}_${depositoActual.upc}`;
+            if (colasData[colaActual] && colasData[colaActual].depositos[keyDeposito]) {
+                colasData[colaActual].depositos[keyDeposito].cantidadRepuesta = depositoActual.cantidadRepuesta;
+            }
+            
+            actualizarListaDepositos();
+            
+            // Mostrar pantalla de éxito
+            mostrarPantallaExito();
+            
+            // Buscar el siguiente depósito en orden secuencial
+            setTimeout(() => {
+                avanzarAlSiguienteDeposito();
+            }, 2000);
+        }).catch(error => {
+            mostrarMensajeDetalle('Error al guardar: ' + error.message, false);
+        });
     } else {
         // Continuar escaneando UPCs
         const upcInput = document.getElementById('upcInput');
@@ -774,22 +739,20 @@ function procesarEscaneoUPC(upc) {
 }
 
 function guardarEscaneosAcumulados() {
-    if (!depositoActual || contadorEscaneosActual === 0) {
+    if (contadorEscaneosActual === 0) {
         return Promise.resolve();
     }
     
-    const key = `${depositoActual.deposito}_${depositoActual.upc}`;
-    const escaneosPendientes = contadorEscaneosActual;
-    
     const ref = database.ref('reposicion_devol');
     const now = new Date();
-    const fecha = now.toLocaleDateString('es-ES');
+    const fecha = fechaArchivoActual || now.toLocaleDateString('es-ES');
     const hora = now.toLocaleTimeString('es-ES', { hour12: false });
     
-    // Guardar cada escaneo individualmente (uno por unidad)
+    // Guardar cada escaneo individualmente
     const promises = [];
     
-    for (let i = 0; i < escaneosPendientes; i++) {
+    // Guardar todos los escaneos acumulados
+    for (let i = 0; i < contadorEscaneosActual; i++) {
         const newRef = ref.push();
         const promise = newRef.set({
             usuario: usuarioActual,
@@ -797,7 +760,7 @@ function guardarEscaneosAcumulados() {
             deposito: depositoActual.deposito,
             descripcion: depositoActual.articulo,
             upc: depositoActual.upc,
-            cantidad: 1, // Siempre 1 por registro de unidad
+            cantidad: 1,
             fecha: fecha,
             hora: hora,
             timestamp: now.getTime()
@@ -805,11 +768,14 @@ function guardarEscaneosAcumulados() {
         promises.push(promise);
     }
     
-    // Limpiar contador temporal
+    // Limpiar contador
     contadorEscaneosActual = 0;
-    escaneosTemporales[key] = 0;
     
-    return Promise.all(promises);
+    return Promise.all(promises).then(() => {
+        // Actualizar la vista de colas después de guardar
+        procesarDatosColas();
+        return true;
+    });
 }
 
 function actualizarListaDepositos() {
@@ -859,28 +825,17 @@ function seleccionarDeposito(index) {
     });
 }
 
-function siguienteDeposito() {
+function avanzarAlSiguienteDeposito() {
     // Guardar escaneos acumulados antes de cambiar
     guardarEscaneosAcumulados().then(() => {
-        // Buscar siguiente depósito no completado en orden secuencial
+        // Buscar siguiente depósito no completado en orden SECUENCIAL
         let siguienteIndex = -1;
-        const startIndex = depositoActual ? depositoActualIndex + 1 : 0;
         
-        // Buscar desde el índice actual + 1 hasta el final
-        for (let i = startIndex; i < depositosCola.length; i++) {
+        // Buscar desde el índice SIGUIENTE (no desde el actual + 1)
+        for (let i = depositoActualIndex + 1; i < depositosCola.length; i++) {
             if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
                 siguienteIndex = i;
                 break;
-            }
-        }
-        
-        // Si no encuentra después del actual, buscar desde el principio
-        if (siguienteIndex === -1 && depositoActual) {
-            for (let i = 0; i < depositoActualIndex; i++) {
-                if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
-                    siguienteIndex = i;
-                    break;
-                }
             }
         }
         
@@ -905,11 +860,6 @@ function siguienteDeposito() {
             
             // Actualizar lista
             actualizarListaDepositos();
-            
-            // Actualizar la vista de colas principal después de un delay
-            setTimeout(() => {
-                procesarDatosColas();
-            }, 2000);
         }
     }).catch(error => {
         mostrarMensajeDetalle('Error al guardar: ' + error.message, false);
@@ -922,39 +872,34 @@ function mostrarPantallaExito() {
     
     setTimeout(() => {
         successScreen.style.display = 'none';
-    }, 2000); // 2 segundos como solicitaste
+    }, 2000);
 }
 
 function volverAColas() {
     // Guardar cualquier cambio pendiente
     guardarEscaneosAcumulados().then(() => {
-        // Limpiar completamente el estado
-        colaActual = '';
-        depositosCola = [];
-        depositoActual = null;
-        depositoActualIndex = -1;
-        escaneosTemporales = {};
-        contadorEscaneosActual = 0;
-        depositoEscaneadoCorrectamente = false;
-        escaneosPorDeposito = {};
-        
-        localStorage.removeItem('colaSeleccionada');
+        limpiarEstadoCola();
         mostrarVistaListaColas();
-        
-        // Actualizar la vista de colas
-        procesarDatosColas();
     }).catch(error => {
         mostrarMensajeDetalle('Error al guardar: ' + error.message, false);
     });
+}
+
+function limpiarEstadoCola() {
+    colaActual = '';
+    depositosCola = [];
+    depositoActual = null;
+    depositoActualIndex = -1;
+    contadorEscaneosActual = 0;
+    depositoEscaneadoCorrectamente = false;
+    
+    localStorage.removeItem('colaSeleccionada');
 }
 
 function guardarFinalizar() {
     guardarEscaneosAcumulados().then(() => {
         mostrarMensajeDetalle('Todos los datos guardados correctamente', true);
         mostrarPantallaExito();
-        
-        // Actualizar datos globales
-        procesarDatosColas();
         
         setTimeout(() => {
             volverAColas();
@@ -1027,10 +972,8 @@ function iniciarSincronizacionTiempoReal() {
         reposicionesData = data || {};
         console.log('Reposiciones sincronizadas en tiempo real:', reposicionesData);
         
-        // Solo actualizar si estamos en la vista de lista
-        if (document.getElementById('vistaListaColas').style.display !== 'none') {
-            procesarDatosColas();
-        }
+        // Procesar los datos actualizados
+        procesarDatosColas();
     });
 }
 

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Productividad - REABASTECIMIENTO SOKSO</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.35.0/dist/apexcharts.css">
     <style>
         *{box-sizing:border-box;font-family:Arial,sans-serif;margin:0;padding:0}
         body{background-color:white;padding:10px;color:black}
@@ -17,24 +18,24 @@
         .checking{background-color:#f39c12}
         
         /* Pestañas */
-        .tabs{display:flex;gap:5px;margin-bottom:15px;border-bottom:1px solid #ddd;padding-bottom:5px}
-        .tab-button{background:#f0f0f0;color:#666;border:none;padding:10px 15px;border-radius:6px 6px 0 0;cursor:pointer;font-size:14px;flex:1}
+        .tabs{display:flex;gap:5px;margin-bottom:15px;border-bottom:1px solid #ddd;padding-bottom:5px;flex-wrap:wrap}
+        .tab-button{background:#f0f0f0;color:#666;border:none;padding:10px 15px;border-radius:6px 6px 0 0;cursor:pointer;font-size:14px;flex:1;min-width:120px}
         .tab-button.active{background:#6600a1;color:white}
         
         /* Contenido de pestañas */
         .tab-content{display:none}
         .tab-content.active{display:block}
         
-        /* Diseño de barras horizontales */
-        .horizontal-layout{display:flex;gap:15px;margin-bottom:20px}
-        .panel{flex:1;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;padding:15px}
-        .panel-title{color:#6600a1;font-size:18px;font-weight:bold;text-align:center;margin-bottom:15px;padding-bottom:8px;border-bottom:1px solid #e0e0e0}
+        /* Diseño de tres paneles horizontales */
+        .three-panels-layout{display:flex;gap:10px;margin-bottom:20px}
+        .panel{flex:1;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;padding:15px;min-height:400px}
+        .panel-title{color:#6600a1;font-size:16px;font-weight:bold;text-align:center;margin-bottom:15px;padding-bottom:8px;border-bottom:1px solid #e0e0e0}
         
-        /* Filtros diarios */
+        /* Filtros */
         .filters{display:flex;gap:10px;margin-bottom:15px;align-items:center;flex-wrap:wrap}
-        .date-filter{display:flex;align-items:center;gap:5px}
-        .date-filter label{font-weight:bold;font-size:14px}
-        .date-filter input{padding:8px;border:1px solid #ddd;border-radius:4px}
+        .filter-group{display:flex;align-items:center;gap:5px}
+        .filter-group label{font-weight:bold;font-size:14px;white-space:nowrap}
+        .filter-group input,.filter-group select{padding:8px;border:1px solid #ddd;border-radius:4px;min-width:120px}
         
         /* Estadísticas */
         .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}
@@ -43,24 +44,34 @@
         .stat-label{font-size:12px;color:#666;margin-top:5px}
         
         /* Tablas */
-        .productivity-table{width:100%;border-collapse:collapse;font-size:12px}
-        .productivity-table th,.productivity-table td{border:1px solid #ddd;padding:6px;text-align:center}
-        .productivity-table th{background:#6600a1;color:white;font-weight:bold}
+        .productivity-table{width:100%;border-collapse:collapse;font-size:11px}
+        .productivity-table th,.productivity-table td{border:1px solid #ddd;padding:4px;text-align:center}
+        .productivity-table th{background:#6600a1;color:white;font-weight:bold;font-size:11px}
         .productivity-table tr:nth-child(even){background:#f0f0f0}
         
         /* Indicadores de rendimiento */
-        .performance-badge{padding:2px 6px;border-radius:3px;font-weight:bold;font-size:11px}
+        .performance-badge{padding:2px 6px;border-radius:3px;font-weight:bold;font-size:10px}
         .performance-excellent{background:#27ae60;color:white}
         .performance-good{background:#2ecc71;color:white}
+        .performance-regular{background:#f39c12;color:white}
         .performance-poor{background:#e74c3c;color:white}
         
         /* Barras de progreso */
         .progress-container{width:100%;background:#e0e0e0;border-radius:10px;margin:5px 0;height:20px}
-        .progress-bar{height:100%;border-radius:10px;text-align:center;color:white;font-size:11px;line-height:20px;font-weight:bold;transition:width 0.3s}
+        .progress-bar{height:100%;border-radius:10px;text-align:center;color:white;font-size:10px;line-height:20px;font-weight:bold;transition:width 0.3s}
         .progress-red{background:#e74c3c}
         .progress-orange{background:#f39c12}
         .progress-green-light{background:#2ecc71}
         .progress-green-dark{background:#27ae60}
+        
+        /* Porcentaje objetivo */
+        .percent-positive{color:#27ae60;font-weight:bold}
+        .percent-negative{color:#e74c3c;font-weight:bold}
+        .percent-exact{color:#666;font-weight:bold}
+        
+        /* Gráficos */
+        .chart-container{background:white;border:1px solid #e0e0e0;border-radius:8px;padding:15px;margin-bottom:15px}
+        .chart-title{color:#6600a1;font-size:16px;font-weight:bold;text-align:center;margin-bottom:15px}
         
         /* Footer */
         .footer{text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #f0f0f0}
@@ -76,18 +87,29 @@
         
         /* Botones */
         .refresh-btn{background:#6600a1;color:white;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:10px}
+        .refresh-btn:hover{background:#4d007a}
         
         /* Responsive */
+        @media (max-width:1200px){
+            .three-panels-layout{flex-wrap:wrap}
+            .panel{min-width:calc(50% - 10px)}
+        }
+        
         @media (max-width:768px){
-            .horizontal-layout{flex-direction:column}
+            .three-panels-layout{flex-direction:column}
+            .panel{min-width:100%}
             .stats-grid{grid-template-columns:repeat(2,1fr)}
-            .productivity-table{font-size:11px}
-            .productivity-table th,.productivity-table td{padding:4px}
+            .productivity-table{font-size:10px}
+            .productivity-table th,.productivity-table td{padding:3px}
             .filters{flex-direction:column;align-items:stretch}
+            .filter-group{width:100%}
+            .filter-group input,.filter-group select{flex:1}
         }
         
         @media (max-width:480px){
             .stats-grid{grid-template-columns:1fr}
+            .panel-title{font-size:14px}
+            .tab-button{min-width:100px;font-size:12px;padding:8px 10px}
         }
     </style>
 </head>
@@ -105,11 +127,37 @@
         <div class="tabs">
             <button class="tab-button active" data-tab="mensual">📊 Productividad Mensual</button>
             <button class="tab-button" data-tab="diaria">📅 Productividad Diaria</button>
+            <button class="tab-button" data-tab="evolucion">📈 Evolución Mensual</button>
         </div>
 
         <!-- Pestaña Productividad Mensual -->
         <div id="tab-mensual" class="tab-content active">
-            <button class="refresh-btn" onclick="cargarDatosProductividad()">🔄 Actualizar Datos</button>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="mesMensual">MES:</label>
+                    <select id="mesMensual">
+                        <option value="01">Enero</option>
+                        <option value="02">Febrero</option>
+                        <option value="03">Marzo</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Mayo</option>
+                        <option value="06">Junio</option>
+                        <option value="07">Julio</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="anioMensual">AÑO:</label>
+                    <input type="number" id="anioMensual" min="2020" max="2100" step="1" value="2024">
+                </div>
+                <button class="refresh-btn" onclick="cargarDatosProductividad()">🔍 Buscar</button>
+                <button class="refresh-btn" onclick="actualizarDatosFirebase()">🔄 Actualizar Datos</button>
+            </div>
+
             <div id="statusMessage" class="status-message"></div>
 
             <!-- ESTADÍSTICAS RÁPIDAS -->
@@ -120,33 +168,34 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="totalUnidades">0</div>
-                    <div class="stat-label">Unidades Recolectadas</div>
+                    <div class="stat-label">Unidades Totales</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" id="promedioGeneral">0</div>
-                    <div class="stat-label">Promedio General</div>
+                    <div class="stat-value" id="totalHoras">0</div>
+                    <div class="stat-label">Horas Válidas</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" id="diasTrabajados">0</div>
-                    <div class="stat-label">Días Analizados</div>
+                    <div class="stat-value" id="productividadPromedio">0</div>
+                    <div class="stat-label">Promedio Unid/Hora</div>
                 </div>
             </div>
 
-            <!-- DISEÑO DE BARRAS HORIZONTALES -->
-            <div class="horizontal-layout">
+            <!-- TRES PANELES HORIZONTALES -->
+            <div class="three-panels-layout">
                 <!-- PANEL RECOLECCIÓN -->
                 <div class="panel">
-                    <div class="panel-title">📦 RECOLECCIÓN MENSUAL</div>
+                    <div class="panel-title">📦 RECOLECCIÓN</div>
                     <div id="recoleccionLoading" class="loading">Cargando datos de recolección...</div>
                     <table class="productivity-table" id="tablaRecoleccion" style="display:none">
                         <thead>
                             <tr>
                                 <th>Recolector</th>
                                 <th>Cola</th>
-                                <th>Promedio Diario</th>
-                                <th>Total Unidades</th>
-                                <th>Días</th>
-                                <th>% Objetivo</th>
+                                <th>Total Und</th>
+                                <th>Horas</th>
+                                <th>Unid/Hora</th>
+                                <th>Objetivo</th>
+                                <th>% Obj</th>
                                 <th>Rendimiento</th>
                             </tr>
                         </thead>
@@ -158,20 +207,43 @@
 
                 <!-- PANEL REPOSICIÓN -->
                 <div class="panel">
-                    <div class="panel-title">🔄 REPOSICIÓN MENSUAL</div>
+                    <div class="panel-title">🔄 REPOSICIÓN</div>
                     <div id="reposicionLoading" class="loading">Cargando datos de reposición...</div>
                     <table class="productivity-table" id="tablaReposicion" style="display:none">
                         <thead>
                             <tr>
                                 <th>Recolector</th>
-                                <th>Promedio Diario</th>
-                                <th>Total Unidades</th>
-                                <th>Días</th>
-                                <th>% Objetivo</th>
+                                <th>Total Und</th>
+                                <th>Horas</th>
+                                <th>Unid/Hora</th>
+                                <th>Objetivo</th>
+                                <th>% Obj</th>
                                 <th>Rendimiento</th>
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaReposicion">
+                            <!-- Los datos se llenarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PANEL DEVOLUCIONES -->
+                <div class="panel">
+                    <div class="panel-title">📤 DEVOLUCIONES</div>
+                    <div id="devolucionesLoading" class="loading">Cargando datos de devoluciones...</div>
+                    <table class="productivity-table" id="tablaDevoluciones" style="display:none">
+                        <thead>
+                            <tr>
+                                <th>Operario</th>
+                                <th>Total Und</th>
+                                <th>Horas</th>
+                                <th>Unid/Hora</th>
+                                <th>Objetivo</th>
+                                <th>% Obj</th>
+                                <th>Rendimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaDevoluciones">
                             <!-- Los datos se llenarán dinámicamente -->
                         </tbody>
                     </table>
@@ -182,11 +254,12 @@
         <!-- Pestaña Productividad Diaria -->
         <div id="tab-diaria" class="tab-content">
             <div class="filters">
-                <div class="date-filter">
+                <div class="filter-group">
                     <label for="fechaDiaria">FECHA:</label>
                     <input type="date" id="fechaDiaria">
                 </div>
                 <button class="refresh-btn" onclick="cargarProductividadDiaria()">🔍 Buscar</button>
+                <button class="refresh-btn" onclick="actualizarDatosFirebase()">🔄 Actualizar Datos</button>
             </div>
 
             <div id="statusDiario" class="status-message"></div>
@@ -199,20 +272,20 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="totalUnidadesDia">0</div>
-                    <div class="stat-label">Unidades Recolectadas</div>
+                    <div class="stat-label">Unidades Totales</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" id="horasValidasDia">0</div>
+                    <div class="stat-value" id="totalHorasDia">0</div>
                     <div class="stat-label">Horas Válidas</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="productividadPromedioDia">0</div>
-                    <div class="stat-label">Productividad/Hora</div>
+                    <div class="stat-label">Promedio Unid/Hora</div>
                 </div>
             </div>
 
-            <!-- DISEÑO DE BARRAS HORIZONTALES -->
-            <div class="horizontal-layout">
+            <!-- TRES PANELES HORIZONTALES DIARIOS -->
+            <div class="three-panels-layout">
                 <!-- PANEL RECOLECCIÓN DIARIA -->
                 <div class="panel">
                     <div class="panel-title">📦 RECOLECCIÓN DIARIA</div>
@@ -222,10 +295,11 @@
                             <tr>
                                 <th>Recolector</th>
                                 <th>Cola</th>
-                                <th>Unid/Hora</th>
+                                <th>Total Und</th>
                                 <th>Horas</th>
-                                <th>Total</th>
-                                <th>% Objetivo</th>
+                                <th>Unid/Hora</th>
+                                <th>Objetivo</th>
+                                <th>% Obj</th>
                                 <th>Rendimiento</th>
                             </tr>
                         </thead>
@@ -243,10 +317,11 @@
                         <thead>
                             <tr>
                                 <th>Recolector</th>
-                                <th>Unid/Hora</th>
+                                <th>Total Und</th>
                                 <th>Horas</th>
-                                <th>Total</th>
-                                <th>% Objetivo</th>
+                                <th>Unid/Hora</th>
+                                <th>Objetivo</th>
+                                <th>% Obj</th>
                                 <th>Rendimiento</th>
                             </tr>
                         </thead>
@@ -255,6 +330,90 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- PANEL DEVOLUCIONES DIARIA -->
+                <div class="panel">
+                    <div class="panel-title">📤 DEVOLUCIONES DIARIA</div>
+                    <div id="devolucionesDiariaLoading" class="loading">Selecciona una fecha para ver los datos</div>
+                    <table class="productivity-table" id="tablaDevolucionesDiaria" style="display:none">
+                        <thead>
+                            <tr>
+                                <th>Operario</th>
+                                <th>Total Und</th>
+                                <th>Horas</th>
+                                <th>Unid/Hora</th>
+                                <th>Objetivo</th>
+                                <th>% Obj</th>
+                                <th>Rendimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaDevolucionesDiaria">
+                            <!-- Los datos se llenarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña Evolución -->
+        <div id="tab-evolucion" class="tab-content">
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="operarioEvolucion">OPERARIO:</label>
+                    <select id="operarioEvolucion">
+                        <!-- Se llenará dinámicamente -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="tipoEvolucion">TIPO:</label>
+                    <select id="tipoEvolucion">
+                        <option value="recoleccion">Recolección</option>
+                        <option value="reposicion">Reposición</option>
+                        <option value="devoluciones">Devoluciones</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="mesesEvolucion">MESES:</label>
+                    <select id="mesesEvolucion">
+                        <option value="3">3 últimos meses</option>
+                        <option value="6" selected>6 últimos meses</option>
+                        <option value="12">12 últimos meses</option>
+                        <option value="24">24 últimos meses</option>
+                    </select>
+                </div>
+                <button class="refresh-btn" onclick="cargarEvolucionOperario()">📈 Ver Evolución</button>
+                <button class="refresh-btn" onclick="actualizarDatosFirebase()">🔄 Actualizar Datos</button>
+            </div>
+
+            <div id="statusEvolucion" class="status-message"></div>
+
+            <!-- GRÁFICO DE EVOLUCIÓN -->
+            <div class="chart-container">
+                <div class="chart-title">📈 Evolución de Productividad</div>
+                <div id="chartEvolucion"></div>
+            </div>
+
+            <!-- TABLA DE DATOS -->
+            <div class="panel">
+                <div class="panel-title">📊 Datos de Evolución Mensual</div>
+                <div id="evolucionLoading" class="loading">Selecciona un operario para ver su evolución</div>
+                <table class="productivity-table" id="tablaEvolucion" style="display:none">
+                    <thead>
+                        <tr>
+                            <th>Mes</th>
+                            <th>Año</th>
+                            <th>Unidades Totales</th>
+                            <th>Horas Válidas</th>
+                            <th>Productividad</th>
+                            <th>Objetivo</th>
+                            <th>% Objetivo</th>
+                            <th>Tendencia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpoTablaEvolucion">
+                        <!-- Los datos se llenarán dinámicamente -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -265,6 +424,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.0"></script>
     <script src="funcionalidad-productividad.js"></script>
 </body>
 </html>
