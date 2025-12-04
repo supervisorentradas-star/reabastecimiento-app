@@ -25,6 +25,7 @@ let depositoActual = null;
 let depositoActualIndex = -1;
 let contadorEscaneosActual = 0;
 let depositoEscaneadoCorrectamente = false;
+let procesandoGuardado = false; // Nueva variable para control
 
 // =============================================
 // FUNCIONES PARA LA VISTA DE LISTA DE COLAS
@@ -71,7 +72,7 @@ function cargarDatosDesdeCache() {
         }
         
         datosDevoluciones = datos;
-        console.log('Datos cargados desde cache:', datosDevoluciones);
+        console.log('Datos cargados desde cache:', datosDevoluciones.length, 'registros');
         
         // Cargar reposiciones y procesar datos
         cargarReposicionesDesdeFirebase();
@@ -88,7 +89,7 @@ function cargarReposicionesDesdeFirebase() {
     ref.once('value').then(snapshot => {
         const data = snapshot.val();
         reposicionesData = data || {};
-        console.log('Reposiciones cargadas desde Firebase:', reposicionesData);
+        console.log('Reposiciones cargadas desde Firebase:', Object.keys(reposicionesData).length, 'registros');
         
         // Procesar datos después de cargar ambos
         procesarDatosColas();
@@ -103,6 +104,9 @@ function cargarReposicionesDesdeFirebase() {
 function procesarDatosColas() {
     colasData = {};
     let totalUnidadesPlanificadas = 0;
+    
+    // Obtener fecha actual para filtrar
+    const fechaActual = obtenerFechaActual();
 
     // Primero, procesar datos de DEVOLUCIONES para obtener las colas planificadas
     if (datosDevoluciones && datosDevoluciones.length > 0) {
@@ -141,26 +145,30 @@ function procesarDatosColas() {
     }
 
     // Luego, procesar datos de reposicion_devol para sumar lo ya repuesto
-    // SUMAR TODAS LAS REPOSICIONES SIN FILTRAR POR USUARIO O FECHA
+    // FILTRAR POR FECHA Y COLA ACTUAL
     if (reposicionesData && Object.keys(reposicionesData).length > 0) {
         Object.keys(reposicionesData).forEach(key => {
             const item = reposicionesData[key];
-            const cola = item.cola;
-            const deposito = item.deposito;
-            const upc = item.upc;
             
-            if (colasData[cola]) {
-                const keyDeposito = `${deposito}_${upc}`;
+            // Filtrar por la fecha del archivo actual (IMPORTANTE)
+            if (item.fecha === fechaArchivoActual) {
+                const cola = item.cola;
+                const deposito = item.deposito;
+                const upc = item.upc;
                 
-                if (colasData[cola].depositos[keyDeposito]) {
-                    // Incrementar la cantidad repuesta
-                    colasData[cola].depositos[keyDeposito].cantidadRepuesta += 1;
+                if (colasData[cola]) {
+                    const keyDeposito = `${deposito}_${upc}`;
                     
-                    // No permitir que exceda la cantidad planificada
-                    if (colasData[cola].depositos[keyDeposito].cantidadRepuesta > 
-                        colasData[cola].depositos[keyDeposito].cantidadPlanificada) {
-                        colasData[cola].depositos[keyDeposito].cantidadRepuesta = 
-                        colasData[cola].depositos[keyDeposito].cantidadPlanificada;
+                    if (colasData[cola].depositos[keyDeposito]) {
+                        // Incrementar la cantidad repuesta
+                        colasData[cola].depositos[keyDeposito].cantidadRepuesta += 1;
+                        
+                        // No permitir que exceda la cantidad planificada
+                        if (colasData[cola].depositos[keyDeposito].cantidadRepuesta > 
+                            colasData[cola].depositos[keyDeposito].cantidadPlanificada) {
+                            colasData[cola].depositos[keyDeposito].cantidadRepuesta = 
+                            colasData[cola].depositos[keyDeposito].cantidadPlanificada;
+                        }
                     }
                 }
             }
@@ -220,6 +228,7 @@ function irADetalleCola(cola) {
     depositoActualIndex = -1;
     contadorEscaneosActual = 0;
     depositoEscaneadoCorrectamente = false;
+    procesandoGuardado = false;
     
     localStorage.setItem('colaSeleccionada', cola);
     inicializarDetalleCola();
@@ -593,7 +602,7 @@ function actualizarInfoSiguienteDeposito() {
         if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
             const nextDeposito = depositosCola[i];
             document.getElementById('nextDepositoInfo').textContent = 
-                `Siguiente: ${nextDeposito.deposito} - ${nextDeposito.articulo} (${nextDeposito.cantidadPlanificada})`;
+                `Siguiente: ${nextDeposito.deposito} - ${nextDeposito.articulo} (${nextDeposito.cantidadPlanificada - nextDeposito.cantidadRepuesta} pendientes)`;
             return;
         }
     }
@@ -704,7 +713,7 @@ function procesarEscaneoUPC(upc) {
         
         // Guardar todos los escaneos acumulados
         guardarEscaneosAcumulados().then(() => {
-            // Actualizar datos locales
+            // Actualizar datos locales INMEDIATAMENTE
             depositoActual.cantidadRepuesta = depositoActual.cantidadPlanificada;
             contadorEscaneosActual = 0;
             
@@ -724,6 +733,7 @@ function procesarEscaneoUPC(upc) {
                 avanzarAlSiguienteDeposito();
             }, 2000);
         }).catch(error => {
+            console.error('Error al guardar escaneos:', error);
             mostrarMensajeDetalle('Error al guardar: ' + error.message, false);
         });
     } else {
@@ -743,6 +753,15 @@ function guardarEscaneosAcumulados() {
         return Promise.resolve();
     }
     
+    // Prevenir guardados múltiples simultáneos
+    if (procesandoGuardado) {
+        console.log('Ya se está procesando un guardado, ignorando...');
+        return Promise.resolve();
+    }
+    
+    procesandoGuardado = true;
+    console.log('Guardando', contadorEscaneosActual, 'escaneos para depósito:', depositoActual.deposito);
+    
     const ref = database.ref('reposicion_devol');
     const now = new Date();
     const fecha = fechaArchivoActual || now.toLocaleDateString('es-ES');
@@ -751,7 +770,7 @@ function guardarEscaneosAcumulados() {
     // Guardar cada escaneo individualmente
     const promises = [];
     
-    // Guardar todos los escaneos acumulados
+    // Guardar EXACTAMENTE el número de escaneos acumulados
     for (let i = 0; i < contadorEscaneosActual; i++) {
         const newRef = ref.push();
         const promise = newRef.set({
@@ -768,13 +787,21 @@ function guardarEscaneosAcumulados() {
         promises.push(promise);
     }
     
-    // Limpiar contador
-    contadorEscaneosActual = 0;
-    
     return Promise.all(promises).then(() => {
+        console.log('Escaneos guardados exitosamente:', contadorEscaneosActual);
+        
         // Actualizar la vista de colas después de guardar
         procesarDatosColas();
+        
+        // Limpiar contador y resetear bandera
+        contadorEscaneosActual = 0;
+        procesandoGuardado = false;
+        
         return true;
+    }).catch(error => {
+        console.error('Error al guardar escaneos:', error);
+        procesandoGuardado = false;
+        throw error;
     });
 }
 
@@ -826,12 +853,12 @@ function seleccionarDeposito(index) {
 }
 
 function avanzarAlSiguienteDeposito() {
-    // Guardar escaneos acumulados antes de cambiar
+    // Guardar cualquier escaneo pendiente primero
     guardarEscaneosAcumulados().then(() => {
         // Buscar siguiente depósito no completado en orden SECUENCIAL
         let siguienteIndex = -1;
         
-        // Buscar desde el índice SIGUIENTE (no desde el actual + 1)
+        // Buscar desde el índice SIGUIENTE (depositoActualIndex + 1)
         for (let i = depositoActualIndex + 1; i < depositosCola.length; i++) {
             if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
                 siguienteIndex = i;
@@ -843,25 +870,39 @@ function avanzarAlSiguienteDeposito() {
             establecerDepositoActual(siguienteIndex);
             mostrarMensajeDetalle(`Siguiente depósito: ${depositosCola[siguienteIndex].deposito}`, true);
         } else {
-            mostrarMensajeDetalle('¡Todos los depósitos completados!', true);
-            mostrarPantallaExito();
+            // Si no hay siguiente, buscar desde el principio por si hay alguno pendiente
+            for (let i = 0; i < depositoActualIndex; i++) {
+                if (depositosCola[i].cantidadRepuesta < depositosCola[i].cantidadPlanificada) {
+                    siguienteIndex = i;
+                    break;
+                }
+            }
             
-            // Resetear campos
-            document.getElementById('currentDepositoDisplay').textContent = '----';
-            document.getElementById('currentArticuloDisplay').textContent = '----';
-            document.getElementById('cantidadTotal').textContent = '0';
-            document.getElementById('cantidadLeida').textContent = '0';
-            document.getElementById('cantidadPendiente').textContent = '0';
-            document.getElementById('nextDepositoInfo').textContent = '¡Cola completada!';
-            
-            depositoActual = null;
-            depositoActualIndex = -1;
-            depositoEscaneadoCorrectamente = false;
-            
-            // Actualizar lista
-            actualizarListaDepositos();
+            if (siguienteIndex !== -1) {
+                establecerDepositoActual(siguienteIndex);
+                mostrarMensajeDetalle(`Volviendo al depósito: ${depositosCola[siguienteIndex].deposito}`, true);
+            } else {
+                mostrarMensajeDetalle('¡Todos los depósitos completados!', true);
+                mostrarPantallaExito();
+                
+                // Resetear campos
+                document.getElementById('currentDepositoDisplay').textContent = '----';
+                document.getElementById('currentArticuloDisplay').textContent = '----';
+                document.getElementById('cantidadTotal').textContent = '0';
+                document.getElementById('cantidadLeida').textContent = '0';
+                document.getElementById('cantidadPendiente').textContent = '0';
+                document.getElementById('nextDepositoInfo').textContent = '¡Cola completada!';
+                
+                depositoActual = null;
+                depositoActualIndex = -1;
+                depositoEscaneadoCorrectamente = false;
+                
+                // Actualizar lista
+                actualizarListaDepositos();
+            }
         }
     }).catch(error => {
+        console.error('Error al avanzar al siguiente depósito:', error);
         mostrarMensajeDetalle('Error al guardar: ' + error.message, false);
     });
 }
@@ -892,6 +933,7 @@ function limpiarEstadoCola() {
     depositoActualIndex = -1;
     contadorEscaneosActual = 0;
     depositoEscaneadoCorrectamente = false;
+    procesandoGuardado = false;
     
     localStorage.removeItem('colaSeleccionada');
 }
@@ -970,7 +1012,7 @@ function iniciarSincronizacionTiempoReal() {
     ref.on('value', function(snapshot) {
         const data = snapshot.val();
         reposicionesData = data || {};
-        console.log('Reposiciones sincronizadas en tiempo real:', reposicionesData);
+        console.log('Reposiciones sincronizadas en tiempo real:', Object.keys(reposicionesData).length, 'registros');
         
         // Procesar los datos actualizados
         procesarDatosColas();
