@@ -30,12 +30,9 @@ const OBJETIVOS = {
 // ================= FUNCIÓN PARA NORMALIZAR NOMBRES =================
 function normalizarNombre(nombre) {
     if (!nombre) return '';
-    // Convertir a minúsculas, trim y capitalizar primera letra
     let nombreNormalizado = nombre.trim().toLowerCase();
-    // Capitalizar primera letra
     nombreNormalizado = nombreNormalizado.charAt(0).toUpperCase() + nombreNormalizado.slice(1);
     
-    // Normalizaciones específicas para nombres comunes
     const normalizaciones = {
         'Edison': 'Edison',
         'Edilson': 'Edilson',
@@ -45,10 +42,13 @@ function normalizarNombre(nombre) {
         'Oscar': 'Oscar',
         'Zulema': 'Zulema',
         'Luis': 'Luis',
-        'Patrick': 'Patrick'
+        'Patrick': 'Patrick',
+        'James': 'James',
+        'Rocio': 'Rocio',
+        'Mishel': 'Mishel',
+        'Meyli': 'Meyli'
     };
     
-    // Si el nombre está en el mapa de normalizaciones, usarlo
     if (normalizaciones[nombreNormalizado]) {
         return normalizaciones[nombreNormalizado];
     }
@@ -68,36 +68,29 @@ function configurarEventListeners() {
     // Eventos para pestañas
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', function() {
-            // Quitar clase active de todos los tabs
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
             
-            // Agregar clase active al tab clickeado
             this.classList.add('active');
             
-            // Ocultar todos los contenidos
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             
-            // Mostrar contenido del tab activo
             const tabId = this.getAttribute('data-tab');
             document.getElementById(`tab-${tabId}`).classList.add('active');
             
-            // Si es la pestaña de evolución, cargar lista de operarios
             if (tabId === 'evolucion' && todosDatosCargados) {
                 cargarListaOperariosEvolucion();
             }
         });
     });
     
-    // Establecer fecha actual por defecto en filtro diario
     const hoy = new Date();
     const hoyFormateado = hoy.toISOString().split('T')[0];
     document.getElementById('fechaDiaria').value = hoyFormateado;
     
-    // Establecer mes y año actual en filtros mensuales
     const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
     const anioActual = hoy.getFullYear();
     document.getElementById('mesMensual').value = mesActual;
@@ -134,13 +127,11 @@ async function actualizarDatosFirebase() {
     try {
         mostrarMensaje('📥 Descargando datos de Firebase...', true);
         
-        // Resetear datos
         datosRecoleccion = [];
         datosReposicion = [];
         datosDevoluciones = [];
         todosDatosCargados = false;
         
-        // Cargar todos los datos de Firebase
         await Promise.all([
             cargarDatosRecoleccion(),
             cargarDatosReposicion(),
@@ -149,7 +140,6 @@ async function actualizarDatosFirebase() {
         
         todosDatosCargados = true;
         
-        // Procesar datos según la pestaña activa
         const tabActivo = document.querySelector('.tab-button.active').getAttribute('data-tab');
         
         if (tabActivo === 'mensual') {
@@ -170,34 +160,26 @@ async function actualizarDatosFirebase() {
 
 async function cargarDatosRecoleccion() {
     return new Promise((resolve, reject) => {
-        console.log('Cargando datos de recolección...');
-        
         database.ref('recolecciones').once('value')
             .then(snapshot => {
                 const datos = snapshot.val();
                 if (datos) {
-                    // Convertir objeto a array y normalizar nombres
                     datosRecoleccion = Object.entries(datos).map(([key, registro]) => ({
                         id: key,
                         ...registro,
-                        usuario: normalizarNombre(registro.usuario)
+                        usuario: normalizarNombre(registro.usuario),
+                        fecha: registro.fechaSistema || registro.fecha || '',
+                        hora: registro.hora || '00:00'
                     }));
-                    console.log(`Datos de recolección cargados: ${datosRecoleccion.length} registros`);
-                    
-                    // Verificar algunos registros
-                    if (datosRecoleccion.length > 0) {
-                        console.log('Ejemplo de registro de recolección:', datosRecoleccion[0]);
-                    }
+                    console.log(`Recolección cargada: ${datosRecoleccion.length} registros`);
                 } else {
                     datosRecoleccion = [];
-                    console.log('No hay datos de recolección en Firebase');
                 }
                 resolve(datosRecoleccion);
             })
             .catch(error => {
-                console.error('Error cargando datos de recolección:', error);
+                console.error('Error cargando recolección:', error);
                 datosRecoleccion = [];
-                mostrarMensaje('❌ Error cargando recolección', false);
                 reject(error);
             });
     });
@@ -205,99 +187,55 @@ async function cargarDatosRecoleccion() {
 
 async function cargarDatosReposicion() {
     return new Promise((resolve, reject) => {
-        console.log('Cargando datos de reposición...');
-        
-        // Intentar diferentes nombres de nodo
-        const nodosPosibles = ['reposiciones', 'reposicion', 'Reposiciones'];
-        
-        const intentarCargarNodo = async (indice) => {
-            if (indice >= nodosPosibles.length) {
-                console.log('No se encontraron datos de reposición en ningún nodo');
-                datosReposicion = [];
-                resolve(datosReposicion);
-                return;
-            }
-            
-            const nodo = nodosPosibles[indice];
-            console.log(`Intentando cargar del nodo: ${nodo}`);
-            
-            try {
-                const snapshot = await database.ref(nodo).once('value');
+        database.ref('reposiciones').once('value')
+            .then(snapshot => {
                 const datos = snapshot.val();
-                
                 if (datos) {
                     datosReposicion = Object.entries(datos).map(([key, registro]) => ({
                         id: key,
                         ...registro,
-                        usuario: normalizarNombre(registro.usuario)
+                        usuario: normalizarNombre(registro.usuario),
+                        fecha: registro.fecha || '',
+                        hora: registro.hora || '00:00'
                     }));
-                    console.log(`Datos de reposición cargados de ${nodo}: ${datosReposicion.length} registros`);
-                    
-                    if (datosReposicion.length > 0) {
-                        console.log('Ejemplo de registro de reposición:', datosReposicion[0]);
-                    }
-                    
-                    resolve(datosReposicion);
+                    console.log(`Reposición cargada: ${datosReposicion.length} registros`);
                 } else {
-                    console.log(`Nodo ${nodo} vacío, intentando siguiente...`);
-                    intentarCargarNodo(indice + 1);
+                    datosReposicion = [];
                 }
-            } catch (error) {
-                console.error(`Error cargando del nodo ${nodo}:`, error);
-                intentarCargarNodo(indice + 1);
-            }
-        };
-        
-        intentarCargarNodo(0);
+                resolve(datosReposicion);
+            })
+            .catch(error => {
+                console.error('Error cargando reposición:', error);
+                datosReposicion = [];
+                reject(error);
+            });
     });
 }
 
 async function cargarDatosDevoluciones() {
     return new Promise((resolve, reject) => {
-        console.log('Cargando datos de devoluciones...');
-        
-        // Intentar diferentes nombres de nodo
-        const nodosPosibles = ['reposicion_devol', 'devoluciones', 'devolucion', 'Devoluciones'];
-        
-        const intentarCargarNodo = async (indice) => {
-            if (indice >= nodosPosibles.length) {
-                console.log('No se encontraron datos de devoluciones en ningún nodo');
-                datosDevoluciones = [];
-                resolve(datosDevoluciones);
-                return;
-            }
-            
-            const nodo = nodosPosibles[indice];
-            console.log(`Intentando cargar del nodo: ${nodo}`);
-            
-            try {
-                const snapshot = await database.ref(nodo).once('value');
+        database.ref('reposicion_devol').once('value')
+            .then(snapshot => {
                 const datos = snapshot.val();
-                
                 if (datos) {
                     datosDevoluciones = Object.entries(datos).map(([key, registro]) => ({
                         id: key,
                         ...registro,
-                        usuario: normalizarNombre(registro.usuario)
+                        usuario: normalizarNombre(registro.usuario),
+                        fecha: registro.fecha || '',
+                        hora: registro.hora || '00:00'
                     }));
-                    console.log(`Datos de devoluciones cargados de ${nodo}: ${datosDevoluciones.length} registros`);
-                    
-                    if (datosDevoluciones.length > 0) {
-                        console.log('Ejemplo de registro de devolución:', datosDevoluciones[0]);
-                    }
-                    
-                    resolve(datosDevoluciones);
+                    console.log(`Devoluciones cargadas: ${datosDevoluciones.length} registros`);
                 } else {
-                    console.log(`Nodo ${nodo} vacío, intentando siguiente...`);
-                    intentarCargarNodo(indice + 1);
+                    datosDevoluciones = [];
                 }
-            } catch (error) {
-                console.error(`Error cargando del nodo ${nodo}:`, error);
-                intentarCargarNodo(indice + 1);
-            }
-        };
-        
-        intentarCargarNodo(0);
+                resolve(datosDevoluciones);
+            })
+            .catch(error => {
+                console.error('Error cargando devoluciones:', error);
+                datosDevoluciones = [];
+                reject(error);
+            });
     });
 }
 
@@ -314,14 +252,12 @@ async function cargarDatosProductividad() {
         
         mostrarMensaje(`📊 Procesando datos de ${mes}/${anio}...`, true);
         
-        // Filtrar datos por mes y año
         const datosRecoleccionFiltrados = filtrarDatosPorMes(datosRecoleccion, mes, anio);
         const datosReposicionFiltrados = filtrarDatosPorMes(datosReposicion, mes, anio);
         const datosDevolucionesFiltrados = filtrarDatosPorMes(datosDevoluciones, mes, anio);
         
         console.log(`Datos filtrados: Recolección=${datosRecoleccionFiltrados.length}, Reposición=${datosReposicionFiltrados.length}, Devoluciones=${datosDevolucionesFiltrados.length}`);
         
-        // Procesar y mostrar datos
         procesarDatosProductividad(datosRecoleccionFiltrados, datosReposicionFiltrados, datosDevolucionesFiltrados);
         
         mostrarMensaje(`✅ Datos de ${mes}/${anio} procesados`, true);
@@ -334,29 +270,15 @@ async function cargarDatosProductividad() {
 
 function filtrarDatosPorMes(datos, mes, anio) {
     return datos.filter(registro => {
-        let fechaRegistro;
+        const fechaRegistro = registro.fecha;
+        if (!fechaRegistro) return false;
         
-        // Intentar obtener la fecha del registro
-        if (registro.fechaSistema) {
-            fechaRegistro = registro.fechaSistema;
-        } else if (registro.fecha) {
-            fechaRegistro = registro.fecha;
-        } else if (registro.timestamp) {
-            // Convertir timestamp a fecha
-            const date = new Date(registro.timestamp);
-            fechaRegistro = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-        } else {
-            return false;
-        }
-        
-        // Verificar si la fecha coincide con el mes y año
         const fechaFormateada = formatDateToDDMMYYYY(fechaRegistro);
         if (!fechaFormateada) return false;
         
         const partes = fechaFormateada.split('/');
         if (partes.length !== 3) return false;
         
-        const dia = partes[0];
         const mesRegistro = partes[1];
         const anioRegistro = parseInt(partes[2]);
         
@@ -366,20 +288,43 @@ function filtrarDatosPorMes(datos, mes, anio) {
 
 // ================= PROCESAR DATOS DE PRODUCTIVIDAD MENSUAL =================
 function procesarDatosProductividad(datosRecoleccionFiltrados, datosReposicionFiltrados, datosDevolucionesFiltrados) {
-    // Procesar datos de recolección
     const estadisticasRecoleccion = calcularEstadisticasRecoleccionMensual(datosRecoleccionFiltrados);
     mostrarEstadisticasRecoleccion(estadisticasRecoleccion);
     
-    // Procesar datos de reposición
     const estadisticasReposicion = calcularEstadisticasReposicionMensual(datosReposicionFiltrados);
     mostrarEstadisticasReposicion(estadisticasReposicion);
     
-    // Procesar datos de devoluciones
     const estadisticasDevoluciones = calcularEstadisticasDevolucionesMensual(datosDevolucionesFiltrados);
     mostrarEstadisticasDevoluciones(estadisticasDevoluciones);
     
-    // Actualizar estadísticas generales
     actualizarEstadisticasGenerales(estadisticasRecoleccion, estadisticasReposicion, estadisticasDevoluciones);
+}
+
+// ================= NUEVA FUNCIÓN PARA CALCULAR HORAS TRABAJADAS =================
+function calcularHorasTrabajadas(registros) {
+    // Agrupar registros por día
+    const registrosPorDia = {};
+    
+    registros.forEach(registro => {
+        const fecha = registro.fecha;
+        if (!fecha) return;
+        
+        if (!registrosPorDia[fecha]) {
+            registrosPorDia[fecha] = new Set();
+        }
+        
+        // Extraer hora del registro (asumimos que cada registro es una hora de trabajo)
+        const hora = registro.hora ? registro.hora.split(':')[0] : '00';
+        registrosPorDia[fecha].add(hora);
+    });
+    
+    // Calcular total de horas (suma de horas únicas por día)
+    let totalHoras = 0;
+    Object.values(registrosPorDia).forEach(horasDia => {
+        totalHoras += horasDia.size;
+    });
+    
+    return totalHoras;
 }
 
 function calcularEstadisticasRecoleccionMensual(datos) {
@@ -390,21 +335,14 @@ function calcularEstadisticasRecoleccionMensual(datos) {
             const usuario = registro.usuario;
             const unidades = parseInt(registro.cantidad_recolectada) || 0;
             const cola = registro.cola || 'N/A';
-            const hora = extraerHoraDelRegistro(registro);
             
             if (!operarios[usuario]) {
                 operarios[usuario] = {
                     usuario: usuario,
                     totalUnidades: 0,
-                    horasValidas: new Set(),
                     colas: new Set(),
                     registros: []
                 };
-            }
-            
-            // Solo contar como hora válida si hay al menos 40 unidades
-            if (unidades >= 40) {
-                operarios[usuario].horasValidas.add(hora);
             }
             
             operarios[usuario].totalUnidades += unidades;
@@ -413,13 +351,11 @@ function calcularEstadisticasRecoleccionMensual(datos) {
         }
     });
     
-    // Convertir a array y calcular productividad
     return Object.values(operarios).map(op => {
-        const horas = op.horasValidas.size;
-        const productividad = horas > 0 ? Math.round(op.totalUnidades / horas) : 0;
+        const horasValidas = calcularHorasTrabajadas(op.registros);
+        const productividad = horasValidas > 0 ? Math.round(op.totalUnidades / horasValidas) : 0;
         const colas = Array.from(op.colas).join(', ');
         
-        // Calcular objetivo (el más alto entre las colas del operario)
         let objetivo = 0;
         const colasArray = Array.from(op.colas);
         for (const cola of colasArray) {
@@ -430,10 +366,8 @@ function calcularEstadisticasRecoleccionMensual(datos) {
             }
         }
         
-        // Si no se encontró objetivo, usar 100 como default
         if (objetivo === 0) objetivo = 100;
         
-        // Calcular porcentaje sobre objetivo (diferencia porcentual)
         let porcentajeObjetivo = 0;
         let porcentajeTexto = '';
         let porcentajeClass = '';
@@ -454,12 +388,11 @@ function calcularEstadisticasRecoleccionMensual(datos) {
             }
         }
         
-        // Determinar clase de rendimiento
         const rendimientoInfo = obtenerClaseRendimiento(porcentajeObjetivo);
         
         return {
             ...op,
-            horasValidas: horas,
+            horasValidas: horasValidas,
             productividad: productividad,
             colas: colas,
             objetivo: objetivo,
@@ -480,20 +413,13 @@ function calcularEstadisticasReposicionMensual(datos) {
         if (registro.usuario) {
             const usuario = registro.usuario;
             const unidades = parseInt(registro.cantidad) || 0;
-            const hora = extraerHoraDelRegistro(registro);
             
             if (!operarios[usuario]) {
                 operarios[usuario] = {
                     usuario: usuario,
                     totalUnidades: 0,
-                    horasValidas: new Set(),
                     registros: []
                 };
-            }
-            
-            // Solo contar como hora válida si hay al menos 40 unidades
-            if (unidades >= 40) {
-                operarios[usuario].horasValidas.add(hora);
             }
             
             operarios[usuario].totalUnidades += unidades;
@@ -501,15 +427,12 @@ function calcularEstadisticasReposicionMensual(datos) {
         }
     });
     
-    // Convertir a array y calcular productividad
     return Object.values(operarios).map(op => {
-        const horas = op.horasValidas.size;
-        const productividad = horas > 0 ? Math.round(op.totalUnidades / horas) : 0;
+        const horasValidas = calcularHorasTrabajadas(op.registros);
+        const productividad = horasValidas > 0 ? Math.round(op.totalUnidades / horasValidas) : 0;
         
-        // Calcular objetivo para reposición
         const objetivo = OBJETIVOS['P'] ? OBJETIVOS['P'].reposicion : 140;
         
-        // Calcular porcentaje sobre objetivo (diferencia porcentual)
         let porcentajeObjetivo = 0;
         let porcentajeTexto = '';
         let porcentajeClass = '';
@@ -530,12 +453,11 @@ function calcularEstadisticasReposicionMensual(datos) {
             }
         }
         
-        // Determinar clase de rendimiento
         const rendimientoInfo = obtenerClaseRendimiento(porcentajeObjetivo);
         
         return {
             ...op,
-            horasValidas: horas,
+            horasValidas: horasValidas,
             productividad: productividad,
             objetivo: objetivo,
             porcentajeObjetivo: porcentajeObjetivo,
@@ -555,20 +477,13 @@ function calcularEstadisticasDevolucionesMensual(datos) {
         if (registro.usuario) {
             const usuario = registro.usuario;
             const unidades = parseInt(registro.cantidad) || 0;
-            const hora = extraerHoraDelRegistro(registro);
             
             if (!operarios[usuario]) {
                 operarios[usuario] = {
                     usuario: usuario,
                     totalUnidades: 0,
-                    horasValidas: new Set(),
                     registros: []
                 };
-            }
-            
-            // Solo contar como hora válida si hay al menos 40 unidades
-            if (unidades >= 40) {
-                operarios[usuario].horasValidas.add(hora);
             }
             
             operarios[usuario].totalUnidades += unidades;
@@ -576,15 +491,12 @@ function calcularEstadisticasDevolucionesMensual(datos) {
         }
     });
     
-    // Convertir a array y calcular productividad
     return Object.values(operarios).map(op => {
-        const horas = op.horasValidas.size;
-        const productividad = horas > 0 ? Math.round(op.totalUnidades / horas) : 0;
+        const horasValidas = calcularHorasTrabajadas(op.registros);
+        const productividad = horasValidas > 0 ? Math.round(op.totalUnidades / horasValidas) : 0;
         
-        // Calcular objetivo para devoluciones (usamos el mismo que reposición)
         const objetivo = OBJETIVOS['P'] ? OBJETIVOS['P'].devoluciones : 140;
         
-        // Calcular porcentaje sobre objetivo (diferencia porcentual)
         let porcentajeObjetivo = 0;
         let porcentajeTexto = '';
         let porcentajeClass = '';
@@ -605,12 +517,11 @@ function calcularEstadisticasDevolucionesMensual(datos) {
             }
         }
         
-        // Determinar clase de rendimiento
         const rendimientoInfo = obtenerClaseRendimiento(porcentajeObjetivo);
         
         return {
             ...op,
-            horasValidas: horas,
+            horasValidas: horasValidas,
             productividad: productividad,
             objetivo: objetivo,
             porcentajeObjetivo: porcentajeObjetivo,
@@ -662,16 +573,6 @@ function mostrarEstadisticasRecoleccion(estadisticas) {
     } else {
         estadisticas.forEach(op => {
             const row = document.createElement('tr');
-            
-            // Crear barra de progreso visual basada en porcentaje
-            const porcentajeProgreso = Math.min(Math.max(op.porcentajeObjetivo + 100, 0), 200);
-            const progresoHTML = op.objetivo > 0 ? 
-                `<div class="progress-container">
-                    <div class="progress-bar ${op.progresoClass}" style="width: ${porcentajeProgreso/2}%">
-                        ${op.productividad}/${op.objetivo}
-                    </div>
-                </div>` : 'N/A';
-            
             row.innerHTML = `
                 <td>${op.usuario}</td>
                 <td>${op.colas || 'N/A'}</td>
@@ -699,16 +600,6 @@ function mostrarEstadisticasReposicion(estadisticas) {
     } else {
         estadisticas.forEach(op => {
             const row = document.createElement('tr');
-            
-            // Crear barra de progreso visual basada en porcentaje
-            const porcentajeProgreso = Math.min(Math.max(op.porcentajeObjetivo + 100, 0), 200);
-            const progresoHTML = op.objetivo > 0 ? 
-                `<div class="progress-container">
-                    <div class="progress-bar ${op.progresoClass}" style="width: ${porcentajeProgreso/2}%">
-                        ${op.productividad}/${op.objetivo}
-                    </div>
-                </div>` : 'N/A';
-            
             row.innerHTML = `
                 <td>${op.usuario}</td>
                 <td>${op.totalUnidades.toLocaleString()}</td>
@@ -735,16 +626,6 @@ function mostrarEstadisticasDevoluciones(estadisticas) {
     } else {
         estadisticas.forEach(op => {
             const row = document.createElement('tr');
-            
-            // Crear barra de progreso visual basada en porcentaje
-            const porcentajeProgreso = Math.min(Math.max(op.porcentajeObjetivo + 100, 0), 200);
-            const progresoHTML = op.objetivo > 0 ? 
-                `<div class="progress-container">
-                    <div class="progress-bar ${op.progresoClass}" style="width: ${porcentajeProgreso/2}%">
-                        ${op.productividad}/${op.objetivo}
-                    </div>
-                </div>` : 'N/A';
-            
             row.innerHTML = `
                 <td>${op.usuario}</td>
                 <td>${op.totalUnidades.toLocaleString()}</td>
@@ -763,14 +644,12 @@ function mostrarEstadisticasDevoluciones(estadisticas) {
 }
 
 function actualizarEstadisticasGenerales(estadisticasRecoleccion, estadisticasReposicion, estadisticasDevoluciones) {
-    // Calcular operarios activos (únicos en todos los tipos)
     const operariosUnicos = new Set();
     
     [...estadisticasRecoleccion, ...estadisticasReposicion, ...estadisticasDevoluciones].forEach(op => {
         operariosUnicos.add(op.usuario);
     });
     
-    // Calcular totales
     const totalUnidadesRecoleccion = estadisticasRecoleccion.reduce((sum, op) => sum + op.totalUnidades, 0);
     const totalUnidadesReposicion = estadisticasReposicion.reduce((sum, op) => sum + op.totalUnidades, 0);
     const totalUnidadesDevoluciones = estadisticasDevoluciones.reduce((sum, op) => sum + op.totalUnidades, 0);
@@ -783,7 +662,6 @@ function actualizarEstadisticasGenerales(estadisticasRecoleccion, estadisticasRe
     
     const productividadPromedio = totalHoras > 0 ? Math.round(totalUnidades / totalHoras) : 0;
     
-    // Actualizar UI
     document.getElementById('totalOperarios').textContent = operariosUnicos.size;
     document.getElementById('totalUnidades').textContent = totalUnidades.toLocaleString();
     document.getElementById('totalHoras').textContent = totalHoras;
@@ -807,10 +685,8 @@ async function cargarProductividadDiaria() {
         
         mostrarMensajeDiario('📊 Calculando productividad diaria...', true);
         
-        // Procesar datos para la fecha seleccionada
         const estadisticasDiarias = await calcularProductividadDiaria(fechaSeleccionada);
         
-        // Mostrar resultados
         mostrarProductividadDiaria(estadisticasDiarias);
         
         mostrarMensajeDiario('✅ Productividad diaria calculada', true);
@@ -822,10 +698,8 @@ async function cargarProductividadDiaria() {
 }
 
 async function calcularProductividadDiaria(fecha) {
-    // Formatear fecha para comparación (DD/MM/YYYY)
     const fechaFormateada = formatDateToDDMMYYYY(fecha);
     
-    // Filtrar datos por fecha
     const recoleccionDelDia = datosRecoleccion.filter(registro => {
         const fechaRegistro = registro.fechaSistema || registro.fecha;
         return formatDateToDDMMYYYY(fechaRegistro) === fechaFormateada;
@@ -841,19 +715,8 @@ async function calcularProductividadDiaria(fecha) {
         return formatDateToDDMMYYYY(fechaRegistro) === fechaFormateada;
     });
     
-    console.log(`Datos del día ${fechaFormateada}:`, {
-        recoleccion: recoleccionDelDia.length,
-        reposicion: reposicionDelDia.length,
-        devoluciones: devolucionesDelDia.length
-    });
-    
-    // Procesar recolección diaria
     const productividadRecoleccion = calcularProductividadPorHoraDiaria(recoleccionDelDia, 'recoleccion');
-    
-    // Procesar reposición diaria
     const productividadReposicion = calcularProductividadPorHoraDiaria(reposicionDelDia, 'reposicion');
-    
-    // Procesar devoluciones diaria
     const productividadDevoluciones = calcularProductividadPorHoraDiaria(devolucionesDelDia, 'devoluciones');
     
     return {
@@ -871,7 +734,6 @@ function calcularProductividadPorHoraDiaria(datos, tipo) {
         if (!registro.usuario) return;
         
         const usuario = registro.usuario;
-        const hora = extraerHoraDelRegistro(registro);
         let unidades = 0;
         
         if (tipo === 'recoleccion') {
@@ -880,34 +742,27 @@ function calcularProductividadPorHoraDiaria(datos, tipo) {
             unidades = parseInt(registro.cantidad) || 0;
         }
         
-        const cola = registro.cola || 'P'; // Para reposición y devoluciones, usar 'P' por defecto
+        const cola = registro.cola || 'P';
         
-        if (unidades >= 40) { // Solo horas válidas
-            if (!operarios[usuario]) {
-                operarios[usuario] = {
-                    usuario: usuario,
-                    horasValidas: new Set(),
-                    totalUnidades: 0,
-                    colas: new Set(),
-                    registros: []
-                };
-            }
-            
-            // Agrupar por hora
-            operarios[usuario].horasValidas.add(hora);
-            operarios[usuario].totalUnidades += unidades;
-            operarios[usuario].colas.add(cola);
-            operarios[usuario].registros.push(registro);
+        if (!operarios[usuario]) {
+            operarios[usuario] = {
+                usuario: usuario,
+                totalUnidades: 0,
+                colas: new Set(),
+                registros: []
+            };
         }
+        
+        operarios[usuario].totalUnidades += unidades;
+        operarios[usuario].colas.add(cola);
+        operarios[usuario].registros.push(registro);
     });
     
-    // Calcular productividad por hora (solo horas válidas)
     return Object.values(operarios).map(op => {
-        const horas = op.horasValidas.size;
-        const productividad = horas > 0 ? Math.round(op.totalUnidades / horas) : 0;
+        const horasValidas = calcularHorasTrabajadas(op.registros);
+        const productividad = horasValidas > 0 ? Math.round(op.totalUnidades / horasValidas) : 0;
         const colas = Array.from(op.colas).join(', ');
         
-        // Determinar objetivo según tipo y cola
         let objetivo = 0;
         const colasArray = Array.from(op.colas);
         
@@ -921,14 +776,12 @@ function calcularProductividadPorHoraDiaria(datos, tipo) {
             }
         } else if (tipo === 'reposicion') {
             objetivo = OBJETIVOS['P'] ? OBJETIVOS['P'].reposicion : 140;
-        } else { // devoluciones
+        } else {
             objetivo = OBJETIVOS['P'] ? OBJETIVOS['P'].devoluciones : 140;
         }
         
-        // Si no se encontró objetivo, usar 100 como default
         if (objetivo === 0) objetivo = 100;
         
-        // Calcular porcentaje sobre objetivo (diferencia porcentual)
         let porcentajeObjetivo = 0;
         let porcentajeTexto = '';
         let porcentajeClass = '';
@@ -949,14 +802,13 @@ function calcularProductividadPorHoraDiaria(datos, tipo) {
             }
         }
         
-        // Determinar rendimiento
         const rendimientoInfo = obtenerClaseRendimiento(porcentajeObjetivo);
         
         return {
             usuario: op.usuario,
             colas: colas,
             productividad: productividad,
-            horasValidas: horas,
+            horasValidas: horasValidas,
             totalUnidades: op.totalUnidades,
             objetivo: objetivo,
             porcentajeObjetivo: porcentajeObjetivo,
@@ -970,30 +822,11 @@ function calcularProductividadPorHoraDiaria(datos, tipo) {
     }).sort((a, b) => b.productividad - a.productividad);
 }
 
-function extraerHoraDelRegistro(registro) {
-    if (registro.hora) {
-        // Extraer solo la hora (formato HH:MM:SS -> HH)
-        return registro.hora.split(':')[0];
-    } else if (registro.timestamp) {
-        // Convertir timestamp a hora
-        const fecha = new Date(registro.timestamp);
-        return String(fecha.getHours()).padStart(2, '0');
-    }
-    return '00';
-}
-
 // ================= MOSTRAR PRODUCTIVIDAD DIARIA =================
 function mostrarProductividadDiaria(estadisticas) {
-    // Mostrar estadísticas generales del día
     actualizarEstadisticasDiarias(estadisticas);
-    
-    // Mostrar tabla de recolección diaria
     mostrarTablaRecoleccionDiaria(estadisticas.recoleccion);
-    
-    // Mostrar tabla de reposición diaria
     mostrarTablaReposicionDiaria(estadisticas.reposicion);
-    
-    // Mostrar tabla de devoluciones diaria
     mostrarTablaDevolucionesDiaria(estadisticas.devoluciones);
 }
 
@@ -1004,7 +837,6 @@ function actualizarEstadisticasDiarias(estadisticas) {
     let productividadTotal = 0;
     let operariosConDatos = 0;
     
-    // Procesar recolección
     estadisticas.recoleccion.forEach(op => {
         operariosUnicos.add(op.usuario);
         totalUnidades += op.totalUnidades;
@@ -1013,7 +845,6 @@ function actualizarEstadisticasDiarias(estadisticas) {
         operariosConDatos++;
     });
     
-    // Procesar reposición
     estadisticas.reposicion.forEach(op => {
         operariosUnicos.add(op.usuario);
         totalUnidades += op.totalUnidades;
@@ -1022,7 +853,6 @@ function actualizarEstadisticasDiarias(estadisticas) {
         operariosConDatos++;
     });
     
-    // Procesar devoluciones
     estadisticas.devoluciones.forEach(op => {
         operariosUnicos.add(op.usuario);
         totalUnidades += op.totalUnidades;
@@ -1031,12 +861,10 @@ function actualizarEstadisticasDiarias(estadisticas) {
         operariosConDatos++;
     });
     
-    // Calcular promedio
     const totalOperarios = operariosUnicos.size;
     const productividadPromedio = operariosConDatos > 0 ? 
         Math.round(productividadTotal / operariosConDatos) : 0;
     
-    // Actualizar UI
     document.getElementById('totalOperariosDia').textContent = totalOperarios;
     document.getElementById('totalUnidadesDia').textContent = totalUnidades.toLocaleString();
     document.getElementById('totalHorasDia').textContent = totalHorasValidas;
@@ -1052,16 +880,6 @@ function mostrarTablaRecoleccionDiaria(datos) {
     } else {
         datos.forEach(op => {
             const row = document.createElement('tr');
-            
-            // Crear barra de progreso visual basada en porcentaje
-            const porcentajeProgreso = Math.min(Math.max(op.porcentajeObjetivo + 100, 0), 200);
-            const progresoHTML = op.objetivo > 0 ? 
-                `<div class="progress-container">
-                    <div class="progress-bar ${op.progresoClass}" style="width: ${porcentajeProgreso/2}%">
-                        ${op.productividad}/${op.objetivo}
-                    </div>
-                </div>` : 'N/A';
-            
             row.innerHTML = `
                 <td>${op.usuario}</td>
                 <td>${op.colas}</td>
@@ -1089,16 +907,6 @@ function mostrarTablaReposicionDiaria(datos) {
     } else {
         datos.forEach(op => {
             const row = document.createElement('tr');
-            
-            // Crear barra de progreso visual basada en porcentaje
-            const porcentajeProgreso = Math.min(Math.max(op.porcentajeObjetivo + 100, 0), 200);
-            const progresoHTML = op.objetivo > 0 ? 
-                `<div class="progress-container">
-                    <div class="progress-bar ${op.progresoClass}" style="width: ${porcentajeProgreso/2}%">
-                        ${op.productividad}/${op.objetivo}
-                    </div>
-                </div>` : 'N/A';
-            
             row.innerHTML = `
                 <td>${op.usuario}</td>
                 <td>${op.totalUnidades.toLocaleString()}</td>
@@ -1125,16 +933,6 @@ function mostrarTablaDevolucionesDiaria(datos) {
     } else {
         datos.forEach(op => {
             const row = document.createElement('tr');
-            
-            // Crear barra de progreso visual basada en porcentaje
-            const porcentajeProgreso = Math.min(Math.max(op.porcentajeObjetivo + 100, 0), 200);
-            const progresoHTML = op.objetivo > 0 ? 
-                `<div class="progress-container">
-                    <div class="progress-bar ${op.progresoClass}" style="width: ${porcentajeProgreso/2}%">
-                        ${op.productividad}/${op.objetivo}
-                    </div>
-                </div>` : 'N/A';
-            
             row.innerHTML = `
                 <td>${op.usuario}</td>
                 <td>${op.totalUnidades.toLocaleString()}</td>
@@ -1156,7 +954,6 @@ function mostrarTablaDevolucionesDiaria(datos) {
 function cargarListaOperariosEvolucion() {
     const operarios = new Set();
     
-    // Agregar operarios de todos los tipos
     datosRecoleccion.forEach(registro => {
         if (registro.usuario) operarios.add(registro.usuario);
     });
@@ -1170,7 +967,6 @@ function cargarListaOperariosEvolucion() {
     const select = document.getElementById('operarioEvolucion');
     select.innerHTML = '<option value="">-- Seleccione un operario --</option>';
     
-    // Ordenar alfabéticamente
     const operariosOrdenados = Array.from(operarios).sort();
     
     operariosOrdenados.forEach(operario => {
@@ -1201,10 +997,8 @@ async function cargarEvolucionOperario() {
         
         mostrarMensajeEvolucion(`📈 Calculando evolución para ${operario}...`, true);
         
-        // Calcular evolución
         const evolucion = calcularEvolucionOperario(operario, tipo, mesesAtras);
         
-        // Mostrar resultados
         mostrarEvolucion(evolucion, operario, tipo);
         
         mostrarMensajeEvolucion('✅ Evolución calculada', true);
@@ -1219,14 +1013,12 @@ function calcularEvolucionOperario(operario, tipo, mesesAtras) {
     const evolucion = [];
     const hoy = new Date();
     
-    // Calcular los últimos N meses
     for (let i = mesesAtras - 1; i >= 0; i--) {
         const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
         const mes = String(fecha.getMonth() + 1).padStart(2, '0');
         const anio = fecha.getFullYear();
         const mesNombre = obtenerNombreMes(mes);
         
-        // Seleccionar datos según el tipo
         let datos = [];
         if (tipo === 'recoleccion') {
             datos = datosRecoleccion;
@@ -1236,15 +1028,20 @@ function calcularEvolucionOperario(operario, tipo, mesesAtras) {
             datos = datosDevoluciones;
         }
         
-        // Filtrar datos del operario y mes
         const datosMes = filtrarDatosPorMes(datos, mes, anio).filter(r => r.usuario === operario);
         
         if (datosMes.length > 0) {
-            // Calcular estadísticas para el mes
-            const estadisticas = calcularEstadisticasMensuales(datosMes, tipo);
+            let estadisticas;
+            if (tipo === 'recoleccion') {
+                estadisticas = calcularEstadisticasRecoleccionMensual(datosMes);
+            } else if (tipo === 'reposicion') {
+                estadisticas = calcularEstadisticasReposicionMensual(datosMes);
+            } else {
+                estadisticas = calcularEstadisticasDevolucionesMensual(datosMes);
+            }
             
             if (estadisticas.length > 0) {
-                const stat = estadisticas[0]; // Solo un operario
+                const stat = estadisticas[0];
                 evolucion.push({
                     mes: mes,
                     mesNombre: mesNombre,
@@ -1256,7 +1053,6 @@ function calcularEvolucionOperario(operario, tipo, mesesAtras) {
                     porcentajeObjetivo: stat.porcentajeObjetivo
                 });
             } else {
-                // Si no hay datos, agregar cero
                 evolucion.push({
                     mes: mes,
                     mesNombre: mesNombre,
@@ -1269,7 +1065,6 @@ function calcularEvolucionOperario(operario, tipo, mesesAtras) {
                 });
             }
         } else {
-            // Si no hay datos, agregar cero
             evolucion.push({
                 mes: mes,
                 mesNombre: mesNombre,
@@ -1286,72 +1081,8 @@ function calcularEvolucionOperario(operario, tipo, mesesAtras) {
     return evolucion;
 }
 
-function calcularEstadisticasMensuales(datos, tipo) {
-    const operarios = {};
-    
-    datos.forEach(registro => {
-        if (registro.usuario) {
-            const usuario = registro.usuario;
-            let unidades = 0;
-            
-            if (tipo === 'recoleccion') {
-                unidades = parseInt(registro.cantidad_recolectada) || 0;
-            } else {
-                unidades = parseInt(registro.cantidad) || 0;
-            }
-            
-            const hora = extraerHoraDelRegistro(registro);
-            
-            if (!operarios[usuario]) {
-                operarios[usuario] = {
-                    usuario: usuario,
-                    totalUnidades: 0,
-                    horasValidas: new Set()
-                };
-            }
-            
-            // Solo contar como hora válida si hay al menos 40 unidades
-            if (unidades >= 40) {
-                operarios[usuario].horasValidas.add(hora);
-            }
-            
-            operarios[usuario].totalUnidades += unidades;
-        }
-    });
-    
-    // Convertir a array y calcular productividad
-    return Object.values(operarios).map(op => {
-        const horas = op.horasValidas.size;
-        const productividad = horas > 0 ? Math.round(op.totalUnidades / horas) : 0;
-        
-        // Calcular objetivo
-        let objetivo = 0;
-        if (tipo === 'recoleccion') {
-            objetivo = 100; // Default
-        } else if (tipo === 'reposicion') {
-            objetivo = OBJETIVOS['P'] ? OBJETIVOS['P'].reposicion : 140;
-        } else {
-            objetivo = OBJETIVOS['P'] ? OBJETIVOS['P'].devoluciones : 140;
-        }
-        
-        // Calcular porcentaje sobre objetivo
-        const porcentajeObjetivo = objetivo > 0 ? Math.round((productividad / objetivo) * 100) : 0;
-        
-        return {
-            ...op,
-            horasValidas: horas,
-            productividad: productividad,
-            objetivo: objetivo,
-            porcentajeObjetivo: porcentajeObjetivo
-        };
-    });
-}
-
 function mostrarEvolucion(evolucion, operario, tipo) {
-    // Actualizar tabla
     mostrarTablaEvolucion(evolucion);
-    
-    // Actualizar gráfico
     actualizarGraficoEvolucion(evolucion, operario, tipo);
 }
 
@@ -1364,8 +1095,6 @@ function mostrarTablaEvolucion(evolucion) {
     } else {
         evolucion.forEach(item => {
             const row = document.createElement('tr');
-            
-            // Calcular tendencia (comparar con mes anterior)
             const tendencia = calcularTendencia(evolucion, item.mes, item.anio);
             
             row.innerHTML = `
@@ -1375,7 +1104,7 @@ function mostrarTablaEvolucion(evolucion) {
                 <td>${item.horasValidas}</td>
                 <td><strong>${item.productividad}</strong></td>
                 <td>${item.objetivo}</td>
-                <td>${item.porcentajeObjetivo}%</td>
+                <td>${item.objetivo > 0 ? Math.round((item.productividad / item.objetivo) * 100) : 0}%</td>
                 <td><span class="${tendencia.clase}">${tendencia.texto}</span></td>
             `;
             tbody.appendChild(row);
@@ -1387,7 +1116,6 @@ function mostrarTablaEvolucion(evolucion) {
 }
 
 function calcularTendencia(evolucion, mes, anio) {
-    // Encontrar el índice actual
     const indexActual = evolucion.findIndex(item => item.mes === mes && item.anio === anio);
     
     if (indexActual <= 0) {
@@ -1414,12 +1142,10 @@ function calcularTendencia(evolucion, mes, anio) {
 }
 
 function actualizarGraficoEvolucion(evolucion, operario, tipo) {
-    // Preparar datos para el gráfico
     const categorias = evolucion.map(item => `${item.mesNombre} ${item.anio}`);
     const productividades = evolucion.map(item => item.productividad);
     const objetivos = evolucion.map(item => item.objetivo);
     
-    // Configurar opciones del gráfico
     const options = {
         series: [{
             name: 'Productividad',
@@ -1476,9 +1202,12 @@ function actualizarGraficoEvolucion(evolucion, operario, tipo) {
         }
     };
     
-    // Renderizar gráfico
-    const chart = new ApexCharts(document.querySelector("#chartEvolucion"), options);
-    chart.render();
+    const chartElement = document.querySelector("#chartEvolucion");
+    if (chartElement) {
+        chartElement.innerHTML = '';
+        const chart = new ApexCharts(chartElement, options);
+        chart.render();
+    }
 }
 
 // ================= UTILIDADES =================
@@ -1493,11 +1222,9 @@ function obtenerNombreMes(mes) {
 function formatDateToDDMMYYYY(dateString) {
     if (!dateString) return '';
     
-    // Si ya está en formato DD/MM/YYYY, devolverlo tal cual
     if (typeof dateString === 'string' && dateString.includes('/')) {
         const partes = dateString.split('/');
         if (partes.length === 3) {
-            // Asegurar formato correcto
             const dia = partes[0].padStart(2, '0');
             const mes = partes[1].padStart(2, '0');
             const anio = partes[2];
@@ -1505,7 +1232,6 @@ function formatDateToDDMMYYYY(dateString) {
         }
     }
     
-    // Si está en formato YYYY-MM-DD, convertirlo
     if (typeof dateString === 'string' && dateString.includes('-')) {
         const partes = dateString.split('-');
         if (partes.length === 3) {
@@ -1513,7 +1239,6 @@ function formatDateToDDMMYYYY(dateString) {
         }
     }
     
-    // Si es un timestamp o formato desconocido, intentar crear fecha
     try {
         const date = new Date(dateString);
         if (!isNaN(date.getTime())) {
