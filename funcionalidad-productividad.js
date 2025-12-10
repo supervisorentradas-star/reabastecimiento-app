@@ -22,7 +22,7 @@ let todosDatosCargados = false;
 // ================= OBJETIVOS DE PRODUCTIVIDAD =================
 const OBJETIVOS = {
     'A+B': { recoleccion: 90 },
-    'F': { recoleccion: 120 },
+    'F': { recoleccion: 90 },
     'CDE': { recoleccion: 120 },
     'P': { reposicion: 140, devoluciones: 140 }
 };
