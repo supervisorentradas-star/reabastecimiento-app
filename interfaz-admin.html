@@ -41,34 +41,6 @@
             font-size: 22px;
             margin-bottom: 15px;
         }
-        .connection-status {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            margin-top: 15px;
-        }
-        .connection-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .connection-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-        .connected {
-            background-color: #27ae60;
-        }
-        .disconnected {
-            background-color: #e74c3c;
-        }
-        .checking {
-            background-color: #f39c12;
-        }
         .module-selector {
             display: flex;
             justify-content: center;
@@ -103,16 +75,15 @@
             border-color: #55008a;
         }
         .admin-controls {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            display: flex;
+            justify-content: center;
             margin-bottom: 25px;
         }
         .admin-button {
             background: #6600a1;
             color: white;
             border: none;
-            padding: 15px;
+            padding: 15px 30px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
@@ -219,7 +190,7 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin-bottom: 25px;
         }
@@ -350,30 +321,21 @@
             background: #f0e6f5;
             color: #6600a1;
         }
-        .user-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
+        .filter-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
-        .user-table th, .user-table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-        }
-        .user-table th {
-            background: #6600a1;
-            color: white;
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #6600a1;
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: bold;
-        }
-        .user-active {
-            background: #d4edda;
-            color: #155724;
-            font-weight: bold;
-        }
-        .user-inactive {
-            background: #f8d7da;
-            color: #721c24;
-            font-weight: bold;
+            color: #6600a1;
+            background: white;
+            cursor: pointer;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -383,11 +345,8 @@
     <div class="container">
         <div class="header">
             <h1>Admin - REABASTECIMIENTO SOKSO</h1>
-            <div class="connection-status">
-                <div class="connection-item">
-                    <div id="firebaseIndicator" class="connection-indicator checking"></div>
-                    <span>FIREBASE</span>
-                </div>
+            <div class="admin-controls">
+                <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
             </div>
         </div>
 
@@ -399,19 +358,10 @@
             <button class="module-tab" onclick="cambiarModulo('reposicion', this)">🔄 Reposición</button>
             <button class="module-tab" onclick="cambiarModulo('rutas', this)">📋 RUTAS & COLAS</button>
             <button class="module-tab" onclick="cambiarModulo('sloting', this)">📤 Gestión Sloting</button>
-            <button class="module-tab" onclick="cambiarModulo('usuarios', this)">👥 Usuarios Conectados</button>
         </div>
 
         <!-- ESTADÍSTICAS RÁPIDAS -->
         <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalRutas">0</div>
-                <div class="stat-label">Rutas Activas</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="rutasCompletadas">0</div>
-                <div class="stat-label">Rutas Completadas</div>
-            </div>
             <div class="stat-card">
                 <div class="stat-value" id="totalRegistros">0/0</div>
                 <div class="stat-label" id="labelRegistros">Planificado/Recolectado</div>
@@ -422,16 +372,20 @@
             </div>
         </div>
 
-        <!-- CONTROLES ADMIN - PANEL PRINCIPAL -->
-        <div id="adminMainPanel" class="admin-controls">
-            <button class="admin-button" onclick="actualizarDesdeFirebase()">🔄 Actualizar desde Firebase</button>
-            <button class="admin-button" onclick="cargarDashboard()">📊 Actualizar Panel</button>
+        <!-- CONTROLES ADMIN - FILTRO DE ESTADO -->
+        <div class="filter-controls" id="filterControls" style="display: none;">
+            <h3 id="panelTitulo">Estado de Rutas - Recolección</h3>
+            <select class="filter-select" id="statusFilter" onchange="filtrarPorEstado()">
+                <option value="all">Todos los Estados</option>
+                <option value="pending">Pendiente</option>
+                <option value="in-progress">En Progreso</option>
+                <option value="completed">Completado</option>
+            </select>
         </div>
 
         <!-- CONTROLES ADMIN - PANEL RUTAS & COLAS -->
         <div id="adminRutasPanel" class="admin-controls hidden">
             <button class="admin-button success" onclick="solicitarSubirRutas('recoleccion')">📤 Subir Recolección</button>
-            <button class="admin-button warning" onclick="verificarRutasActuales()">🔍 Ver Rutas Actuales</button>
         </div>
 
         <!-- CONTROLES ADMIN - PANEL SLOTING -->
@@ -441,7 +395,6 @@
 
         <!-- PANEL DE CONTROL - ESTADO DE RUTAS -->
         <div id="routesPanel" class="section">
-            <h2 id="panelTitulo">Estado de Rutas - Recolección</h2>
             <div id="dashboardLoading" class="loading">Cargando estado de rutas...</div>
             <table class="dashboard-table" id="dashboardTable" style="display:none">
                 <thead id="dashboardTableHead">
@@ -503,26 +456,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- PANEL DE USUARIOS CONECTADOS -->
-        <div id="usuariosPanel" class="section hidden">
-            <h2>Usuarios Conectados</h2>
-            <div id="usuariosLoading" class="loading">Cargando información de usuarios...</div>
-            <table class="user-table" id="usuariosTable" style="display:none">
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th>Estado</th>
-                        <th>Última Actividad</th>
-                        <th>Tiempo Conectado</th>
-                        <th>Módulo Activo</th>
-                    </tr>
-                </thead>
-                <tbody id="usuariosTableBody">
-                    <!-- Los datos se llenarán dinámicamente -->
-                </tbody>
-            </table>
         </div>
 
         <div class="footer">
