@@ -85,7 +85,7 @@ function cambiarModulo(modulo, boton) {
         
         // Actualizar título del panel
         document.getElementById('panelTitulo').textContent = 
-            `Estado de Rutas - ${modulo === 'recoleccion' ? 'Recolección' : 'Reposición'}`;
+            `Estado: ${modulo === 'recoleccion' ? 'Recolección' : 'Reposición'}`;
         
         // Actualizar etiquetas según el módulo
         if (modulo === 'recoleccion') {
@@ -925,7 +925,7 @@ function actualizarTablaEstadoRutas() {
 }
 
 // ================= FUNCIONES GENERALES =================
-function volverInterfazPrincipal() {
+function volverMenu() {
     window.location.href = 'index.html';
 }
 
