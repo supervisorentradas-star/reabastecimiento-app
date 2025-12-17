@@ -374,6 +374,66 @@
             font-weight: bold;
         }
 
+        /* NUEVOS ESTILOS PARA SISTEMA DUAL */
+        .modo-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 15px 0;
+            padding: 10px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .modo-btn {
+            padding: 12px 5px;
+            border: 2px solid rgb(138, 11, 210);
+            background: white;
+            color: rgb(138, 11, 210);
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .modo-btn.active {
+            background: rgb(138, 11, 210);
+            color: white;
+        }
+
+        .cantidad-manual-container {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #27ae60;
+            text-align: center;
+        }
+
+        .cantidad-input {
+            width: 100%;
+            max-width: 200px;
+            padding: 12px;
+            font-size: 18px;
+            border: 2px solid #27ae60;
+            border-radius: 6px;
+            text-align: center;
+            margin: 10px auto;
+            display: block;
+        }
+
+        .cantidad-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .btn-info {
+            background: #3498db;
+            color: white;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -419,7 +479,8 @@
             }
             
             .action-buttons,
-            .picking-actions {
+            .picking-actions,
+            .cantidad-actions {
                 grid-template-columns: 1fr;
             }
             
@@ -549,6 +610,36 @@
 
             <div class="lista-depositos" id="listaDepositos">
                 <div class="loading">Cargando depósitos...</div>
+            </div>
+
+            <!-- SELECTOR DE MODO DE ESCANEO -->
+            <div class="modo-selector">
+                <button id="modoUnitario" class="modo-btn active" onclick="cambiarModoEscaneo('unitario')">
+                    🔢 MODO UNITARIO
+                </button>
+                <button id="modoLote" class="modo-btn" onclick="cambiarModoEscaneo('lote')">
+                    📦 MODO LOTE
+                </button>
+            </div>
+
+            <!-- CONTENEDOR PARA MODO LOTE -->
+            <div id="cantidadManualContainer" class="cantidad-manual-container hidden">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">
+                    📦 MODO LOTE ACTIVADO
+                </div>
+                <div style="margin-bottom: 15px; font-size: 14px; color: #7f8c8d;">
+                    Escanea el UPC arriba, luego ingresa la cantidad total:
+                </div>
+                <input type="number" id="cantidadManualInput" class="cantidad-input" 
+                       placeholder="Cantidad" min="1" step="1" value="1">
+                <div class="cantidad-actions">
+                    <button class="btn btn-info" onclick="confirmarCantidadManual()">
+                        ✅ CONFIRMAR CANTIDAD
+                    </button>
+                    <button class="btn btn-secondary" onclick="cancelarModoLote()">
+                        ❌ CANCELAR MODO LOTE
+                    </button>
+                </div>
             </div>
         </div>
 
