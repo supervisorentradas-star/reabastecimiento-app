@@ -2,650 +2,928 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recolección - REABASTECIMIENTO SOKSO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📦 Recolección SOKSO</title>
+    
+    <!-- Meta tags para PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#6600a1">
+    
     <style>
+        /* ===== RESET MOBILE-FIRST ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
         }
 
-        body {
-            font-family: Arial, sans-serif;
-            background: white;
-            min-height: 100vh;
-            padding: 8px;
-            color: rgb(138, 11, 210);
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
+        html {
+            font-size: 16px;
+            height: 100%;
             overflow: hidden;
         }
 
-        /* HEADER COMÚN PARA TODAS LAS VENTANAS */
-        .header {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: white;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding: 0;
+            overscroll-behavior-y: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            color: #333;
+        }
+
+        /* ===== HEADER DEL SISTEMA ===== */
+        .system-header {
+            background: linear-gradient(135deg, #6600a1, #55008a);
+            color: white;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 8px;
-            border-bottom: 2px solid rgb(138, 11, 210);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 100;
         }
 
-        .header h1 {
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 18px;
-            color: rgb(138, 11, 210);
-            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
         }
 
-        .user-display {
-            font-size: 14px;
-            color: rgb(138, 11, 210);
-            font-weight: bold;
+        .back-button:active {
+            background: rgba(255,255,255,0.3);
+            transform: scale(0.95);
         }
 
-        .connection-indicator {
-            width: 12px;
-            height: 12px;
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #27ae60;
         }
 
-        .connection-disconnected {
+        .connection-dot.offline {
             background: #e74c3c;
         }
 
-        /* VENTANAS */
-        .ventana {
-            display: none;
-        }
-
-        #ventana1 {
-            display: block;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin: 15px 0;
-            color: rgb(138, 11, 210);
-        }
-
-        /* VENTANA 1 - RUTAS */
-        .rutas-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        .ruta-button {
-            background: rgb(138, 11, 210);
-            color: white;
-            border: none;
-            padding: 12px 5px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .ruta-button:hover {
-            background: rgb(120, 10, 180);
-        }
-
-        .info-panel {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            margin: 15px 0;
-            border: 1px solid #e0e0e0;
-        }
-
-        .info-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-            text-align: center;
-        }
-
-        .info-item {
-            font-size: 14px;
-        }
-
-        .info-value {
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid rgb(138, 11, 210);
-        }
-
-        .btn {
-            padding: 10px 5px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-primary {
-            background: rgb(138, 11, 210);
-            color: white;
-        }
-
-        .btn-exit {
-            background: rgb(175, 80, 229);
-            color: white;
-        }
-
-        /* VENTANA 2 - COLAS */
-        .tipo-selector {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-            margin: 10px 0;
-        }
-
-        .tipo-button {
-            padding: 8px 5px;
-            border: 2px solid rgb(138, 11, 210);
+        /* ===== APP CONTAINER ===== */
+        .app-container {
+            width: 100%;
+            height: calc(100% - 60px);
             background: white;
-            color: rgb(138, 11, 210);
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
-        .tipo-button.active {
-            background: rgb(138, 11, 210);
-            color: white;
-        }
-
-        .colas-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin: 15px 0;
-        }
-
-        .cola-button {
-            background: rgb(138, 11, 210);
-            color: white;
-            border: none;
-            padding: 15px 5px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .cola-button.in-progress {
-            background: #f39c12;
-        }
-
-        .cola-button.completed {
-            background: #27ae60;
-        }
-
-        .cola-button.available {
-            background: rgb(138, 11, 210);
-        }
-
-        .cola-button.occupied {
-            background: #e74c3c;
-            cursor: not-allowed;
-        }
-
-        /* VENTANA 3 - PICKING */
-        .picking-header {
+        /* ===== STATUS BAR ===== */
+        .status-bar {
+            height: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e8ed;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 0 15px;
+            font-size: 11px;
+            color: #666;
+            flex-shrink: 0;
         }
 
-        .current-deposito {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid rgb(138, 11, 210);
-            margin: 15px 0;
-        }
-
-        .deposito-info {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .deposito-codigo {
-            font-size: 20px;
-            font-weight: bold;
-            color: rgb(138, 11, 210);
-            margin-bottom: 5px;
-        }
-
-        .deposito-descripcion {
-            font-size: 16px;
-            color: #2c3e50;
-            font-weight: bold;
-            margin-bottom: 10px;
-            background: #e8f4fd;
-            padding: 8px;
-            border-radius: 4px;
-            border-left: 3px solid rgb(138, 11, 210);
-        }
-
-        .contadores {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .contador-item {
-            text-align: center;
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .contador-label {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-bottom: 5px;
-        }
-
-        .contador-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: rgb(138, 11, 210);
-        }
-
-        .scan-area {
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .upc-input {
-            width: 100%;
-            max-width: 300px;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid rgb(138, 11, 210);
-            border-radius: 6px;
-            text-align: center;
-            margin: 0 auto;
-            display: block;
-        }
-
-        .picking-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+        .status-left, .status-right {
+            display: flex;
+            align-items: center;
             gap: 8px;
-            margin: 15px 0;
         }
 
-        .btn-warning {
-            background: #e74c3c;
+        /* ===== APP CONTENT ===== */
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .content-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #6600a1;
+        }
+
+        /* ===== CARD STYLES ===== */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e1e8ed;
+            transition: all 0.3s ease;
+        }
+
+        .card:active {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .card-badge {
+            background: #6600a1;
             color: white;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* ===== BUTTON STYLES ===== */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 48px;
+            width: 100%;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
         }
 
         .btn-primary {
-            background: rgb(138, 11, 210);
+            background: linear-gradient(135deg, #6600a1, #55008a);
             color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border: 1px solid #e1e8ed;
         }
 
         .btn-success {
-            background: #27ae60;
+            background: linear-gradient(135deg, #27ae60, #219653);
             color: white;
         }
 
-        .lista-depositos {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            margin: 15px 0;
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
         }
 
-        .deposito-item {
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #6600a1;
+            border: 2px solid #6600a1;
+        }
+
+        /* ===== GRID LAYOUTS ===== */
+        .grid-2 {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== FORM ELEMENTS ===== */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 13px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: white;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #6600a1;
+            box-shadow: 0 0 0 3px rgba(102, 0, 161, 0.1);
+        }
+
+        /* ===== BOTTOM NAVIGATION ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            border-top: 1px solid #e1e8ed;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            padding: 8px;
+            color: #95a5a6;
+            text-decoration: none;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            border: none;
+            background: none;
             cursor: pointer;
         }
 
-        .deposito-item.current {
-            background: #e8f4fd;
-            border-left: 4px solid rgb(138, 11, 210);
+        .nav-item.active {
+            color: #6600a1;
         }
 
-        .deposito-item.completed {
+        .nav-icon {
+            font-size: 18px;
+            margin-bottom: 3px;
+        }
+
+        /* ===== LOADING STATES ===== */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6600a1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== LIST STYLES ===== */
+        .list {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .list-item {
+            padding: 14px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            min-height: 56px;
+        }
+
+        .list-item:active {
+            background: #f8f9fa;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item.current {
+            background: #e8f4fd;
+            border-left: 4px solid #6600a1;
+        }
+
+        .list-item.completed {
             background: #d5f4e6;
         }
 
-        .deposito-item.not-found {
-            background: #f8d7da;
+        .list-item.not-found {
+            background: #fde8e8;
             border-left: 4px solid #e74c3c;
         }
 
-        .deposito-codigo-small {
+        .list-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6600a1;
+            font-size: 16px;
             font-weight: bold;
-            color: rgb(138, 11, 210);
+        }
+
+        .list-item-content {
+            flex: 1;
+        }
+
+        .list-item-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 3px;
             font-size: 14px;
         }
 
-        .deposito-cantidad {
-            text-align: center;
-            font-weight: bold;
+        .list-item-subtitle {
+            font-size: 11px;
+            color: #95a5a6;
         }
 
-        .deposito-estado {
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        /* NUEVOS ESTILOS PARA SISTEMA DUAL */
-        .modo-selector {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 15px 0;
-            padding: 10px;
-            border-top: 2px solid #e0e0e0;
-        }
-
-        .modo-btn {
-            padding: 12px 5px;
-            border: 2px solid rgb(138, 11, 210);
-            background: white;
-            color: rgb(138, 11, 210);
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
+        .list-item-badge {
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 50px;
             text-align: center;
         }
 
-        .modo-btn.active {
-            background: rgb(138, 11, 210);
-            color: white;
+        .badge-success {
+            background: #d5f4e6;
+            color: #27ae60;
         }
 
-        .cantidad-manual-container {
-            margin: 15px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 2px solid #27ae60;
+        .badge-warning {
+            background: #fef5e7;
+            color: #f39c12;
+        }
+
+        .badge-danger {
+            background: #fde8e8;
+            color: #e74c3c;
+        }
+
+        .badge-info {
+            background: #e8f4fd;
+            color: #6600a1;
+        }
+
+        /* ===== PROGRESS INDICATORS ===== */
+        .progress-bar {
+            height: 6px;
+            background: #e1e8ed;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6600a1, #55008a);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: #95a5a6;
             text-align: center;
         }
 
-        .cantidad-input {
-            width: 100%;
-            max-width: 200px;
-            padding: 12px;
-            font-size: 18px;
-            border: 2px solid #27ae60;
-            border-radius: 6px;
-            text-align: center;
-            margin: 10px auto;
-            display: block;
-        }
-
-        .cantidad-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .btn-info {
-            background: #3498db;
-            color: white;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
-        }
-
-        /* MENSAJES TEMPORALES */
-        #mensajeTemporal {
+        /* ===== TOAST NOTIFICATIONS ===== */
+        .toast-container {
             position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            z-index: 1000;
-            text-align: center;
-            min-width: 200px;
+            z-index: 3000;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastSlideIn 0.3s ease-out;
+            border-left: 4px solid #6600a1;
+        }
+
+        .toast.success {
+            border-left-color: #27ae60;
+        }
+
+        .toast.error {
+            border-left-color: #e74c3c;
+        }
+
+        .toast.warning {
+            border-left-color: #f39c12;
+        }
+
+        .toast-icon {
+            font-size: 18px;
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== MODAL STYLES ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
             display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
 
-        .mensaje-exito {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .modal-container {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            animation: modalSlideUp 0.3s ease-out;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
-        .mensaje-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .rutas-grid,
-            .colas-grid {
-                grid-template-columns: repeat(2, 1fr);
+        .modal-header {
+            padding: 18px;
+            background: linear-gradient(135deg, #6600a1, #55008a);
+            color: white;
+            text-align: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e8ed;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* ===== TABS ===== */
+        .tabs-header {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: #95a5a6;
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #6600a1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        /* ===== SCANNER STYLES ===== */
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            overflow: hidden;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            background: #000;
+        }
+
+        .scanner-viewfinder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid #6600a1;
+            border-radius: 15px;
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
+        }
+
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #6600a1;
+            animation: scan 2s infinite linear;
+            box-shadow: 0 0 8px #6600a1;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-1 { margin-top: 8px; }
+        .mt-2 { margin-top: 15px; }
+        .mb-1 { margin-bottom: 8px; }
+        .mb-2 { margin-bottom: 15px; }
+        .p-1 { padding: 8px; }
+        .p-2 { padding: 15px; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 360px) {
+            html {
+                font-size: 14px;
             }
             
-            .action-buttons,
-            .picking-actions,
-            .cantidad-actions {
-                grid-template-columns: 1fr;
+            .btn {
+                padding: 12px;
+                font-size: 14px;
             }
             
-            .info-row {
-                grid-template-columns: 1fr;
-                gap: 5px;
+            .card {
+                padding: 12px;
+            }
+            
+            .app-content {
+                padding: 12px;
+            }
+        }
+
+        /* ===== SAFARI FIXES ===== */
+        @supports (-webkit-touch-callout: none) {
+            .app-container {
+                min-height: -webkit-fill-available;
             }
         }
     </style>
+    
+    <!-- Firebase SDK (Solo si no está ya cargado) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 </head>
 <body>
-    <!-- Mensaje Temporal -->
-    <div id="mensajeTemporal"></div>
-
-    <div class="container">
-        
-        <!-- VENTANA 1: SELECCIÓN DE RUTA -->
-        <div id="ventana1" class="ventana">
-            <div class="header">
-                <h1>Recolección</h1>
-                <div class="user-display" id="userDisplayV1">Usuario: Cargando...</div>
-                <div class="connection-indicator" id="connectionIndicatorV1"></div>
-            </div>
-
-            <h2 class="section-title">SELECCIONA UNA RUTA</h2>
-
-            <div class="rutas-grid" id="rutasGrid">
-                <div class="loading">Cargando rutas...</div>
-            </div>
-
-            <div class="info-panel">
-                <div class="info-row">
-                    <div class="info-item">
-                        <div>Fecha:</div>
-                        <div class="info-value" id="fechaActual">--/--/----</div>
-                    </div>
-                    <div class="info-item">
-                        <div>Tipo:</div>
-                        <div class="info-value" id="tipoActual">REGULAR</div>
-                    </div>
-                    <div class="info-item">
-                        <div>Unidades:</div>
-                        <div class="info-value" id="totalUnidades">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="actualizarDatos()">🔄 Actualizar</button>
-                <button class="btn btn-primary" onclick="cargarRutas()">Cargar Rutas</button>
-                <button class="btn btn-exit" onclick="volverInterfazPrincipal()">🚪 Interfaz Principal</button>
+    <!-- System Header -->
+    <div class="system-header">
+        <div class="header-left">
+            <button class="back-button" onclick="volverAlMenu()">←</button>
+            <div class="header-title">
+                <span>📦</span>
+                <span>Recolección SOKSO</span>
             </div>
         </div>
-
-        <!-- VENTANA 2: SELECCIÓN DE COLA -->
-        <div id="ventana2" class="ventana">
-            <div class="header">
-                <h1 id="rutaSeleccionadaTitulo">RUTA: --</h1>
-                <div class="connection-indicator" id="connectionIndicatorV2"></div>
+        <div class="header-right">
+            <div class="user-badge" id="userBadge">
+                <span>👤</span>
+                <span id="userName">Cargando...</span>
             </div>
-
-            <div class="tipo-selector">
-                <button class="tipo-button active" data-tipo="REGULAR">REGULAR</button>
-                <button class="tipo-button" data-tipo="BACKORDER">BACKORDER</button>
-                <button class="tipo-button" data-tipo="CYBER">CYBER</button>
-            </div>
-
-            <h2 class="section-title">SELECCIONA UNA COLA</h2>
-
-            <div class="colas-grid" id="colasGrid">
-                <div class="loading">Cargando colas...</div>
-            </div>
-
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="volverARutas()">VOLVER A RUTAS</button>
+            <div class="connection-status">
+                <div class="connection-dot" id="connectionDot"></div>
+                <span id="connectionText">Online</span>
             </div>
         </div>
-
-        <!-- VENTANA 3: PROCESO DE PICKING -->
-        <div id="ventana3" class="ventana">
-            <div class="header">
-                <div>
-                    <div>RUTA: <span id="rutaPicking">--</span></div>
-                    <div>COLA: <span id="colaPicking">--</span></div>
-                </div>
-                <div class="connection-indicator" id="connectionIndicatorV3"></div>
-            </div>
-
-            <div class="current-deposito">
-                <div class="deposito-info">
-                    <div class="deposito-codigo" id="depositoActualCodigo">-----</div>
-                    <div class="deposito-descripcion" id="depositoActualDescripcion">-----</div>
-                </div>
-
-                <div class="contadores">
-                    <div class="contador-item">
-                        <div class="contador-label">CANTIDAD</div>
-                        <div class="contador-value" id="cantidadTotal">0</div>
-                    </div>
-                    <div class="contador-item">
-                        <div class="contador-label">LEÍDA</div>
-                        <div class="contador-value" id="cantidadLeida">0</div>
-                    </div>
-                    <div class="contador-item">
-                        <div class="contador-label">PENDIENTE</div>
-                        <div class="contador-value" id="cantidadPendiente">0</div>
-                    </div>
-                </div>
-
-                <div class="scan-area">
-                    <div style="margin-bottom: 10px; font-weight: bold;">SCANEAR CÓDIGO UPC</div>
-                    <input type="text" id="upcInput" class="upc-input" placeholder="Escanea código UPC" autocomplete="off" autofocus>
-                </div>
-            </div>
-
-            <div class="picking-actions">
-                <button class="btn btn-warning" onclick="marcarNoEncontrado()">No Encontrado</button>
-                <button class="btn btn-primary" onclick="volverAColas()">Volver a Colas</button>
-                <button class="btn btn-success" onclick="transferirPalet()">
-                    🔄 Transferir
-                </button>
-            </div>
-
-            <h3 class="section-title">LISTA DE DEPÓSITOS</h3>
-
-            <div class="lista-depositos" id="listaDepositos">
-                <div class="loading">Cargando depósitos...</div>
-            </div>
-
-            <!-- SELECTOR DE MODO DE ESCANEO -->
-            <div class="modo-selector">
-                <button id="modoUnitario" class="modo-btn active" onclick="cambiarModoEscaneo('unitario')">
-                    🔢 MODO UNITARIO
-                </button>
-                <button id="modoLote" class="modo-btn" onclick="cambiarModoEscaneo('lote')">
-                    📦 MODO LOTE
-                </button>
-            </div>
-
-            <!-- CONTENEDOR PARA MODO LOTE -->
-            <div id="cantidadManualContainer" class="cantidad-manual-container hidden">
-                <div style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">
-                    📦 MODO LOTE ACTIVADO
-                </div>
-                <div style="margin-bottom: 15px; font-size: 14px; color: #7f8c8d;">
-                    Escanea el UPC arriba, luego ingresa la cantidad total:
-                </div>
-                <input type="number" id="cantidadManualInput" class="cantidad-input" 
-                       placeholder="Cantidad" min="1" step="1" value="1">
-                <div class="cantidad-actions">
-                    <button class="btn btn-info" onclick="confirmarCantidadManual()">
-                        ✅ CONFIRMAR CANTIDAD
-                    </button>
-                    <button class="btn btn-secondary" onclick="cancelarModoLote()">
-                        ❌ CANCELAR MODO LOTE
-                    </button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Script de funciones -->
-    <script src="funciones-recoleccion.js"></script>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-left">
+            <span id="currentDate">--/--/----</span>
+            <span id="currentTime">00:00</span>
+        </div>
+        <div class="status-right">
+            <span id="batteryLevel">100%</span>
+            <span>📶</span>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div class="app-container">
+        <!-- App Content -->
+        <div class="app-content" id="appContent">
+            <!-- Contenido se carga dinámicamente aquí -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <div id="loadingText">Cargando sistema...</div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <button class="nav-item active" data-page="rutas">
+                <span class="nav-icon">📊</span>
+                <span>Rutas</span>
+            </button>
+            <button class="nav-item" data-page="colas">
+                <span class="nav-icon">📋</span>
+                <span>Colas</span>
+            </button>
+            <button class="nav-item" data-page="picking">
+                <span class="nav-icon">📦</span>
+                <span>Picking</span>
+            </button>
+            <button class="nav-item" data-page="config">
+                <span class="nav-icon">⚙️</span>
+                <span>Config</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scanner Modal -->
+    <div class="modal-overlay" id="scannerModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 style="margin: 0; font-size: 16px;">🔍 Escanear Código</h3>
+            </div>
+            <div class="modal-body">
+                <div class="scanner-container">
+                    <div class="scanner-viewfinder">
+                        <div class="scanner-line"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="text" 
+                           id="manualUPC" 
+                           class="form-input" 
+                           placeholder="O ingresa UPC manualmente"
+                           autocomplete="off">
+                </div>
+                <button class="btn btn-secondary" onclick="closeScanner()">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quantity Modal -->
+    <div class="modal-overlay" id="quantityModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 style="margin: 0; font-size: 16px;">📦 Ingresar Cantidad</h3>
+            </div>
+            <div class="modal-body">
+                <div class="card mb-2">
+                    <div class="card-header">
+                        <div class="card-title" id="modalItemTitle">Depósito</div>
+                        <div class="card-badge" id="modalItemBadge">0/0</div>
+                    </div>
+                    <div id="modalItemInfo" style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                        Información del item
+                    </div>
+                    <div class="form-group">
+                        <input type="number" 
+                               id="quantityInput" 
+                               class="form-input" 
+                               min="1" 
+                               max="1000" 
+                               value="1" 
+                               autofocus
+                               inputmode="numeric"
+                               style="font-size: 20px; text-align: center; font-weight: bold;">
+                    </div>
+                    <div class="grid-2 mb-2">
+                        <button class="btn btn-secondary" onclick="adjustQuantity(-10)">-10</button>
+                        <button class="btn btn-secondary" onclick="adjustQuantity(10)">+10</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" onclick="closeQuantityModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-success" onclick="confirmQuantity()">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Config -->
+    <script>
+        // Configuración de Firebase (misma que en index.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAl6wzWg_opgBrZ4fe0golJ-fe-civk7RE",
+            authDomain: "reabastecimiento-d71a1.firebaseapp.com",
+            databaseURL: "https://reabastecimiento-d71a1-default-rtdb.firebaseio.com",
+            projectId: "reabastecimiento-d71a1",
+            storageBucket: "reabastecimiento-d71a1.firebasestorage.app",
+            messagingSenderId: "107012533068",
+            appId: "1:107012533068:web:3576d5e3a18a42dcaefde9"
+        };
+        
+        // Usar la app de Firebase ya inicializada si existe, sino inicializar
+        let firebaseApp;
+        let database;
+        
+        try {
+            firebaseApp = firebase.app();
+            database = firebase.database();
+            console.log('✅ Firebase ya estaba inicializado');
+        } catch (e) {
+            console.log('⚠️ Firebase no inicializado, inicializando...');
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+        }
+    </script>
+    
+    <!-- Main App Script -->
+    <script src="app-mobile.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
